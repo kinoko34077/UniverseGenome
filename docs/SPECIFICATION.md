@@ -38,7 +38,7 @@ An implementation default does not promote `accepted-default` or `parameterized`
 ## Current implementation frontier
 
 Phase 0: repository/specification scaffold.  
-Phase 1 through Phase 2B are accepted; Phase 2C is the active bounded local
-fusion implementation.
+Phase 1 through Phase 2C are accepted; Phase 2D is the active bounded local
+fragmentation implementation.
 
 See `docs/ROADMAP.md`.

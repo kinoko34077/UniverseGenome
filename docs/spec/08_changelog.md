@@ -53,3 +53,14 @@ Future physical-rule changes must record affected REQ/SPEC IDs, old/new behavior
   speed, age, bond, latent mixer and slot reuse behavior.
 - Phase 2D fragmentation and later phases remain deferred pending #14
   acceptance.
+
+## 2026-10-03 — Phase 2C accepted (#14 / PR #15)
+- Bounded local exact 2×2 fusion, deterministic upper-level result state,
+  latent mixer, HP/slot lifecycle and snapshot continuation passed exact-head
+  review, merge, and post-main CI on
+  `9d860c5e7cc61df647bc7c36c7f465854af565fa`.
+
+## 2026-10-03 — Phase 2D fragmentation implementation candidate (#16)
+- `core/physics.py` implements deterministic fixed-capacity fragmentation,
+  level-0 collapse/deletion, latent/HP/age split and headless counters.
+- Phase 2E aging and later phases remain deferred pending #16 acceptance.

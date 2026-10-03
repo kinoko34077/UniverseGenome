@@ -91,4 +91,21 @@ groups remain unchanged; candidate discovery is local and bounded.
 Save/load restores fusion parameters and fused state; resumed execution equals
 uninterrupted execution.
 
+## Phase 2D acceptance tests
+
+### TEST-P2D-001 Fragment state split
+
+A level>0 core retains its level and emits one lower 1×1 fragment with the
+canonical direction, speed, latent, HP and age split.
+
+### TEST-P2D-002 Level-0 and capacity behavior
+
+Compound level-0 shapes collapse, level-0 singles follow deletion, and full
+capacity/probability-zero cases are deterministic no-ops.
+
+### TEST-P2D-003 Fragmentation snapshot continuation
+
+Save/load restores fragmentation parameters and state; resumed execution
+equals uninterrupted execution.
+
 ---

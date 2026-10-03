@@ -40,17 +40,20 @@
     "rotate_amount": 4,
     "fusion_enabled": true,
     "fusion_velocity_threshold": 8,
-    "fusion_bond_threshold": 32
+    "fusion_bond_threshold": 32,
+    "fragmentation_enabled": true,
+    "fragmentation_rate": 0
   },
   "features": {
     "phase1_physics": true,
     "phase2a_bond_physics": true,
     "phase2b_latent_operators": true,
     "fusion": true,
-    "fragmentation": false,
+    "fragmentation": true,
     "latent_runtime": true,
     "multi_universe_search": false,
     "io_learning": false,
-    "evolution": false
+    "evolution": false,
+    "aging": false
   }
 }
