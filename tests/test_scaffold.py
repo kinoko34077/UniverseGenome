@@ -105,9 +105,15 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("PR #33", changelog)
         self.assertIn("PR #34", changelog)
         self.assertIn("02b07bb8dae7f649d543f8386d421064c6977a55", changelog)
+        # Historical acceptance markers remain durable, while the handoff also
+        # projects the current post-#59 readiness evidence.
         self.assertIn("02b07bb8dae7f649d543f8386d421064c6977a55", handoff)
         self.assertIn("84/84", handoff)
         self.assertIn("4fe87b2f32662d7445bc8084dc91d07e2a029d42", handoff)
+        self.assertIn("5844e989706afce7988c4b8d50f94fc33afb1228", handoff)
+        self.assertIn("130 tests / OK", handoff)
+        self.assertIn("37137438184", handoff)
+        self.assertIn("readiness audit #60", handoff)
         self.assertIn("Phase 5", roadmap)
 
     def test_phase5_metadata_and_implemented_defaults_are_current(self):
