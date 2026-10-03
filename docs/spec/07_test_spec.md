@@ -196,4 +196,9 @@ absolute-fitness top 1/8 from growth-only pruning.
 Free-slot replacement is deterministic and seed escalation is bounded to
 4→8→16→32 without evolving seed as genome data.
 
+### TEST-P5-005 Phase 6+ handoff boundary
+
+The Phase 5 boundary records the Phase 4 outcome and a durable Phase 6+
+handoff; no Phase 6+ capability is activated by the v0.1 Work Order.
+
 ---
