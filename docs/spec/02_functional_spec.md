@@ -296,9 +296,10 @@ Do not use internal structural abundance as direct success reward.
 Optimizer fitness stores normalized rates for event/count fields and means for
 latency/activity so candidates with 4, 8, 16, or 32 evidence seeds remain
 comparable. Retention and alternate-input noise robustness are growth-only
-dimensions, not additional absolute-fitness tie-breakers. Activity cost is the
-per-generation physics activity-event count: collisions, bond contacts,
-latent transmissions, fusions, fragmentations, and noise spawns.
+dimensions, not additional absolute-fitness tie-breakers. Activity cost sums
+the per-generation physics activity-event count over an evaluation: collisions,
+bond contacts, latent transmissions, fusions, fragmentations, and noise
+spawns.
 
 ---
 
