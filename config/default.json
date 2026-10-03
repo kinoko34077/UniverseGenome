@@ -54,6 +54,6 @@
     "multi_universe_search": false,
     "io_learning": false,
     "evolution": false,
-    "aging": false
+    "aging": true
   }
 }

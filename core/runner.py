@@ -1,4 +1,4 @@
-"""Headless runner and bounded performance reporting through Phase 2D."""
+"""Headless runner and bounded performance reporting through Phase 2E."""
 
 from __future__ import annotations
 
@@ -26,6 +26,7 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
     phase2b = bool(config.get("features", {}).get("phase2b_latent_operators", False))
     phase2c = bool(config.get("features", {}).get("fusion", False))
     phase2d = bool(config.get("features", {}).get("fragmentation", False))
+    phase2e = bool(config.get("features", {}).get("aging", False))
     return {
         "project": "UniverseGenome",
         "phase": 2 if phase2a and phase1 else (1 if phase1 else 0),
@@ -35,6 +36,7 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
         "phase2b_latent_operators_implemented": phase2b and phase2a and phase1,
         "phase2c_fusion_implemented": phase2c and phase2b and phase2a and phase1,
         "phase2d_fragmentation_implemented": phase2d and phase2c and phase2b and phase2a and phase1,
+        "phase2e_aging_implemented": phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "logical_size": config["world"]["logical_size"],
         "subdivisions_per_tile": config["world"]["subdivisions_per_tile"],
         "fixed_point_size": config["world"]["fixed_point_size"],
@@ -45,7 +47,9 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
             "hp": HP_BITS,
         },
         "next_phase": (
-            "Phase 2E aging"
+            "Phase 3 128-universe runtime and observation GUI"
+            if phase2e and phase2d and phase2c and phase2b and phase2a and phase1
+            else "Phase 2E aging"
             if phase2d and phase2c and phase2b and phase2a and phase1
             else "Phase 2D fragmentation"
             if phase2c and phase2b and phase2a and phase1
@@ -97,7 +101,7 @@ def run_headless(seed: int, generations: int, config: PhysicsConfig) -> dict[str
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="UniverseGenome headless Phase 2D runner")
+    parser = argparse.ArgumentParser(description="UniverseGenome headless Phase 2E runner")
     parser.add_argument("--config", default="config/default.json")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--generations", type=int, default=0)

@@ -108,4 +108,26 @@ capacity/probability-zero cases are deterministic no-ops.
 Save/load restores fragmentation parameters and state; resumed execution
 equals uninterrupted execution.
 
+## Phase 2E acceptance tests
+
+### TEST-P2E-001 Age-class boundaries
+
+Age zero is safe, age 1 maps to class 0, and the 2/4/8/16 boundaries map to
+the highest-set-bit classes specified by `SPEC-AGE-001`.
+
+### TEST-P2E-002 Age-scaled fragmentation pressure
+
+The configured base fragmentation rate is multiplied by the class power of
+two with uint16 saturation; disabled aging preserves the base rate.
+
+### TEST-P2E-003 Deterministic age pressure
+
+Fixed seed/config/state produces the same age-dependent fragmentation outcome,
+and an older structure receives a higher pressure window than a younger one.
+
+### TEST-P2E-004 Aging snapshot continuation
+
+Save/load restores aging configuration and state; resumed execution equals
+uninterrupted execution.
+
 ---

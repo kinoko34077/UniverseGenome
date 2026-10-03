@@ -1,4 +1,4 @@
-"""Deterministic single-universe physics through Phase 2D."""
+"""Deterministic single-universe physics through Phase 2E."""
 
 from __future__ import annotations
 
@@ -55,6 +55,7 @@ class PhysicsConfig:
     fusion_bond_threshold: int = 32
     fragmentation_enabled: bool = False
     fragmentation_rate: int = 0
+    aging_enabled: bool = False
 
     def __post_init__(self) -> None:
         if self.logical_size != 32 or self.fixed_point_size != 256:
@@ -119,6 +120,11 @@ class PhysicsConfig:
             fusion_bond_threshold=int(values.get("fusion_bond_threshold", 32)),
             fragmentation_enabled=bool(values.get("fragmentation_enabled", False)),
             fragmentation_rate=int(values.get("fragmentation_rate", 0)),
+            aging_enabled=bool(
+                mapping.get("features", {}).get("aging", values.get("aging_enabled", False))
+                if isinstance(mapping.get("features", {}), Mapping)
+                else values.get("aging_enabled", False)
+            ),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -147,6 +153,7 @@ class PhysicsConfig:
             "fusion_bond_threshold": self.fusion_bond_threshold,
             "fragmentation_enabled": self.fragmentation_enabled,
             "fragmentation_rate": self.fragmentation_rate,
+            "aging_enabled": self.aging_enabled,
         }
 
 
@@ -179,6 +186,29 @@ def speed_code_for_magnitude(magnitude: int) -> int:
         return SPEED_MAGNITUDES.index(int(magnitude))
     except ValueError as exc:
         raise ValueError(f"unsupported speed magnitude: {magnitude}") from exc
+
+
+def age_class(age: int) -> int:
+    """Return the highest-set-bit age class, with age zero in the base class."""
+    value = int(age)
+    if value <= 0:
+        return 0
+    return value.bit_length() - 1
+
+
+def age_scaled_fragmentation_rate(
+    base_rate: int,
+    age: int,
+    *,
+    aging_enabled: bool = True,
+) -> int:
+    """Scale the base uint16 rate by a power of two for the cell's age class."""
+    rate = int(base_rate)
+    if not 0 <= rate <= 0xFFFF:
+        raise ValueError("base_rate must fit uint16")
+    if not aging_enabled:
+        return rate
+    return min(0xFFFF, rate << age_class(age))
 
 
 def velocity_vector(direction: int, speed_code: int) -> tuple[int, int]:
@@ -486,7 +516,12 @@ def _fragment_active_cells(
     for slot in active:
         if slot in fused_slots or state.lifecycle[slot] != Lifecycle.ACTIVE:
             continue
-        if event_u16(event_key(state.seed, generation, 0, EVENT_FRAGMENTATION, slot)) >= config.fragmentation_rate:
+        rate = age_scaled_fragmentation_rate(
+            config.fragmentation_rate,
+            state.age[slot],
+            aging_enabled=config.aging_enabled,
+        )
+        if event_u16(event_key(state.seed, generation, 0, EVENT_FRAGMENTATION, slot)) >= rate:
             continue
         structure = state.structure[slot]
         level = structure_level(structure)
