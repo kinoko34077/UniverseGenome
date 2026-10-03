@@ -58,8 +58,9 @@ def build_server(
     host: str = "127.0.0.1",
     port: int = 8000,
     runtime: PopulationRuntime | None = None,
+    history_length: int = PopulationRuntime.DEFAULT_HISTORY_LENGTH,
 ) -> ThreadingHTTPServer:
-    resolved_runtime = runtime or PopulationRuntime()
+    resolved_runtime = runtime or PopulationRuntime(history_length=history_length)
     handler_class = type(
         "ConfiguredUniverseGenomeHandler",
         (UniverseGenomeHandler,),
@@ -75,9 +76,16 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Serve the UniverseGenome observation runtime")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument(
+        "--history-length",
+        type=int,
+        choices=(128, 256, 512),
+        default=PopulationRuntime.DEFAULT_HISTORY_LENGTH,
+        help="bounded rewind history in generations",
+    )
     args = parser.parse_args(argv)
 
-    server = build_server(args.host, args.port)
+    server = build_server(args.host, args.port, history_length=args.history_length)
     print(f"Serving UniverseGenome runtime at http://{args.host}:{args.port}")
     try:
         server.serve_forever()

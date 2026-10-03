@@ -132,3 +132,22 @@ Manual parameter changes do not mutate the constants of an already-running autho
 Apply on next reset/spawn/new universe unless a future explicit live-edit mode is specified.
 
 ---
+
+# 37. Current Phase 3 implementation contract
+
+The accepted observer surface is implemented through the server-owned runtime
+payload:
+
+- every overview summary contains a bounded 8×8 spatial projection with
+  activity, highest hierarchy, and occupancy values;
+- detail cells expose HP, hierarchy level, latent, activity, and bond/contact
+  values;
+- overview polling is 500 ms and detail polling is 125 ms;
+- HP/hierarchy automatic alternation occurs every four detail frames and can
+  be manually locked;
+- clone observation is an explicit selected observation target and does not
+  mutate or advance the authoritative slot;
+- the server history policy is bounded to 128, 256, or 512 generations, with
+  the default observer runtime configured for 512.
+
+---
