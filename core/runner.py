@@ -10,7 +10,7 @@ from typing import Any
 
 from .physics import PhysicsConfig, create_universe, step
 from .population import run_population_headless
-from .experiment import compare_baseline_trained
+from .experiment import compare_baseline_trained, load_experiment_config
 from search.evolution import run_optimizer_headless
 from .state import DEFAULT_MAX_CELLS, HP_BITS, LATENT_BITS, STRUCTURE_BITS
 
@@ -134,6 +134,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--generations", type=int, default=0)
     parser.add_argument("--population", action="store_true", help="run the Phase 3 128-slot population")
     parser.add_argument("--experiment", action="store_true", help="run the Phase 4 baseline/trained measurement")
+    parser.add_argument(
+        "--experiment-config",
+        default="config/experiment_v0_1.json",
+        help="effective Phase 4 experiment protocol JSON",
+    )
     parser.add_argument("--optimizer", action="store_true", help="run the Phase 5 optimizer diagnostics")
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
@@ -159,7 +164,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.experiment:
         if not status["phase4_io_learning_implemented"]:
             raise ValueError("config must explicitly enable Phase 4 I/O learning")
-        measurement = compare_baseline_trained(seeds=(args.seed, args.seed + 1, args.seed + 2), config=config)
+        experiment = load_experiment_config(args.experiment_config)
+        measurement = compare_baseline_trained(
+            seeds=(args.seed, args.seed + 1, args.seed + 2),
+            config=config,
+            experiment=experiment,
+        )
         status["experiment_measurement"] = {
             "seed_count": measurement.seed_count,
             "baseline_successes": measurement.baseline_successes,

@@ -5,7 +5,7 @@
   "task": "A->B->NULL",
   "byte_hold_generations": 4,
   "byte_gap_generations": 4,
-  "teacher_delay_generations": null,
-  "teacher_repetitions": null,
+  "teacher_delay_generations": 4,
+  "teacher_repetitions": 1,
   "evaluation_timeout_generations": 1024
 }

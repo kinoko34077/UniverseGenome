@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 INPUT_DATA_LINES = 8
 INPUT_VALID_LINES = 1
@@ -37,6 +38,19 @@ class InputBus:
         self.signal = InputSignal(value=self.signal.value, valid=False)
         return self.signal
 
+    def signal_coordinates(self) -> tuple[tuple[int, int], ...]:
+        """Return fixed-organ tiles carrying the currently valid input signal."""
+        if not self.signal.valid:
+            return ()
+        coordinates = FixedOrgans.coordinates()
+        active = [coordinates[FixedOrgans.input_valid]]
+        active.extend(
+            coordinates[f"IN{bit}"]
+            for bit in range(INPUT_DATA_LINES)
+            if self.signal.value & (1 << bit)
+        )
+        return tuple(active)
+
 
 @dataclass(frozen=True)
 class OutputEvent:
@@ -52,6 +66,35 @@ class OutputEvent:
         return cls("null", None)
 
 
+@dataclass(frozen=True)
+class OutputSignal:
+    value: int = 0
+    valid: bool = False
+    null: bool = False
+
+    def __post_init__(self) -> None:
+        validate_byte(self.value)
+
+
+def read_output_signal(state: Any) -> OutputSignal:
+    """Read a byte/NULL signal from ordinary cells adjacent to fixed output organs."""
+    coordinates = FixedOrgans.coordinates()
+    occupied = {
+        ((state.x[slot] // 8) % 32, (state.y[slot] // 8) % 32)
+        for slot in state.active_slots()
+    }
+    value = sum(
+        (1 << bit)
+        for bit in range(OUTPUT_DATA_LINES)
+        if coordinates[f"OUT{bit}"] in occupied
+    )
+    return OutputSignal(
+        value=value,
+        valid=coordinates[FixedOrgans.output_valid] in occupied,
+        null=coordinates[FixedOrgans.output_null] in occupied,
+    )
+
+
 @dataclass
 class OutputEdgeDetector:
     previous_valid: bool = False
@@ -62,6 +105,9 @@ class OutputEdgeDetector:
             event.append(OutputEvent.null() if null else OutputEvent.byte(value))
         self.previous_valid = bool(valid)
         return event
+
+    def observe_signal(self, signal: OutputSignal) -> list[OutputEvent]:
+        return self.observe(valid=signal.valid, value=signal.value, null=signal.null)
 
 
 class FixedOrgans:

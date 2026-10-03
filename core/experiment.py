@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+import json
+from pathlib import Path
+from typing import Any, Iterable, Mapping
 
-from .io_bus import FixedOrgans, InputBus, OutputEdgeDetector, OutputEvent
+from .io_bus import FixedOrgans, InputBus, OutputEdgeDetector, OutputEvent, read_output_signal
 from .physics import PhysicsConfig, create_universe, step
 from .state import UniverseState
 
@@ -36,6 +38,27 @@ class ExperimentConfig:
             "teacher_repetitions": self.teacher_repetitions,
             "evaluation_timeout_generations": self.evaluation_timeout_generations,
         }
+
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, Any]) -> "ExperimentConfig":
+        values = {
+            name: mapping[name]
+            for name in (
+                "byte_hold_generations", "byte_gap_generations",
+                "teacher_delay_generations", "teacher_repetitions",
+                "evaluation_timeout_generations",
+            )
+            if mapping.get(name) is not None
+        }
+        return cls(**values)
+
+
+def load_experiment_config(path: str | Path) -> ExperimentConfig:
+    with Path(path).open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError("experiment config must be an object")
+    return ExperimentConfig.from_mapping(payload)
 
 
 @dataclass(frozen=True)
@@ -90,17 +113,23 @@ class IOExperiment:
         self.output_detector = OutputEdgeDetector()
         self.teacher_events: list[OutputEvent] = []
 
-    def _nearby_slots(self, anchor: tuple[int, int]) -> tuple[int, ...]:
+    def _nearby_slots(self, anchors: Iterable[tuple[int, int]]) -> tuple[int, ...]:
+        anchor_values = tuple(anchors)
+        if not anchor_values:
+            return ()
         result = []
         for slot in self.state.active_slots():
             x = (self.state.x[slot] // 8) % 32
             y = (self.state.y[slot] // 8) % 32
-            if _torus_distance(x, anchor[0]) <= 1 and _torus_distance(y, anchor[1]) <= 1:
+            if any(
+                _torus_distance(x, anchor[0]) <= 1 and _torus_distance(y, anchor[1]) <= 1
+                for anchor in anchor_values
+            ):
                 result.append(slot)
         return tuple(result)
 
-    def _advance(self, anchor: tuple[int, int] | None = None) -> None:
-        stimulus = self._nearby_slots(anchor) if anchor is not None else ()
+    def _advance(self, anchors: Iterable[tuple[int, int]] = ()) -> None:
+        stimulus = self._nearby_slots(anchors)
         step(self.state, stimulus_slots=stimulus)
 
     def drive_input(self, value: int, *, valid: bool = True) -> None:
@@ -112,17 +141,36 @@ class IOExperiment:
     def observe_output(self, *, valid: bool, value: int = 0, null: bool = False) -> list[OutputEvent]:
         return self.output_detector.observe(valid=valid, value=value, null=null)
 
+    def observe_output_state(self) -> list[OutputEvent]:
+        return self.output_detector.observe_signal(read_output_signal(self.state))
+
+    @staticmethod
+    def _teacher_coordinates(event: OutputEvent) -> tuple[tuple[int, int], ...]:
+        coordinates = FixedOrgans.coordinates()
+        result = [coordinates[FixedOrgans.output_valid]]
+        if event.kind == "byte":
+            result.extend(
+                coordinates[f"OUT{bit}"]
+                for bit in range(8)
+                if int(event.value or 0) & (1 << bit)
+            )
+        elif event.kind == "null":
+            result.append(coordinates[FixedOrgans.output_null])
+        else:
+            raise ValueError(f"unsupported teacher output event: {event.kind}")
+        return tuple(result)
+
     def teacher_output(self, event: OutputEvent) -> None:
         """Apply teacher-side stimulation without passing the event to autonomous scoring."""
         self.teacher_events.append(event)
-        self._advance(FixedOrgans.output_anchor)
+        self._advance(self._teacher_coordinates(event))
 
     def train_a_to_b_null(self, *, input_byte: int = 65, output_byte: int = 66) -> TrainingRecord:
         teacher_events: list[OutputEvent] = []
         for _ in range(self.experiment.teacher_repetitions):
             for _ in range(self.experiment.byte_hold_generations):
                 self.drive_input(input_byte)
-                self._advance(FixedOrgans.input_anchor)
+                self._advance(self.input_bus.signal_coordinates())
             for _ in range(self.experiment.byte_gap_generations):
                 self.release_input()
                 self._advance()
@@ -149,16 +197,20 @@ class IOExperiment:
     ) -> EvaluationResult:
         clone = _clone_state(self.state)
         clone_experiment = IOExperiment(clone, experiment=self.experiment)
+        observed: list[OutputEvent] = []
         for _ in range(self.experiment.byte_hold_generations):
             clone_experiment.drive_input(input_byte)
-            clone_experiment._advance(FixedOrgans.input_anchor)
+            clone_experiment._advance(clone_experiment.input_bus.signal_coordinates())
+            observed.extend(clone_experiment.observe_output_state())
         for _ in range(self.experiment.byte_gap_generations):
             clone_experiment.release_input()
             clone_experiment._advance()
+            observed.extend(clone_experiment.observe_output_state())
         for _ in range(self.experiment.evaluation_timeout_generations):
             clone_experiment.release_input()
             clone_experiment._advance()
-        actual = tuple()
+            observed.extend(clone_experiment.observe_output_state())
+        actual = tuple(observed)
         expected_tuple = tuple(expected)
         return EvaluationResult(
             expected_events=expected_tuple,
