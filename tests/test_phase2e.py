@@ -96,7 +96,7 @@ class Phase2EAgingTests(unittest.TestCase):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
         status = build_status(raw)
         self.assertTrue(status["phase2e_aging_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 6+ capability ladder (handoff only)")
+        self.assertEqual(status["next_phase"], "Phase 5 acceptance remediation (Phase 6+ blocked)")
         self.assertTrue(raw["features"]["aging"])
         self.assertTrue(raw["features"]["multi_universe_search"])
 

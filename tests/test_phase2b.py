@@ -133,7 +133,7 @@ class Phase2BLatentTests(unittest.TestCase):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
         status = build_status(raw)
         self.assertTrue(status["phase2b_latent_operators_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 6+ capability ladder (handoff only)")
+        self.assertEqual(status["next_phase"], "Phase 5 acceptance remediation (Phase 6+ blocked)")
 
         proc = subprocess.run(
             [sys.executable, "-m", "core.runner", "--config", "config/default.json", "--generations", "2", "--json"],
