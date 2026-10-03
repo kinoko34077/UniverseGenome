@@ -26,8 +26,8 @@ Future physical-rule changes must record affected REQ/SPEC IDs, old/new behavior
   saturating gain/decay parameters for compatible destination contact.
 - Headless metrics expose compatible bond contacts, while bounded destination
   pair resolution remains unchanged.
-- Phase 2B latent operators and all later phases remained deferred pending a
-  later child Issue.
+- Phase 2B latent operators and all later phases were deferred pending a later
+  child Issue.
 
 ## 2026-10-03 — Phase 2A accepted (#10 / PR #11)
 - Local `bond_strength:uint8` gain/decay, deterministic contact accounting,
@@ -39,4 +39,17 @@ Future physical-rule changes must record affected REQ/SPEC IDs, old/new behavior
   accepted 16-bit latent operator families with synchronous updates.
 - Successful local transmission contributes activity for HP recovery and is
   exposed in headless metrics.
-- Phase 2C fusion and later phases remain deferred pending #12 acceptance.
+- Phase 2C fusion and later phases were deferred pending #12 acceptance.
+
+## 2026-10-03 — Phase 2B accepted (#12 / PR #13)
+- Deterministic local masks, four latent operators, synchronous propagation,
+  activity recovery, snapshot continuation and headless transmission metrics
+  passed exact-head review, merge, and post-main CI on
+  `ee9a36d573707aeb9835c82f941beb526485c46f`.
+
+## 2026-10-03 — Phase 2C fusion implementation candidate (#14)
+- `core/physics.py` discovers bounded local exact 2×2 footprint covers and
+  commits deterministic upper-level cores with the specified HP, direction,
+  speed, age, bond, latent mixer and slot reuse behavior.
+- Phase 2D fragmentation and later phases remain deferred pending #14
+  acceptance.

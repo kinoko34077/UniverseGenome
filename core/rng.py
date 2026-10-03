@@ -1,4 +1,4 @@
-"""Counter-based deterministic event randomness through Phase 2B."""
+"""Counter-based deterministic event randomness through Phase 2C."""
 
 from typing import Tuple
 

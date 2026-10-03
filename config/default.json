@@ -37,13 +37,16 @@
     "bond_decay": 1,
     "bond_velocity_threshold": 8,
     "latent_operator": "masked_copy",
-    "rotate_amount": 4
+    "rotate_amount": 4,
+    "fusion_enabled": true,
+    "fusion_velocity_threshold": 8,
+    "fusion_bond_threshold": 32
   },
   "features": {
     "phase1_physics": true,
     "phase2a_bond_physics": true,
     "phase2b_latent_operators": true,
-    "fusion": false,
+    "fusion": true,
     "fragmentation": false,
     "latent_runtime": true,
     "multi_universe_search": false,

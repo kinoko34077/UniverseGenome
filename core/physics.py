@@ -1,8 +1,9 @@
-"""Deterministic single-universe physics through Phase 2B."""
+"""Deterministic single-universe physics through Phase 2C."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import combinations
 import time
 from typing import Any, Iterable, Mapping
 
@@ -15,6 +16,7 @@ from .state import (
     SHAPE_VERTICAL,
     UniverseState,
     degrade_structure,
+    structure_level,
     structure_shape,
 )
 
@@ -47,6 +49,9 @@ class PhysicsConfig:
     bond_velocity_threshold: int = 8
     latent_operator: str = "masked_copy"
     rotate_amount: int = 4
+    fusion_enabled: bool = False
+    fusion_velocity_threshold: int = 8
+    fusion_bond_threshold: int = 32
 
     def __post_init__(self) -> None:
         if self.logical_size != 32 or self.fixed_point_size != 256:
@@ -59,6 +64,7 @@ class PhysicsConfig:
             "noise_attempts", "hp_decay", "recovery_hp", "collision_threshold",
             "collision_damage", "structure_damage_threshold", "black_hole_grace",
             "bond_velocity_threshold",
+            "fusion_velocity_threshold",
         ):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
@@ -68,6 +74,8 @@ class PhysicsConfig:
             raise ValueError(f"unsupported latent operator: {self.latent_operator}")
         if not 0 <= self.rotate_amount < 16:
             raise ValueError("rotate_amount must be in 0..15")
+        if not 0 <= self.fusion_bond_threshold <= 0xFF:
+            raise ValueError("fusion_bond_threshold must fit uint8")
         if not 0 <= self.noise_spawn_hp <= 0xFF or not 0 <= self.recovery_hp <= 0xFF:
             raise ValueError("HP parameters must fit uint8")
         if not 0 <= self.noise_structure <= 0xFFFF:
@@ -101,6 +109,9 @@ class PhysicsConfig:
             bond_velocity_threshold=int(values.get("bond_velocity_threshold", 8)),
             latent_operator=str(values.get("latent_operator", "masked_copy")),
             rotate_amount=int(values.get("rotate_amount", 4)),
+            fusion_enabled=bool(values.get("fusion_enabled", False)),
+            fusion_velocity_threshold=int(values.get("fusion_velocity_threshold", 8)),
+            fusion_bond_threshold=int(values.get("fusion_bond_threshold", 32)),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -124,6 +135,9 @@ class PhysicsConfig:
             "bond_velocity_threshold": self.bond_velocity_threshold,
             "latent_operator": self.latent_operator,
             "rotate_amount": self.rotate_amount,
+            "fusion_enabled": self.fusion_enabled,
+            "fusion_velocity_threshold": self.fusion_velocity_threshold,
+            "fusion_bond_threshold": self.fusion_bond_threshold,
         }
 
 
@@ -135,6 +149,7 @@ class StepMetrics:
     collision_pair_evaluations: int
     bond_contact_count: int
     latent_transmission_count: int
+    fusion_count: int
     noise_spawn_count: int
     generations_per_second: float
 
@@ -220,6 +235,19 @@ def apply_latent_operator(
     else:
         result = destination & (source | (~mask & 0xFFFF))
     return result & 0xFFFF
+
+
+def rotate_left16(value: int, amount: int) -> int:
+    amount %= 16
+    value &= 0xFFFF
+    return ((value << amount) | (value >> ((16 - amount) % 16))) & 0xFFFF
+
+
+def mix_fusion_latent(latents: Iterable[int]) -> int:
+    accumulator = 0
+    for index, latent in enumerate(latents):
+        accumulator ^= rotate_left16(int(latent), (index % 4) * 4)
+    return accumulator & 0xFFFF
 
 
 def destination_footprint(structure: int, x: int, y: int) -> set[tuple[int, int]]:
@@ -335,6 +363,103 @@ def _transmit_latent(
     return len(selected_pairs), activity_slots
 
 
+def _fusion_candidates(
+    state: UniverseState,
+    occupancy: dict[tuple[int, int], list[int]],
+    config: PhysicsConfig,
+) -> list[tuple[tuple[int, int], tuple[int, ...]]]:
+    """Find deterministic local exact covers of 2x2 destination regions."""
+    candidates_by_anchor: list[tuple[tuple[int, int], tuple[int, ...]]] = []
+    anchors = {
+        ((tile_x + dx) % LOGICAL_SIZE, (tile_y + dy) % LOGICAL_SIZE)
+        for tile_x, tile_y in occupancy
+        for dx in (0, -1)
+        for dy in (0, -1)
+    }
+    for anchor_x, anchor_y in sorted(anchors, key=lambda item: (item[1], item[0])):
+            region = {
+                (anchor_x, anchor_y),
+                ((anchor_x + 1) % LOGICAL_SIZE, anchor_y),
+                (anchor_x, (anchor_y + 1) % LOGICAL_SIZE),
+                ((anchor_x + 1) % LOGICAL_SIZE, (anchor_y + 1) % LOGICAL_SIZE),
+            }
+            local_slots = sorted({slot for tile in region for slot in occupancy.get(tile, ())})
+            # A fusion group has at most four non-overlapping footprints. Keep
+            # candidate enumeration a local constant even under dense contact.
+            local_slots = local_slots[:8]
+            for size in range(2, min(4, len(local_slots)) + 1):
+                for group in combinations(local_slots, size):
+                    footprints = [destination_footprint(state.structure[slot], state.x[slot], state.y[slot]) for slot in group]
+                    if any(not footprint or not footprint.issubset(region) for footprint in footprints):
+                        continue
+                    covered: set[tuple[int, int]] = set()
+                    overlap = False
+                    for footprint in footprints:
+                        if covered.intersection(footprint):
+                            overlap = True
+                            break
+                        covered.update(footprint)
+                    if overlap:
+                        continue
+                    if covered != region:
+                        continue
+                    levels = {structure_level(state.structure[slot]) for slot in group}
+                    if len(levels) != 1 or max(levels) >= 7:
+                        continue
+                    if any(state.bond_strength[slot] < config.fusion_bond_threshold for slot in group):
+                        continue
+                    if any(
+                        relative_velocity(
+                            state.direction[first], state.speed_code[first],
+                            state.direction[second], state.speed_code[second],
+                        ) > config.fusion_velocity_threshold
+                        for first, second in combinations(group, 2)
+                    ):
+                        continue
+                    candidates_by_anchor.append(((anchor_x, anchor_y), group))
+    return candidates_by_anchor
+
+
+def _fuse_groups(
+    state: UniverseState,
+    config: PhysicsConfig,
+    occupancy: dict[tuple[int, int], list[int]],
+) -> tuple[int, set[int]]:
+    fused_slots: set[int] = set()
+    fusion_count = 0
+    for (anchor_x, anchor_y), group in _fusion_candidates(state, occupancy, config):
+        if any(slot in fused_slots or state.lifecycle[slot] != Lifecycle.ACTIVE for slot in group):
+            continue
+        level = structure_level(state.structure[group[0]])
+        result_slot = min(group)
+        ordered = tuple(sorted(group, key=lambda slot: (tile_coordinate(state.y[slot]), tile_coordinate(state.x[slot]), slot)))
+        hp_values = {slot: state.hp[slot] for slot in group}
+        best_slot = min(group, key=lambda slot: (-hp_values[slot], slot))
+        best_direction = state.direction[best_slot]
+        total_hp = min(0xFF, sum(hp_values.values()))
+        latent = mix_fusion_latent(state.latent[slot] for slot in ordered)
+        speed_code = min(state.speed_code[slot] for slot in group)
+        result_structure = SHAPE_SINGLE << ((level + 1) * 2)
+
+        for slot in group:
+            if slot != result_slot:
+                state.free(slot)
+        state.lifecycle[result_slot] = int(Lifecycle.ACTIVE)
+        state.x[result_slot] = anchor_x * 8
+        state.y[result_slot] = anchor_y * 8
+        state.structure[result_slot] = result_structure & 0xFFFF
+        state.latent[result_slot] = latent
+        state.hp[result_slot] = total_hp
+        state.bond_strength[result_slot] = 0
+        state.direction[result_slot] = best_direction
+        state.speed_code[result_slot] = speed_code
+        state.age[result_slot] = 0
+        state.black_hole_timer[result_slot] = 0
+        fused_slots.update(group)
+        fusion_count += 1
+    return fusion_count, fused_slots
+
+
 def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) -> None:
     state.lifecycle[slot] = int(Lifecycle.BLACK_HOLE)
     state.black_hole_timer[slot] = config.black_hole_grace
@@ -439,8 +564,12 @@ def step(
         {pair: pair_addresses[pair] for pair in compatible_pairs},
         generation,
     )
+    if resolved.fusion_enabled:
+        fusion_count, fused_slots = _fuse_groups(state, resolved, occupancy)
+    else:
+        fusion_count, fused_slots = 0, set()
     for slot in active:
-        if state.lifecycle[slot] != Lifecycle.ACTIVE:
+        if state.lifecycle[slot] != Lifecycle.ACTIVE or slot in fused_slots:
             continue
         if slot in stimulated and slot not in recovered_slots:
             state.hp[slot] = min(0xFF, state.hp[slot] + resolved.recovery_hp)
@@ -460,6 +589,7 @@ def step(
         collision_pair_evaluations=collision_count,
         bond_contact_count=len(compatible_pairs),
         latent_transmission_count=latent_transmission_count,
+        fusion_count=fusion_count,
         noise_spawn_count=noise_spawn_count,
         generations_per_second=1.0 / elapsed,
     )
