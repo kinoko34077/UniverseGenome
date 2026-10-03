@@ -38,6 +38,6 @@ An implementation default does not promote `accepted-default` or `parameterized`
 ## Current implementation frontier
 
 Phase 0: repository/specification scaffold.  
-Phase 1 next: deterministic single-universe minimal physics.
+Phase 1 is accepted; Phase 2A is the active bounded local contact/bond implementation.
 
 See `docs/ROADMAP.md`.

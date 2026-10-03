@@ -15,7 +15,7 @@ Deliverables:
 - automated smoke verification
 - README routing
 
-## Phase 1 — Minimal deterministic universe (implementation in progress; #8)
+## Phase 1 — Minimal deterministic universe (accepted on `main`; #8 / PR #9)
 - 32×32 torus
 - 256×256 fixed-point position
 - fixed slot pool
@@ -32,10 +32,10 @@ Deliverables:
 - headless performance counters
 
 ## Phase 2 — Local learning physics
-2A contact/bond  
-2B four latent operators  
-2C fusion  
-2D fragmentation  
+2A contact/bond (in progress; #10)
+2B four latent operators
+2C fusion
+2D fragmentation
 2E aging
 
 ## Phase 3 — 128-universe runtime and observation GUI
@@ -47,5 +47,5 @@ Deliverables:
 ## Phase 5 — Universe-genome optimization
 fitness/growth separation, pruning, mutation, steady-state evolution, multi-seed escalation.
 
-## Phase 6+ — Capability ladder
+## Phase 6+ — Capability ladder (handoff only after Phase 5)
 multiple mappings, sequence discrimination, multi-event output, forgetting/relearning, robustness, generalization, multi-byte/raw UTF-8 experiments.

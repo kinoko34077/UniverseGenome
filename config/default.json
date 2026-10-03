@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "UniverseGenome",
-  "phase": 1,
+  "phase": 2,
   "world": {
     "logical_size": 32,
     "subdivisions_per_tile": 8,
@@ -32,10 +32,14 @@
     "collision_damage": 8,
     "latent_damage_mask": 1,
     "structure_damage_threshold": 16,
-    "black_hole_grace": 2
+    "black_hole_grace": 2,
+    "bond_gain": 4,
+    "bond_decay": 1,
+    "bond_velocity_threshold": 8
   },
   "features": {
     "phase1_physics": true,
+    "phase2a_bond_physics": true,
     "fusion": false,
     "fragmentation": false,
     "latent_runtime": false,
