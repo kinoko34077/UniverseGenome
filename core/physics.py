@@ -194,6 +194,18 @@ class StepMetrics:
     noise_spawn_count: int
     generations_per_second: float
 
+    @property
+    def activity_cost(self) -> int:
+        """Count bounded physical activity events for fitness accounting."""
+        return (
+            self.collision_count
+            + self.bond_contact_count
+            + self.latent_transmission_count
+            + self.fusion_count
+            + self.fragmentation_count
+            + self.noise_spawn_count
+        )
+
 
 def create_universe(seed: int = 0, config: PhysicsConfig | Mapping[str, Any] | None = None) -> UniverseState:
     if config is None:

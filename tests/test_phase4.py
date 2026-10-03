@@ -8,12 +8,13 @@ import unittest
 from core import experiment as experiment_module
 from core.experiment import (
     ExperimentConfig,
+    EvaluationResult,
     FixedOrgans,
     IOExperiment,
     compare_baseline_trained,
 )
 from core.io_bus import InputBus, OutputEdgeDetector, OutputEvent, read_output_signal, validate_byte
-from core.physics import PhysicsConfig, create_universe, destination_footprint, step
+from core.physics import PhysicsConfig, StepMetrics, create_universe, destination_footprint, step
 from core.state import SHAPE_HORIZONTAL
 from core.runner import build_status, load_config
 
@@ -192,6 +193,52 @@ class Phase4IOTests(unittest.TestCase):
             teacher_repetitions=1,
             evaluation_timeout_generations=1024,
         ))
+
+    def test_p4_013_evaluation_result_reports_named_observables(self):
+        metrics = StepMetrics(
+            generation=1,
+            active_cells=2,
+            collision_count=1,
+            collision_pair_evaluations=1,
+            bond_contact_count=2,
+            latent_transmission_count=3,
+            fusion_count=4,
+            fragmentation_count=5,
+            noise_spawn_count=6,
+            generations_per_second=1.0,
+        )
+        self.assertEqual(metrics.activity_cost, 21)
+
+        result = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(OutputEvent.byte(65), OutputEvent.byte(66)),
+            success=False,
+            clone_generation=8,
+            event_generations=(3, 5),
+            evaluation_generations=8,
+            activity_cost=11,
+            timed_out=True,
+        )
+
+        self.assertEqual(result.wrong_output_count, 1)
+        self.assertEqual(result.response_latency, 5)
+        self.assertEqual(result.activity_cost, 11)
+        self.assertTrue(result.timed_out)
+
+    def test_p4_014_timeout_and_evaluation_cadence_are_explicit(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            evaluation_timeout_generations=3,
+        )
+        result = IOExperiment(
+            create_universe(seed=96, config=experiment_physics_config()),
+            experiment=protocol,
+        ).evaluate_autonomous(input_byte=65, expected=(OutputEvent.byte(66),))
+
+        self.assertEqual(result.evaluation_generations, 3)
+        self.assertTrue(result.timed_out)
+        self.assertEqual(result.response_latency, 3)
 
 
 if __name__ == "__main__":

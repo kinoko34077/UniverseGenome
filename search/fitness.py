@@ -1,4 +1,4 @@
-"""Phase 5 lexicographic absolute-fitness comparison."""
+"""Phase 5 normalized lexicographic absolute-fitness comparison."""
 
 from __future__ import annotations
 
@@ -15,13 +15,13 @@ FITNESS_ORDER = (
 
 @dataclass(frozen=True)
 class Fitness:
-    success: int = 0
-    wrong_outputs: int = 0
-    timeouts: int = 0
-    response_latency: int = 0
-    activity_cost: int = 0
-    retention: int = 0
-    noise_robustness: int = 0
+    success: float = 0.0
+    wrong_outputs: float = 0.0
+    timeouts: float = 0.0
+    response_latency: float = 0.0
+    activity_cost: float = 0.0
+    retention: float = 0.0
+    noise_robustness: float = 0.0
 
     def __post_init__(self) -> None:
         if any(value < 0 for value in (
@@ -30,18 +30,16 @@ class Fitness:
         )):
             raise ValueError("fitness values must be non-negative")
 
-    def sort_key(self) -> tuple[int, int, int, int, int, int, int]:
+    def sort_key(self) -> tuple[float, float, float, float, float]:
         return (
             -self.success,
             self.wrong_outputs,
             self.timeouts,
             self.response_latency,
             self.activity_cost,
-            -self.retention,
-            -self.noise_robustness,
         )
 
-    def to_dict(self) -> dict[str, int]:
+    def to_dict(self) -> dict[str, float]:
         return {
             "success": self.success,
             "wrong_outputs": self.wrong_outputs,
@@ -53,8 +51,8 @@ class Fitness:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, int]) -> "Fitness":
-        return cls(**{name: int(payload.get(name, 0)) for name in (
+    def from_dict(cls, payload: dict[str, int | float]) -> "Fitness":
+        return cls(**{name: float(payload.get(name, 0)) for name in (
             "success", "wrong_outputs", "timeouts", "response_latency",
             "activity_cost", "retention", "noise_robustness",
         )})

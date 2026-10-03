@@ -83,7 +83,7 @@ def prune_candidates(records: list[object]) -> set[int]:
         )
         # Keep a zero-median category able to discard candidates with no
         # observed growth while retaining the per-window scale.
-        thresholds = tuple(max(1, int(value) >> 1) for value in medians)
+        thresholds = tuple(int(value) >> 1 for value in medians)
         for record in complete_records:
             recent_windows = recent_by_record[record.index]
             if record.index in protected:

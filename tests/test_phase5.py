@@ -4,13 +4,20 @@ import json
 from pathlib import Path
 import unittest
 
-from core.experiment import ExperimentConfig
+from core.experiment import (
+    EvaluationResult,
+    ExperimentConfig,
+    LearningMeasurement,
+    SeedMeasurement,
+)
+from core.io_bus import OutputEvent
 from core.population import run_population_headless
 from core.physics import PhysicsConfig, create_universe
 from core.runner import build_status, load_config
 from search.evolution import (
     CandidateSlot,
     SteadyStateOptimizer,
+    record_candidate_evaluation,
     evaluate_candidate,
     optimizer_snapshot,
     restore_optimizer_snapshot,
@@ -43,6 +50,224 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(compare_fitness(winner, winner), 0)
         self.assertLess(Fitness(1, 0, 0, 1, 1).sort_key(), Fitness(1, 0, 0, 2, 1).sort_key())
 
+    def test_p5_015_fitness_is_invariant_to_equivalent_seed_counts(self):
+        expected = (OutputEvent.byte(66), OutputEvent.null())
+        result = EvaluationResult(
+            expected_events=expected,
+            autonomous_events=expected,
+            success=True,
+            clone_generation=99,
+            event_generations=(4, 6),
+            evaluation_generations=12,
+            activity_cost=8,
+            timed_out=False,
+        )
+
+        def measurement(repetitions):
+            per_seed = tuple(
+                SeedMeasurement(
+                    seed=index,
+                    baseline=result,
+                    trained=result,
+                    baseline_no_input=result,
+                    trained_no_input=result,
+                    baseline_alternate=result,
+                    trained_alternate=result,
+                )
+                for index in range(repetitions)
+            )
+            return LearningMeasurement(
+                seed_count=repetitions,
+                baseline_successes=repetitions,
+                trained_successes=repetitions,
+                baseline_no_input_clean=repetitions,
+                trained_no_input_clean=repetitions,
+                baseline_alternate_input_clean=repetitions,
+                trained_alternate_input_clean=repetitions,
+                criterion="test",
+                learning_claim=False,
+                per_seed=per_seed,
+            )
+
+        self.assertEqual(
+            SteadyStateOptimizer._fitness_from_measurement(measurement(4)),
+            SteadyStateOptimizer._fitness_from_measurement(measurement(8)),
+        )
+
+    def test_p5_016_fitness_uses_named_event_metrics_and_five_field_order(self):
+        result = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(OutputEvent.byte(65), OutputEvent.byte(64), OutputEvent.byte(66)),
+            success=False,
+            clone_generation=99,
+            event_generations=(2, 4, 5),
+            evaluation_generations=12,
+            activity_cost=17,
+            timed_out=True,
+        )
+        measurement = LearningMeasurement(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=0,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=0,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(SeedMeasurement(
+                seed=1,
+                baseline=result,
+                trained=result,
+                baseline_no_input=result,
+                trained_no_input=result,
+                baseline_alternate=result,
+                trained_alternate=result,
+            ),),
+        )
+
+        fitness = SteadyStateOptimizer._fitness_from_measurement(measurement)
+        self.assertEqual(fitness.wrong_outputs, 2.0)
+        self.assertEqual(fitness.timeouts, 1.0)
+        self.assertEqual(fitness.response_latency, 5.0)
+        self.assertEqual(fitness.activity_cost, 17.0)
+        self.assertEqual(
+            Fitness(success=1, retention=0, noise_robustness=0).sort_key(),
+            Fitness(success=1, retention=1, noise_robustness=1).sort_key(),
+        )
+
+    def test_p5_017_initial_population_has_eight_matched_parameter_genomes(self):
+        genomes = UniverseGenome.initial_population()
+        self.assertEqual(len(genomes), 8)
+        self.assertEqual(len({tuple(genome.to_dict().items()) for genome in genomes}), 8)
+
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=101)
+        first_category = [
+            (slot.genome, slot.seed)
+            for slot in optimizer.candidates
+            if slot.category == "masked_copy"
+        ]
+        self.assertEqual(len(first_category), 32)
+        for category in ("masked_xor", "rotate_copy", "masked_and"):
+            self.assertEqual(
+                first_category,
+                [(slot.genome, slot.seed) for slot in optimizer.candidates if slot.category == category],
+            )
+
+    def test_p5_018_seed_escalation_preserves_genome_and_sample_prefix(self):
+        parent = CandidateSlot(
+            index=0,
+            category="masked_copy",
+            genome=UniverseGenome.default(),
+            seed=41,
+            seed_count=4,
+            fitness=Fitness(),
+            growth_windows=(),
+        )
+        optimizer = SteadyStateOptimizer()
+        expanded = optimizer.escalate_seed_evidence(parent=parent, target_index=12)
+
+        self.assertEqual(expanded.index, 12)
+        self.assertEqual(expanded.category, parent.category)
+        self.assertEqual(expanded.genome, parent.genome)
+        self.assertEqual(expanded.seed, parent.seed)
+        self.assertEqual(parent.seeds, (41, 42, 43, 44))
+        self.assertEqual(expanded.seeds, (41, 42, 43, 44, 45, 46, 47, 48))
+
+    def test_p5_019_mutation_child_is_separate_from_seed_escalation(self):
+        parent = CandidateSlot(
+            index=0,
+            category="masked_copy",
+            genome=UniverseGenome.default(),
+            seed=41,
+            seed_count=8,
+            fitness=Fitness(),
+            growth_windows=(),
+        )
+        optimizer = SteadyStateOptimizer()
+        child = optimizer.replace_free_slot(
+            free_index=12,
+            parent=parent,
+            direction=1,
+            field="hp_decay",
+        )
+
+        self.assertNotEqual(child.genome, parent.genome)
+        self.assertEqual(child.seed_count, 4)
+        self.assertEqual(child.seed, 49)
+        self.assertEqual(child.last_mutation_field, "hp_decay")
+        self.assertEqual(parent.seed_count, 8)
+
+    def test_p5_020_integrated_queue_escalates_same_genome_before_mutation(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=104,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        optimizer.step()
+        queued_before = {
+            slot.index: slot
+            for slot in optimizer.candidates
+            if slot.index in optimizer.scheduler["escalation_queue"]
+        }
+
+        summary = optimizer.step()
+        self.assertEqual(
+            {item["reason"] for item in summary["replacements"]},
+            {"seed_escalation"},
+        )
+        for item in summary["replacements"]:
+            previous = queued_before[item["index"]]
+            current = optimizer.candidates[item["index"]]
+            self.assertEqual(current.genome, previous.genome)
+            self.assertEqual(current.category, previous.category)
+            self.assertEqual(current.seed, previous.seed)
+            self.assertEqual(current.seed_count, 8)
+            self.assertIsNone(current.last_mutation_field)
+
+    def test_p5_021_growth_windows_follow_128_physical_generations(self):
+        candidate = CandidateSlot(
+            index=0,
+            category="masked_copy",
+            genome=UniverseGenome.default(),
+            seed=0,
+            fitness=Fitness(),
+            growth_windows=(),
+        )
+        candidate = record_candidate_evaluation(candidate, Fitness(success=1), 127)
+        self.assertEqual(candidate.physical_generations, 127)
+        self.assertEqual(candidate.growth_windows, ())
+
+        candidate = record_candidate_evaluation(candidate, Fitness(success=1), 1)
+        self.assertEqual(candidate.physical_generations, 128)
+        self.assertEqual(len(candidate.growth_windows), 1)
+
+        for _ in range(3):
+            candidate = record_candidate_evaluation(candidate, Fitness(success=1), 128)
+        self.assertEqual(candidate.physical_generations, 512)
+        self.assertEqual(len(candidate.growth_windows), 4)
+
+    def test_p5_022_zero_median_growth_does_not_prune(self):
+        records = [
+            CandidateSlot(
+                index=index,
+                category="masked_copy",
+                genome=UniverseGenome.default(),
+                seed=index,
+                fitness=Fitness(),
+                growth_windows=(0, 0, 0, 0),
+            )
+            for index in range(8)
+        ]
+        self.assertEqual(prune_candidates(records), set())
+
     def test_p5_003_growth_flags_and_history_are_bounded(self):
         before = Fitness(0, 4, 3, 8, 10)
         after = Fitness(1, 3, 2, 7, 9)
@@ -57,7 +282,7 @@ class Phase5OptimizerTests(unittest.TestCase):
 
     def test_p5_004_pruning_protects_absolute_top_eighth(self):
         records = [
-            CandidateSlot(index=index, category="masked_copy", genome=UniverseGenome.default(), seed=index, fitness=Fitness(1 if index == 0 else 0, 0, 0, index, index), growth_windows=((4, 4, 4, 4) if index in (0, 4, 5, 6) else (0, 0, 0, 0)))
+            CandidateSlot(index=index, category="masked_copy", genome=UniverseGenome.default(), seed=index, fitness=Fitness(1 if index == 0 else 0, 0, 0, index, index), growth_windows=((0x0F, 0x0F, 0x0F, 0x0F) if index in (0, 4, 5, 6) else (0, 0, 0, 0)))
             for index in range(8)
         ]
         self.assertIn(0, protected_indices(records))
@@ -71,7 +296,8 @@ class Phase5OptimizerTests(unittest.TestCase):
         replacement = optimizer.replace_free_slot(free_index=12, parent=parent, direction=1)
         self.assertEqual(replacement.index, 12)
         self.assertEqual(replacement.category, parent.category)
-        self.assertEqual(replacement.seed, 42)
+        self.assertEqual(replacement.seed, 45)
+        self.assertEqual(replacement.seed_count, 4)
         self.assertNotIn("seed", replacement.genome.to_dict())
 
     def test_p5_006_status_and_flags(self):
@@ -154,7 +380,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         optimizer = SteadyStateOptimizer()
         replacement = parent
         for expected_count in (8, 16, 32, 32):
-            replacement = optimizer.replace_free_slot(free_index=12, parent=replacement, direction=1)
+            replacement = optimizer.escalate_seed_evidence(parent=replacement, target_index=12)
             self.assertEqual(replacement.seed_count, expected_count)
 
     def test_p5_010_headless_output_contains_real_measurement_and_replacement_trace(self):
@@ -172,7 +398,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
         self.assertEqual(result["candidate_measurement"]["seed_count"], 2)
         self.assertFalse(result["phase4_learning_claim"])
-        self.assertEqual(result["replacement_seed_counts"], [8, 16, 32, 32])
+        self.assertEqual(result["replacement_seed_counts"], [4, 8, 16, 32])
 
     def test_p2g_optimizer_snapshot_roundtrip_preserves_bounded_state(self):
         parent = CandidateSlot(
@@ -261,7 +487,14 @@ class Phase5OptimizerTests(unittest.TestCase):
                          {"masked_copy": 32, "masked_xor": 32, "rotate_copy": 32, "masked_and": 32})
         for category in ("masked_copy", "masked_xor", "rotate_copy", "masked_and"):
             slot = next(candidate for candidate in optimizer.candidates if candidate.category == category)
-            self.assertEqual(slot.universe_snapshot["config"]["latent_operator"], category)
+            self.assertEqual(
+                SteadyStateOptimizer._effective_config(
+                    slot.genome,
+                    category,
+                    optimizer.base_config,
+                ).latent_operator,
+                category,
+            )
 
         summary = optimizer.step()
 
@@ -275,7 +508,6 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(summary["cross_category_selection"], False)
         self.assertGreaterEqual(summary["replacement_count"], 4)
         self.assertGreaterEqual(len({slot.last_mutation_field for slot in optimizer.candidates if slot.last_mutation_field}), 2)
-        self.assertTrue(all(slot.universe_snapshot is not None for slot in optimizer.candidates))
 
     def test_p5_012_integrated_snapshot_restores_deterministic_continuation(self):
         protocol = ExperimentConfig(
@@ -301,7 +533,33 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIn("experiment", payload)
         self.assertIn("scheduler", payload)
         self.assertEqual(len(payload["candidates"]), 128)
-        self.assertTrue(all("universe_snapshot" in candidate for candidate in payload["candidates"]))
+        self.assertEqual(payload["format_version"], 3)
+        self.assertTrue(all("universe_snapshot" not in candidate for candidate in payload["candidates"]))
+        self.assertTrue(all("physical_generations" in candidate for candidate in payload["candidates"]))
+
+    def test_p5_023_headless_evidence_exposes_authoritative_metrics(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        result = run_optimizer_headless(
+            seeds=(3, 4),
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+            iterations=4,
+        )
+        self.assertEqual(result["replacement_seed_counts"], [4, 8, 16, 32])
+        per_seed = result["candidate_measurement"]["per_seed"]
+        self.assertTrue(per_seed)
+        self.assertTrue({
+            "wrong_output_count",
+            "timed_out",
+            "response_latency",
+            "activity_cost",
+        } <= set(per_seed[0]))
 
     def test_p5_013_headless_reports_integrated_multi_field_search(self):
         protocol = ExperimentConfig(
@@ -315,10 +573,10 @@ class Phase5OptimizerTests(unittest.TestCase):
             seeds=(3, 4),
             base_config=PhysicsConfig(max_cells=8),
             experiment=protocol,
-            iterations=3,
+            iterations=4,
         )
         self.assertEqual(result["population_size"], 128)
-        self.assertEqual(result["optimizer_iterations"], 3)
+        self.assertEqual(result["optimizer_iterations"], 4)
         self.assertEqual(result["category_counts"], {
             "masked_copy": 32,
             "masked_xor": 32,
@@ -328,9 +586,12 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertGreaterEqual(result["replacement_count"], 4)
         self.assertGreaterEqual(len(result["mutation_fields"]), 2)
         self.assertEqual(result["seed_escalation"], [8, 16, 32, 32])
-        self.assertEqual(result["integrated_seed_counts"], [8] * 4 + [16] * 4 + [32] * 4)
+        self.assertEqual(
+            result["integrated_seed_counts"],
+            [4] * 4 + [8] * 4 + [16] * 4 + [32] * 4,
+        )
 
-    def test_p5_014_integrated_loop_reaches_growth_pruning(self):
+    def test_p5_014_integrated_loop_does_not_prune_before_physical_window(self):
         protocol = ExperimentConfig(
             byte_hold_generations=0,
             byte_gap_generations=0,
@@ -344,8 +605,9 @@ class Phase5OptimizerTests(unittest.TestCase):
             experiment=protocol,
         )
         summary = optimizer.run(iterations=5)
-        self.assertGreater(summary["pruned_count"], 0)
-        self.assertTrue(any(item["reason"] == "growth_pruned" for item in summary["replacements"]))
+        self.assertEqual(summary["pruned_count"], 0)
+        self.assertFalse(any(item["reason"] == "growth_pruned" for item in summary["replacements"]))
+        self.assertTrue(all(not slot.growth_windows for slot in optimizer.candidates))
 
 
 if __name__ == "__main__":

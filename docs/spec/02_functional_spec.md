@@ -253,7 +253,8 @@ Per category:
 - 4 seeds each
 - 32 slots total
 
-Matched genome/seed positions should be used across categories when possible.
+The eight parameter genomes are deterministic and distinct. Matched
+genome/seed positions should be used across categories when possible.
 
 ---
 
@@ -291,6 +292,14 @@ Compare in order:
 5. lower activity cost
 
 Do not use internal structural abundance as direct success reward.
+
+Optimizer fitness stores normalized rates for event/count fields and means for
+latency/activity so candidates with 4, 8, 16, or 32 evidence seeds remain
+comparable. Retention and alternate-input noise robustness are growth-only
+dimensions, not additional absolute-fitness tie-breakers. Activity cost sums
+the per-generation physics activity-event count over an evaluation: collisions,
+bond contacts, latent transmissions, fusions, fragmentations, and noise
+spawns.
 
 ---
 
@@ -396,22 +405,23 @@ Seed escalation for promising genome:
 
 The implemented steady-state boundary maintains 128 candidate slots as four
 category-local groups of 32. Each optimizer step evaluates every slot through
-the real Phase 4 baseline/trained measurement, derives absolute fitness and an
-8-bit growth window, selects parents only within the same category, and
-replaces an actual category slot with a mutated child. The scheduler first
-continues queued seed escalation and otherwise uses category-local pruning or
-the weakest non-protected slot for bounded exploration. Mutation fields are
-selected from the complete genome field set rather than being hard-coded to a
-single parameter.
+the real Phase 4 baseline/trained measurement and advances each candidate's
+physical evaluation clock. An 8-bit growth window is appended only at each
+128-generation boundary. Parents are selected only within the same category,
+and an actual category slot is replaced either by a same-genome seed-evidence
+expansion or by a separate mutated child. Mutation fields are selected from
+the complete genome field set rather than being hard-coded to a single
+parameter.
 
 An integrated optimizer snapshot includes the effective `PhysicsConfig`,
-`ExperimentConfig`, all 128 candidate records and universe snapshots, the
-generation, and mutation/replacement scheduler state. Restoring it and
+`ExperimentConfig`, all 128 authoritative candidate records, physical growth
+clocks/references, the generation, and mutation/replacement scheduler state.
+It does not serialize reconstructed universe snapshots. Restoring it and
 continuing the same protocol is deterministic.
 
 The headless runner uses one integrated step and an 8-generation per-candidate
 Phase 4 timeout by default as an explicit bounded-performance budget.
-`--optimizer-iterations 3` runs the complete 4→8→16→32 seed-escalation
+`--optimizer-iterations 4` runs the complete 4→8→16→32 seed-evidence
 progression, while `--optimizer-timeout-generations` raises or lowers the
 per-candidate evaluation budget. The result reports evaluated-slot counts,
 replacement counts, mutation fields, seed counts, and generations per second.
