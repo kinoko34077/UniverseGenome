@@ -53,7 +53,7 @@
     "latent_runtime": true,
     "multi_universe_runtime": true,
     "multi_universe_search": false,
-    "io_learning": false,
+    "io_learning": true,
     "evolution": false,
     "aging": true
   }

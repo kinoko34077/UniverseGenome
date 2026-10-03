@@ -128,7 +128,7 @@ class Phase2CFusionTests(unittest.TestCase):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
         status = build_status(raw)
         self.assertTrue(status["phase2c_fusion_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 4 I/O learning")
+        self.assertEqual(status["next_phase"], "Phase 5 UniverseGenome optimizer")
 
         proc = subprocess.run(
             [sys.executable, "-m", "core.runner", "--config", "config/default.json", "--generations", "2", "--json"],

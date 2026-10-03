@@ -152,4 +152,26 @@ observation clones cannot mutate authoritative slots.
 Population status/summary runs without the GUI, while the 16×8 overview,
 detail modes, required controls, and external-clock declaration are exposed.
 
+## Phase 4 acceptance tests
+
+### TEST-P4-001 Raw bus and fixed organs
+
+Bytes 0..255, independent VALID, fixed input/output organs, and recorded
+non-cell coordinates are representable and deterministic.
+
+### TEST-P4-002 Edge-based output events
+
+Only VALID rising edges emit bytes or NULL; continuous HIGH does not repeat an
+event, and LOW→HIGH emits a new event.
+
+### TEST-P4-003 Teacher exclusion and clone evaluation
+
+Teacher B/NULL stimulation is kept out of autonomous output scoring, and
+evaluation on a clone leaves the authoritative training state unchanged.
+
+### TEST-P4-004 Multi-seed learning measurement
+
+Baseline and trained A→B→NULL measurements run across multiple seeds with a
+predeclared criterion; a failed criterion is recorded as failure, not success.
+
 ---
