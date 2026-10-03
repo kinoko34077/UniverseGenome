@@ -40,11 +40,11 @@
 - Produces `EvaluationResult.event_generations`, `evaluation_generations`, `timed_out`, `wrong_output_count`, `response_latency`, and `activity_cost`.
 - Produces `LearningMeasurement.evaluation_generations` for optimizer cadence.
 
-- [ ] **Step 1: Write failing tests** for wrong-event counting, timeout based on missing expected events, first relevant response latency, and activity accumulation from `StepMetrics` rather than output-event count.
-- [ ] **Step 2: Run `python -m unittest tests.test_phase4 -v` and confirm the new assertions fail for the current proxy metrics.**
-- [ ] **Step 3: Implement explicit event-generation bookkeeping and a named `StepMetrics.activity_cost` metric.**
-- [ ] **Step 4: Run the focused Phase 4 tests and confirm they pass.**
-- [ ] **Step 5: Commit `fix: expose authoritative phase4 evaluation metrics`.**
+- [x] **Step 1: Write failing tests** for wrong-event counting, timeout based on missing expected events, first relevant response latency, and activity accumulation from `StepMetrics` rather than output-event count.
+- [x] **Step 2: Run `python -m unittest tests.test_phase4 -v` and confirm the new assertions fail for the current proxy metrics.**
+- [x] **Step 3: Implement explicit event-generation bookkeeping and a named `StepMetrics.activity_cost` metric.**
+- [x] **Step 4: Run the focused Phase 4 tests and confirm they pass.**
+- [x] **Step 5: Commit `fix: expose authoritative phase4 evaluation metrics`.**
 
 ### Task 2: Normalize Fitness and restore canonical absolute ordering
 
@@ -57,11 +57,11 @@
 - `Fitness` stores comparable normalized rates/means; `sort_key()` returns only the five canonical absolute fields.
 - `_fitness_from_measurement()` divides count metrics by `measurement.seed_count` and consumes the explicit Phase 4 observables.
 
-- [ ] **Step 1: Write failing tests** for rate invariance across seed counts, event-based wrong outputs, timeout flags, first response latency, activity cost, and retention/noise exclusion from absolute sort order.
-- [ ] **Step 2: Run the focused Phase 5 tests and confirm they fail.**
-- [ ] **Step 3: Implement normalized `Fitness` serialization/comparison and the corrected measurement mapping.**
-- [ ] **Step 4: Run focused Phase 5 tests and then the Phase 4/5 suites.**
-- [ ] **Step 5: Commit `fix: normalize phase5 fitness semantics`.**
+- [x] **Step 1: Write failing tests** for rate invariance across seed counts, event-based wrong outputs, timeout flags, first response latency, activity cost, and retention/noise exclusion from absolute sort order.
+- [x] **Step 2: Run the focused Phase 5 tests and confirm they fail.**
+- [x] **Step 3: Implement normalized `Fitness` serialization/comparison and the corrected measurement mapping.**
+- [x] **Step 4: Run focused Phase 5 tests and then the Phase 4/5 suites.**
+- [x] **Step 5: Commit `fix: normalize phase5 fitness semantics`.**
 
 ### Task 3: Separate initial genomes, seed escalation, and mutation children
 
@@ -75,11 +75,11 @@
 - `SteadyStateOptimizer.escalate_seed_evidence(parent, target_index)` preserves genome/category/base seed and expands only `seed_count`.
 - `replace_free_slot()` creates a new mutation child with a fresh deterministic seed base and starts at `seed_count=4`.
 
-- [ ] **Step 1: Write failing tests** for eight distinct matched genomes, same-genome seed-set expansion, and mutation-child separation.
-- [ ] **Step 2: Run focused tests and confirm current default clones and queued mutation fail the assertions.**
-- [ ] **Step 3: Implement the deterministic initial population and separate scheduler operations.**
-- [ ] **Step 4: Run focused Phase 5 tests and integrated optimizer smoke tests.**
-- [ ] **Step 5: Commit `fix: separate phase5 seed evidence from mutation`.**
+- [x] **Step 1: Write failing tests** for eight distinct matched genomes, same-genome seed-set expansion, and mutation-child separation.
+- [x] **Step 2: Run focused tests and confirm current default clones and queued mutation fail the assertions.**
+- [x] **Step 3: Implement the deterministic initial population and separate scheduler operations.**
+- [x] **Step 4: Run focused Phase 5 tests and integrated optimizer smoke tests.**
+- [x] **Step 5: Commit `fix: separate phase5 seed evidence from mutation`.**
 
 ### Task 4: Tie growth windows to physical evaluation generations
 
@@ -92,11 +92,11 @@
 - Candidate snapshots store `physical_generations` and the fitness reference for the current growth window.
 - Growth flags are appended only when accumulated evaluation generations cross 128; at most four windows are retained.
 
-- [ ] **Step 1: Write failing tests** for no growth window before 128 generations, one at 128, four at 512, and zero-median pruning behavior.
-- [ ] **Step 2: Run focused tests and confirm optimizer iterations currently advance growth too early.**
-- [ ] **Step 3: Implement the physical cadence gate and canonical `median >> 1` threshold.**
-- [ ] **Step 4: Run focused Phase 5 tests, including the integrated pruning path.**
-- [ ] **Step 5: Commit `fix: gate phase5 growth on physical cadence`.**
+- [x] **Step 1: Write failing tests** for no growth window before 128 generations, one at 128, four at 512, and zero-median pruning behavior.
+- [x] **Step 2: Run focused tests and confirm optimizer iterations currently advance growth too early.**
+- [x] **Step 3: Implement the physical cadence gate and canonical `median >> 1` threshold.**
+- [x] **Step 4: Run focused Phase 5 tests, including the integrated pruning path.**
+- [x] **Step 5: Commit `fix: gate phase5 growth on physical cadence`.**
 
 ### Task 5: Make optimizer persistence authoritative and update evidence
 
@@ -112,16 +112,16 @@
 - Snapshot format records candidate parameters, normalized fitness, growth reference/history, physical clock, and scheduler state; it does not serialize unused universe snapshots.
 - Headless evidence reports separate mutation-child creation and `4 → 8 → 16 → 32` evidence progression.
 
-- [ ] **Step 1: Write failing persistence/headless assertions** for the authoritative fields, absence of unused snapshots, deterministic continuation, and the corrected four-step progression.
-- [ ] **Step 2: Run focused tests and confirm the old snapshot schema/evidence fails.**
-- [ ] **Step 3: Implement the snapshot/evidence changes and update accepted spec/test documentation.**
-- [ ] **Step 4: Run full unittest, compileall, headless optimizer smoke, and diff checks.**
-- [ ] **Step 5: Commit `fix: align phase5 persistence and evidence`.**
+- [x] **Step 1: Write failing persistence/headless assertions** for the authoritative fields, absence of unused snapshots, deterministic continuation, and the corrected four-step progression.
+- [x] **Step 2: Run focused tests and confirm the old snapshot schema/evidence fails.**
+- [x] **Step 3: Implement the snapshot/evidence changes and update accepted spec/test documentation.**
+- [x] **Step 4: Run full unittest, compileall, headless optimizer smoke, and diff checks.**
+- [x] **Step 5: Commit `fix: align phase5 persistence and evidence`.**
 
 ### Task 6: Final verification and review handoff
 
-- [ ] Run `python -m unittest discover -s tests -v` and record the exact count.
-- [ ] Run `python -m compileall core search persistence server tests`.
-- [ ] Run the bounded optimizer smoke with explicit timeout and corrected iteration count.
-- [ ] Inspect the diff for stale `universe_snapshot`, raw-total fitness, optimizer-iteration growth, and retention/noise absolute sorting.
+- [x] Run `python -m unittest discover -s tests -v` and record the exact count.
+- [x] Run `python -m compileall core search persistence server tests`.
+- [x] Run the bounded optimizer smoke with explicit timeout and corrected iteration count.
+- [x] Inspect the diff for stale `universe_snapshot`, raw-total fitness, optimizer-iteration growth, and retention/noise absolute sorting.
 - [ ] Push the dedicated branch and request an independent review against the exact head before merge.
