@@ -39,7 +39,11 @@ class PhysicsConfig:
     noise_attempts: int = 0
     noise_spawn_hp: int = 255
     noise_structure: int = SHAPE_SINGLE
+    noise_latent: int = 1
+    noise_speed_code: int = 1
     initial_density: int = 0
+    initial_latent: int = 1
+    initial_speed_code: int = 1
     hp_decay: int = 0
     recovery_hp: int = 32
     collision_threshold: int = 8
@@ -90,6 +94,12 @@ class PhysicsConfig:
             raise ValueError("HP parameters must fit uint8")
         if not 0 <= self.noise_structure <= 0xFFFF:
             raise ValueError("noise_structure must fit uint16")
+        for name in ("noise_latent", "initial_latent"):
+            if not 0 <= getattr(self, name) <= 0xFFFF:
+                raise ValueError(f"{name} must fit uint16")
+        for name in ("noise_speed_code", "initial_speed_code"):
+            if not 0 <= getattr(self, name) < len(SPEED_MAGNITUDES):
+                raise ValueError(f"{name} must be a supported speed code")
         if not 0 <= self.latent_damage_mask <= 0xFFFF:
             raise ValueError("latent_damage_mask must fit uint16")
 
@@ -107,7 +117,11 @@ class PhysicsConfig:
             noise_attempts=int(values.get("noise_attempts", 0)),
             noise_spawn_hp=int(values.get("noise_spawn_hp", 255)),
             noise_structure=int(values.get("noise_structure", SHAPE_SINGLE)),
+            noise_latent=int(values.get("noise_latent", 1)),
+            noise_speed_code=int(values.get("noise_speed_code", 1)),
             initial_density=int(values.get("initial_density", 0)),
+            initial_latent=int(values.get("initial_latent", 1)),
+            initial_speed_code=int(values.get("initial_speed_code", 1)),
             hp_decay=int(values.get("hp_decay", 0)),
             recovery_hp=int(values.get("recovery_hp", 32)),
             collision_threshold=int(values.get("collision_threshold", 8)),
@@ -141,7 +155,11 @@ class PhysicsConfig:
             "noise_attempts": self.noise_attempts,
             "noise_spawn_hp": self.noise_spawn_hp,
             "noise_structure": self.noise_structure,
+            "noise_latent": self.noise_latent,
+            "noise_speed_code": self.noise_speed_code,
             "initial_density": self.initial_density,
+            "initial_latent": self.initial_latent,
+            "initial_speed_code": self.initial_speed_code,
             "hp_decay": self.hp_decay,
             "recovery_hp": self.recovery_hp,
             "collision_threshold": self.collision_threshold,
@@ -192,9 +210,10 @@ def create_universe(seed: int = 0, config: PhysicsConfig | Mapping[str, Any] | N
             x=x,
             y=y,
             structure=resolved.noise_structure,
+            latent=resolved.initial_latent,
             hp=resolved.noise_spawn_hp,
             direction=event_u16(event_key(state.seed, 0, slot, EVENT_INITIAL_DENSITY, 2)) & 0x07,
-            speed_code=0,
+            speed_code=resolved.initial_speed_code,
         )
     return state
 
@@ -381,9 +400,10 @@ def _spawn_noise(state: UniverseState, config: PhysicsConfig, generation: int) -
             x=x,
             y=y,
             structure=config.noise_structure,
+            latent=config.noise_latent,
             hp=config.noise_spawn_hp,
             direction=direction,
-            speed_code=0,
+            speed_code=config.noise_speed_code,
         )
     except RuntimeError:
         # Capacity is a declared deterministic boundary, not permission
