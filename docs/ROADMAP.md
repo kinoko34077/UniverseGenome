@@ -35,8 +35,8 @@ Deliverables:
 2A contact/bond (accepted on `main`; #10 / PR #11)
 2B four latent operators (accepted on `main`; #12 / PR #13)
 2C fusion (accepted on `main`; #14 / PR #15)
-2D fragmentation (in progress; #16)
-2E aging
+2D fragmentation (accepted on `main`; #16 / PR #17)
+2E aging (accepted on `main`; #18)
 
 ## Phase 3 — 128-universe runtime and observation GUI
 4 categories × 32 slots, matched genome/seed comparisons, overview/detail/rewind/clone observation.

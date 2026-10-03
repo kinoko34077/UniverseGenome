@@ -1,4 +1,4 @@
-"""Authoritative fixed-capacity universe state through Phase 2D.
+"""Authoritative fixed-capacity universe state through Phase 2E.
 
 Slot indices are reusable storage positions only. They are deliberately not
 cell identities and are never included in deterministic event keys.
@@ -172,7 +172,7 @@ class UniverseState:
     @classmethod
     def from_snapshot(cls, payload: dict[str, Any], *, config: Any | None = None) -> "UniverseState":
         if payload.get("format_version") != 1 or payload.get("kind") != "UniverseGenomePhase1":
-            raise ValueError("unsupported Phase 2D snapshot")
+            raise ValueError("unsupported Phase 2E snapshot")
         arrays = payload.get("arrays")
         if not isinstance(arrays, dict):
             raise ValueError("snapshot arrays are required")
@@ -185,7 +185,7 @@ class UniverseState:
             "direction", "speed_code", "age", "black_hole_timer",
         }
         if set(arrays) != required:
-            raise ValueError("snapshot arrays do not match Phase 2D state")
+            raise ValueError("snapshot arrays do not match Phase 2E state")
         state = cls(
             seed=int(payload["seed"]),
             max_cells=max_cells,

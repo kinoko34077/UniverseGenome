@@ -64,3 +64,8 @@ Future physical-rule changes must record affected REQ/SPEC IDs, old/new behavior
 - `core/physics.py` implements deterministic fixed-capacity fragmentation,
   level-0 collapse/deletion, latent/HP/age split and headless counters.
 - Phase 2E aging and later phases remain deferred pending #16 acceptance.
+## 2026-10-03 — Phase 2E aging implementation candidate (#18)
+- `core/physics.py` implements safe highest-set-bit age classes and
+  deterministic power-of-two fragmentation pressure with uint16 saturation.
+- Phase 3 and later runtime/learning work remains deferred pending #18
+  acceptance.

@@ -126,7 +126,7 @@ class Phase2BLatentTests(unittest.TestCase):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
         status = build_status(raw)
         self.assertTrue(status["phase2b_latent_operators_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 2E aging")
+        self.assertEqual(status["next_phase"], "Phase 3 128-universe runtime and observation GUI")
 
         proc = subprocess.run(
             [sys.executable, "-m", "core.runner", "--config", "config/default.json", "--generations", "2", "--json"],
