@@ -39,6 +39,20 @@ Post-merge main CI `37137438184` succeeded with:
 - Python test suite: **130 tests / OK**;
 - Playwright Chromium browser E2E: **1 passed**.
 
+### Historical acceptance markers
+
+For continuity with earlier audit evidence, the pre-readiness Phase 5 history is
+retained as historical evidence rather than current state:
+
+- remediation PR #34 merged at
+  `02b07bb8dae7f649d543f8386d421064c6977a55`;
+- the later pre-#42 baseline reached
+  `4fe87b2f32662d7445bc8084dc91d07e2a029d42`;
+- that checkpoint reported **84/84** tests and main CI `37116004528`.
+
+These markers are superseded as current evidence by PR #59,
+`5844e989706afce7988c4b8d50f94fc33afb1228`, and CI `37137438184`.
+
 Readiness audit #60 found no unresolved P0/P1 in the accepted Phase 0–5 runtime
 path. Non-blocking P2/P3 residuals are tracked separately in #61 and do not
 change the accepted v0.1 boundary.
