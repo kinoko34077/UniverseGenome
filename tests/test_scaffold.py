@@ -151,6 +151,11 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("#63", readme)
         self.assertIn("#65", readme)
         self.assertNotIn("Phase 1 through Phase 5 are accepted on `main`", readme)
+        self.assertIn("remains unresolved under #63", readme)
+        self.assertNotIn(
+            "The GUI observes the server-owned runtime API and does not drive the authoritative simulation clock.",
+            readme,
+        )
         self.assertIn("acceptance remediation is active", specification)
         self.assertIn("Phase 6+ is blocked", specification)
         self.assertIn(

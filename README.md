@@ -70,8 +70,10 @@ python -m unittest discover -s tests -v
 python -m server.app --help
 ```
 
-The GUI observes the server-owned runtime API and does not drive the
-authoritative simulation clock.
+The current GUI remains the Phase 3 server-owned runtime observer and does not
+drive that local simulation clock. Phase 5 authoritative-search integration
+remains unresolved under #63, so the GUI is not current evidence that the
+browser observes the optimizer's authoritative population.
 
 ## Reuse lineage
 
