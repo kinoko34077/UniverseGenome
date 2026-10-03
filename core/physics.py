@@ -250,8 +250,9 @@ def transmission_mask(
     address: int,
     pair: tuple[int, int],
     bond_strength: int,
+    participant: UniverseState | None = None,
 ) -> int:
-    """Select a deterministic anonymous subset of the sixteen latent bits."""
+    """Select a deterministic anonymous subset without using slot identity."""
     if not 0 <= bond_strength <= 0xFF:
         raise ValueError("bond_strength must fit uint8")
     if len(pair) != 2:
@@ -259,9 +260,14 @@ def transmission_mask(
     width = 1 + (bond_strength >> 4)
     available = list(range(16))
     mask = 0
-    pair_index = ((int(pair[0]) & 0xFFFF) << 16) | (int(pair[1]) & 0xFFFF)
+    if participant is None:
+        local_index = 0
+    else:
+        slot = int(pair[0])
+        participant._validate_slot(slot)
+        local_index = ((participant.x[slot] & 0xFF) << 8) | (participant.y[slot] & 0xFF)
     for choice in range(width):
-        key = event_key(seed, generation, address, EVENT_LATENT_MASK, pair_index + choice)
+        key = event_key(seed, generation, address, EVENT_LATENT_MASK, local_index + choice)
         selected = available.pop(event_index(key, len(available)))
         mask |= 1 << selected
     return mask
@@ -308,8 +314,14 @@ def mix_fusion_latent(latents: Iterable[int]) -> int:
     return accumulator & 0xFFFF
 
 
-def fragmentation_split_mask(seed: int, generation: int, slot: int) -> int:
-    return event_u16(event_key(seed, generation, 0, EVENT_FRAGMENTATION, int(slot)))
+def fragmentation_split_mask(
+    seed: int,
+    generation: int,
+    spatial_address: int,
+    local_index: int,
+) -> int:
+    """Return a split mask addressed by physical location, never a slot."""
+    return event_u16(event_key(seed, generation, int(spatial_address), EVENT_FRAGMENTATION, int(local_index)))
 
 
 def destination_footprint(structure: int, x: int, y: int) -> set[tuple[int, int]]:
@@ -331,7 +343,7 @@ def _collision_pair(
     address: int,
     generation: int,
 ) -> tuple[int, int]:
-    ordered = sorted(set(candidates))
+    ordered = sorted(set(candidates), key=lambda slot: _cell_order_key(state, slot))
     if len(ordered) == 2:
         return ordered[0], ordered[1]
     first = event_index(event_key(state.seed, generation, address, EVENT_COLLISION_PAIR, 0), len(ordered))
@@ -342,31 +354,42 @@ def _collision_pair(
     return tuple(sorted(pair))
 
 
+def _cell_order_key(state: UniverseState, slot: int) -> tuple[int, ...]:
+    """Order equivalent physical participants without using storage identity."""
+    return (
+        tile_coordinate(state.y[slot]),
+        tile_coordinate(state.x[slot]),
+        state.structure[slot],
+        state.latent[slot],
+        state.hp[slot],
+        state.bond_strength[slot],
+        state.direction[slot],
+        state.speed_code[slot],
+        state.age[slot],
+    )
+
+
 def _spawn_noise(state: UniverseState, config: PhysicsConfig, generation: int) -> int:
-    spawned = 0
-    for attempt in range(config.noise_attempts):
-        base = attempt * 4
-        chance_key = event_key(state.seed, generation, 0, EVENT_NOISE, base)
-        if event_u16(chance_key) >= config.noise_rate:
-            continue
-        x = event_u16(event_key(state.seed, generation, 0, EVENT_NOISE, base + 1)) & 0xFF
-        y = event_u16(event_key(state.seed, generation, 0, EVENT_NOISE, base + 2)) & 0xFF
-        direction = event_u16(event_key(state.seed, generation, 0, EVENT_NOISE, base + 3)) & 0x07
-        try:
-            state.spawn(
-                x=x,
-                y=y,
-                structure=config.noise_structure,
-                hp=config.noise_spawn_hp,
-                direction=direction,
-                speed_code=0,
-            )
-        except RuntimeError:
-            # Capacity is a declared deterministic boundary, not permission
-            # to grow the authoritative arrays.
-            continue
-        spawned += 1
-    return spawned
+    chance_key = event_key(state.seed, generation, 0, EVENT_NOISE, 0)
+    if event_u16(chance_key) >= config.noise_rate:
+        return 0
+    x = event_u16(event_key(state.seed, generation, 0, EVENT_NOISE, 1)) & 0xFF
+    y = event_u16(event_key(state.seed, generation, 0, EVENT_NOISE, 2)) & 0xFF
+    direction = event_u16(event_key(state.seed, generation, 0, EVENT_NOISE, 3)) & 0x07
+    try:
+        state.spawn(
+            x=x,
+            y=y,
+            structure=config.noise_structure,
+            hp=config.noise_spawn_hp,
+            direction=direction,
+            speed_code=0,
+        )
+    except RuntimeError:
+        # Capacity is a declared deterministic boundary, not permission
+        # to grow the authoritative arrays.
+        return 0
+    return 1
 
 
 def _transmit_latent(
@@ -379,7 +402,7 @@ def _transmit_latent(
     """Resolve one deterministic, non-overlapping transmission per active slot."""
     selected_pairs: list[tuple[int, int]] = []
     selected_slots: set[int] = set()
-    for pair in sorted(pairs):
+    for pair in sorted(pairs, key=lambda item: (_cell_order_key(state, item[0]), _cell_order_key(state, item[1]))):
         if pair[0] in selected_slots or pair[1] in selected_slots:
             continue
         selected_pairs.append(pair)
@@ -396,6 +419,7 @@ def _transmit_latent(
             address,
             (first, second),
             state.bond_strength[first],
+            participant=state,
         )
         second_mask = transmission_mask(
             state.seed,
@@ -403,6 +427,7 @@ def _transmit_latent(
             address,
             (second, first),
             state.bond_strength[second],
+            participant=state,
         )
         updates[second] = apply_latent_operator(
             config.latent_operator,
@@ -494,9 +519,9 @@ def _fuse_groups(
             continue
         level = structure_level(state.structure[group[0]])
         result_slot = min(group)
-        ordered = tuple(sorted(group, key=lambda slot: (tile_coordinate(state.y[slot]), tile_coordinate(state.x[slot]), slot)))
+        ordered = tuple(sorted(group, key=lambda slot: _cell_order_key(state, slot)))
         hp_values = {slot: state.hp[slot] for slot in group}
-        best_slot = min(group, key=lambda slot: (-hp_values[slot], slot))
+        best_slot = max(group, key=lambda slot: (hp_values[slot], _cell_order_key(state, slot)))
         best_direction = state.direction[best_slot]
         total_hp = min(0xFF, sum(hp_values.values()))
         latent = mix_fusion_latent(state.latent[slot] for slot in ordered)
@@ -561,7 +586,9 @@ def _fragment_active_cells(
         old_age = state.age[slot]
         old_direction = state.direction[slot]
         old_speed = state.speed_code[slot]
-        split_mask = fragmentation_split_mask(state.seed, generation, slot)
+        spatial_address = (tile_coordinate(old_y) << 5) | tile_coordinate(old_x)
+        local_index = ((old_x & 0xFF) << 8) | (old_y & 0xFF)
+        split_mask = fragmentation_split_mask(state.seed, generation, spatial_address, local_index)
         dx, dy = velocity_vector(old_direction, speed_code_for_magnitude(1))
         try:
             fragment = state.spawn(
@@ -592,6 +619,30 @@ def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) ->
     state.hp[slot] = 0
 
 
+def _local_revival_slots(state: UniverseState) -> set[int]:
+    """Permit a nearby active latent/bond signal to revive a black-hole slot."""
+    active = state.active_slots()
+    black_holes = [
+        slot for slot, lifecycle in enumerate(state.lifecycle)
+        if lifecycle == Lifecycle.BLACK_HOLE
+    ]
+    revived: set[int] = set()
+    for black_hole in black_holes:
+        black_hole_footprint = destination_footprint(
+            state.structure[black_hole], state.x[black_hole], state.y[black_hole]
+        )
+        for participant in active:
+            if not (state.latent[participant] or state.bond_strength[participant]):
+                continue
+            participant_footprint = destination_footprint(
+                state.structure[participant], state.x[participant], state.y[participant]
+            )
+            if black_hole_footprint.intersection(participant_footprint):
+                revived.add(black_hole)
+                break
+    return revived
+
+
 def step(
     state: UniverseState,
     config: PhysicsConfig | None = None,
@@ -606,6 +657,7 @@ def step(
     started = time.perf_counter()
     generation = state.generation
     stimulated = set(int(slot) for slot in stimulus_slots)
+    stimulated.update(_local_revival_slots(state))
     recovered_slots: set[int] = set()
 
     for slot in range(state.max_cells):
@@ -667,8 +719,12 @@ def step(
             state.latent[first] &= ~resolved.latent_damage_mask
             state.latent[second] &= ~resolved.latent_damage_mask
             if relative >= resolved.structure_damage_threshold:
-                state.structure[first] = degrade_structure(state.structure[first])
-                state.structure[second] = degrade_structure(state.structure[second])
+                for slot in (first, second):
+                    degraded = degrade_structure(state.structure[slot])
+                    if degraded == 0:
+                        state.free(slot)
+                    else:
+                        state.structure[slot] = degraded
 
     bond_contact_slots = {
         slot

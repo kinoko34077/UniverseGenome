@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from core.physics import PhysicsConfig, create_universe, fragmentation_split_mask, step
+from core.geometry import tile_coordinate
 from core.runner import build_status
 from core.state import Lifecycle, SHAPE_HORIZONTAL, SHAPE_SINGLE, structure_level, structure_shape
 from persistence.snapshot import load_snapshot, save_snapshot
@@ -42,9 +43,11 @@ class Phase2DFragmentationTests(unittest.TestCase):
             speed_code=1,
         )
         state.age[core] = 9
-        split_mask = fragmentation_split_mask(state.seed, state.generation, core)
-
         metrics = step(state)
+
+        spatial_address = (tile_coordinate(state.y[core]) << 5) | tile_coordinate(state.x[core])
+        local_index = ((state.x[core] & 0xFF) << 8) | (state.y[core] & 0xFF)
+        split_mask = fragmentation_split_mask(state.seed, state.generation - 1, spatial_address, local_index)
 
         self.assertEqual(metrics.fragmentation_count, 1)
         self.assertEqual(state.lifecycle[core], Lifecycle.ACTIVE)

@@ -22,6 +22,7 @@
     "destination_only_collision": true
   },
   "physics": {
+    "initial_density": 4,
     "noise_rate": 0,
     "noise_attempts": 0,
     "noise_spawn_hp": 255,

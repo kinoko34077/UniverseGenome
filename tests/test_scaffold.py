@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from core import geometry
-from core.physics import step
+from core.physics import PhysicsConfig, create_universe, step
 from core.runner import build_status, load_config
 from core.state import DEFAULT_MAX_CELLS, HP_BITS, LATENT_BITS, STRUCTURE_BITS
 from server.app import build_server
@@ -59,6 +59,13 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertEqual(config["world"]["max_cells"], 1024)
         self.assertFalse(config["state"]["permanent_cell_id"])
         self.assertTrue(config["features"]["phase1_physics"])
+
+    def test_default_config_creates_a_deterministic_initial_substrate(self):
+        config = load_config(ROOT / "config" / "default.json")
+        state = create_universe(seed=17, config=PhysicsConfig.from_mapping(config))
+        replay = create_universe(seed=17, config=PhysicsConfig.from_mapping(config))
+        self.assertGreater(len(state.active_slots()), 0)
+        self.assertEqual(state.to_snapshot(), replay.to_snapshot())
 
     def test_experiment_config_records_effective_protocol_and_outcome(self):
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
