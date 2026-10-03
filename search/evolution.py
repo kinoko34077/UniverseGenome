@@ -178,17 +178,15 @@ class SteadyStateOptimizer:
     @staticmethod
     def _fitness_from_measurement(measurement: LearningMeasurement) -> Fitness:
         trained = tuple(item.trained for item in measurement.per_seed)
+        denominator = float(measurement.seed_count)
         return Fitness(
-            success=measurement.trained_successes,
-            wrong_outputs=sum(not result.success for result in trained),
-            timeouts=sum(
-                not result.autonomous_events and result.clone_generation > 0
-                for result in trained
-            ),
-            response_latency=sum(result.clone_generation for result in trained),
-            activity_cost=sum(len(result.autonomous_events) for result in trained),
-            retention=measurement.trained_no_input_clean,
-            noise_robustness=measurement.trained_alternate_input_clean,
+            success=measurement.trained_successes / denominator,
+            wrong_outputs=sum(result.wrong_output_count for result in trained) / denominator,
+            timeouts=sum(result.timed_out for result in trained) / denominator,
+            response_latency=sum(result.response_latency for result in trained) / denominator,
+            activity_cost=sum(result.activity_cost for result in trained) / denominator,
+            retention=measurement.trained_no_input_clean / denominator,
+            noise_robustness=measurement.trained_alternate_input_clean / denominator,
         )
 
     def _evaluate_slot(self, slot: CandidateSlot) -> LearningMeasurement:

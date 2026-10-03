@@ -4,7 +4,13 @@ import json
 from pathlib import Path
 import unittest
 
-from core.experiment import ExperimentConfig
+from core.experiment import (
+    EvaluationResult,
+    ExperimentConfig,
+    LearningMeasurement,
+    SeedMeasurement,
+)
+from core.io_bus import OutputEvent
 from core.population import run_population_headless
 from core.physics import PhysicsConfig, create_universe
 from core.runner import build_status, load_config
@@ -42,6 +48,92 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(compare_fitness(winner, loser), 1)
         self.assertEqual(compare_fitness(winner, winner), 0)
         self.assertLess(Fitness(1, 0, 0, 1, 1).sort_key(), Fitness(1, 0, 0, 2, 1).sort_key())
+
+    def test_p5_015_fitness_is_invariant_to_equivalent_seed_counts(self):
+        expected = (OutputEvent.byte(66), OutputEvent.null())
+        result = EvaluationResult(
+            expected_events=expected,
+            autonomous_events=expected,
+            success=True,
+            clone_generation=99,
+            event_generations=(4, 6),
+            evaluation_generations=12,
+            activity_cost=8,
+            timed_out=False,
+        )
+
+        def measurement(repetitions):
+            per_seed = tuple(
+                SeedMeasurement(
+                    seed=index,
+                    baseline=result,
+                    trained=result,
+                    baseline_no_input=result,
+                    trained_no_input=result,
+                    baseline_alternate=result,
+                    trained_alternate=result,
+                )
+                for index in range(repetitions)
+            )
+            return LearningMeasurement(
+                seed_count=repetitions,
+                baseline_successes=repetitions,
+                trained_successes=repetitions,
+                baseline_no_input_clean=repetitions,
+                trained_no_input_clean=repetitions,
+                baseline_alternate_input_clean=repetitions,
+                trained_alternate_input_clean=repetitions,
+                criterion="test",
+                learning_claim=False,
+                per_seed=per_seed,
+            )
+
+        self.assertEqual(
+            SteadyStateOptimizer._fitness_from_measurement(measurement(4)),
+            SteadyStateOptimizer._fitness_from_measurement(measurement(8)),
+        )
+
+    def test_p5_016_fitness_uses_named_event_metrics_and_five_field_order(self):
+        result = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(OutputEvent.byte(65), OutputEvent.byte(64), OutputEvent.byte(66)),
+            success=False,
+            clone_generation=99,
+            event_generations=(2, 4, 5),
+            evaluation_generations=12,
+            activity_cost=17,
+            timed_out=True,
+        )
+        measurement = LearningMeasurement(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=0,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=0,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(SeedMeasurement(
+                seed=1,
+                baseline=result,
+                trained=result,
+                baseline_no_input=result,
+                trained_no_input=result,
+                baseline_alternate=result,
+                trained_alternate=result,
+            ),),
+        )
+
+        fitness = SteadyStateOptimizer._fitness_from_measurement(measurement)
+        self.assertEqual(fitness.wrong_outputs, 2.0)
+        self.assertEqual(fitness.timeouts, 1.0)
+        self.assertEqual(fitness.response_latency, 5.0)
+        self.assertEqual(fitness.activity_cost, 17.0)
+        self.assertEqual(
+            Fitness(success=1, retention=0, noise_robustness=0).sort_key(),
+            Fitness(success=1, retention=1, noise_robustness=1).sort_key(),
+        )
 
     def test_p5_003_growth_flags_and_history_are_bounded(self):
         before = Fitness(0, 4, 3, 8, 10)
