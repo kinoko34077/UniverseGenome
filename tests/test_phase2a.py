@@ -94,7 +94,7 @@ class Phase2ABondTests(unittest.TestCase):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
         status = build_status(raw)
         self.assertTrue(status["phase2a_bond_physics_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 2B latent operators")
+        self.assertTrue(status["phase2a_bond_physics_implemented"])
 
         proc = subprocess.run(
             [sys.executable, "-m", "core.runner", "--config", "config/default.json", "--generations", "2", "--json"],

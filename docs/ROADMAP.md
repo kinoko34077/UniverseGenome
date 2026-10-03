@@ -32,8 +32,8 @@ Deliverables:
 - headless performance counters
 
 ## Phase 2 — Local learning physics
-2A contact/bond (in progress; #10)
-2B four latent operators
+2A contact/bond (accepted on `main`; #10 / PR #11)
+2B four latent operators (in progress; #12)
 2C fusion
 2D fragmentation
 2E aging
