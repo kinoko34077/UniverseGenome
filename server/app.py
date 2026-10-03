@@ -1,4 +1,4 @@
-"""Serve the static Phase 0 observation scaffold.
+"""Serve the static Phase 3 observation/control surface.
 
 This server is not a simulation clock and owns no authoritative universe state.
 """
@@ -21,13 +21,13 @@ def build_server(host: str = "127.0.0.1", port: int = 8000) -> ThreadingHTTPServ
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Serve the UniverseGenome Phase 0 UI scaffold")
+    parser = argparse.ArgumentParser(description="Serve the UniverseGenome Phase 3 UI")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args(argv)
 
     server = build_server(args.host, args.port)
-    print(f"Serving Phase 0 UI scaffold at http://{args.host}:{args.port}")
+    print(f"Serving Phase 3 UI at http://{args.host}:{args.port}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -81,7 +81,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
     def test_ui_scaffold_exists_and_declares_external_clock(self):
         html = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
         js = (ROOT / "ui" / "sim_view.js").read_text(encoding="utf-8")
-        self.assertIn("Phase 0", html)
+        self.assertIn("Phase 3", html)
         self.assertIn("authoritative simulation clock is external", js)
         self.assertNotIn("updateGrid(", js)
 
@@ -108,7 +108,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
             text=True,
         )
         status = json.loads(proc.stdout)
-        self.assertEqual(status["phase"], 2)
+        self.assertEqual(status["phase"], 3)
         self.assertTrue(status["phase1_physics_implemented"])
 
 

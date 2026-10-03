@@ -51,6 +51,7 @@
     "fusion": true,
     "fragmentation": true,
     "latent_runtime": true,
+    "multi_universe_runtime": true,
     "multi_universe_search": false,
     "io_learning": false,
     "evolution": false,

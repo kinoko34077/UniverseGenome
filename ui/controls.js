@@ -1,5 +1,24 @@
-// Phase 0 controls are visible but disabled because no simulation runtime exists.
+// Controls emit requests; they never advance the authoritative simulation clock.
 
 const status = document.getElementById("status");
-status.textContent =
-  "Core/GUI separation is active. Phase 1 provides the authoritative simulation state.";
+const actions = {
+  run: "run",
+  pause: "pause",
+  step: "step",
+  reset: "reset",
+  select: "select-universe",
+  clone: "clone-for-observation",
+  rewind: "rewind",
+  save: "save-snapshot",
+  load: "load-snapshot",
+};
+
+for (const [selector, action] of Object.entries(actions)) {
+  const nodes = document.querySelectorAll(`[data-action="${selector}"]`);
+  for (const node of nodes) {
+    node.addEventListener("click", () => {
+      window.dispatchEvent(new CustomEvent("universegenome-control", { detail: { action } }));
+      status.textContent = `Requested ${action}; the external core clock remains authoritative.`;
+    });
+  }
+}

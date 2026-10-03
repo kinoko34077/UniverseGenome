@@ -69,3 +69,11 @@ Future physical-rule changes must record affected REQ/SPEC IDs, old/new behavior
   deterministic power-of-two fragmentation pressure with uint16 saturation.
 - Phase 3 and later runtime/learning work remains deferred pending #18
   acceptance.
+
+## 2026-10-03 — Phase 3 runtime/observation implementation candidate (#20)
+- `core/population.py` implements four isolated categories × 32 slots,
+  matched genome/seed metadata, compact bounded history, rewind, clone, and
+  population snapshot/headless summary surfaces.
+- The static UI exposes the 16×8 overview, detail modes, and required controls;
+  the authoritative simulation clock remains in the core.
+- Phase 4 I/O learning and later work remain deferred pending #20 acceptance.

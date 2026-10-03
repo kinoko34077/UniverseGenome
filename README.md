@@ -6,12 +6,12 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current accepted state
 
-**Phase 1 through Phase 2E are accepted on `main`; Phase 3 is next.**
+**Phase 1 through Phase 2E are accepted on `main`; Phase 3 runtime is implemented on the active branch.**
 The repository contains the canonical v0.1 requirements/specification,
 architecture decisions, a deterministic single-universe core, headless
 snapshot/performance verification, and the unchanged observer/UI scaffold.
-Phase 2E aging is tracked by Issue #18 under the parent Work Order #7; Phase 3
-and later phases remain deferred.
+Phase 3 is tracked by Issue #20 under the parent Work Order #7; Phase 4 and
+later phases remain deferred until the Phase 3 acceptance gate.
 
 ## Canonical entry points
 
@@ -30,6 +30,7 @@ and later phases remain deferred.
 - Issue #14 owns the bounded Phase 2C fusion implementation.
 - Issue #16 owns the bounded Phase 2D fragmentation implementation.
 - Issue #18 owns the bounded Phase 2E aging implementation.
+- Issue #20 owns the bounded Phase 3 runtime/observation implementation.
 
 ## Headless verification commands
 
