@@ -152,6 +152,12 @@ observation clones cannot mutate authoritative slots.
 Population status/summary runs without the GUI, while the 16×8 overview,
 detail modes, required controls, and external-clock declaration are exposed.
 
+### TEST-P3-005 Bounded rewind memory evidence
+
+The 128, 256, and 512 history policies retain at most the selected bounded
+entry count, report a reproducible compact-history memory estimate, and remain
+within the explicit runtime budget.
+
 ## Phase 4 acceptance tests
 
 ### TEST-P4-001 Raw bus and fixed organs

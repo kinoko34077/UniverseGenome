@@ -122,6 +122,13 @@ Selectable:
 
 Use bounded ring/history storage, not unbounded generation retention.
 
+The population runtime stores each retained checkpoint as compact deterministic
+JSON text rather than a live nested Python dictionary. Runtime summaries expose
+the retained entry count, serialized object memory estimate, a 256 MiB bound,
+and whether the current estimate is within that bound. The 128/256/512 policy
+therefore has executable memory evidence while preserving exact rewind and
+snapshot round-trips.
+
 ---
 
 ## SPEC-UI-022 — Parameter edits

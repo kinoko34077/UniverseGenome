@@ -6,6 +6,7 @@ from collections import Counter, deque
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import sys
 import time
 from typing import Any, Iterable
 
@@ -15,6 +16,7 @@ from .state import Lifecycle, UniverseState
 
 CATEGORY_OPERATORS = ("masked_copy", "masked_xor", "rotate_copy", "masked_and")
 HISTORY_LENGTHS = (128, 256, 512)
+HISTORY_MEMORY_BUDGET_BYTES = 256 * 1024 * 1024
 GENOME_COUNT = 8
 SEEDS_PER_GENOME = 4
 SLOTS_PER_CATEGORY = GENOME_COUNT * SEEDS_PER_GENOME
@@ -144,6 +146,26 @@ def _restore_compact(record: dict[str, Any]) -> UniverseState:
     return state
 
 
+def _encode_history(record: dict[str, Any]) -> str:
+    """Store one population checkpoint as compact deterministic JSON text."""
+    return json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def _decode_history(record: str | dict[str, Any]) -> dict[str, Any]:
+    """Decode compact history while accepting pre-remediation dict records."""
+    if isinstance(record, dict):
+        return record
+    if not isinstance(record, str):
+        raise ValueError("population history record must be compact JSON text")
+    try:
+        decoded = json.loads(record)
+    except json.JSONDecodeError as exc:
+        raise ValueError("population history record is not valid JSON") from exc
+    if not isinstance(decoded, dict):
+        raise ValueError("population history record must decode to an object")
+    return decoded
+
+
 class Population:
     """Four isolated categories with matched genome/seed pairs and bounded history."""
 
@@ -173,7 +195,7 @@ class Population:
             if pairs != expected_pairs:
                 raise ValueError("Phase 3 categories must align genome/seed pairs")
         self.history_length = history_length
-        self._history: deque[dict[str, Any]] = deque(maxlen=history_length + 1)
+        self._history: deque[str] = deque(maxlen=history_length + 1)
         self._record_history()
 
     @classmethod
@@ -216,11 +238,16 @@ class Population:
     def history_size(self) -> int:
         return len(self._history)
 
+    @property
+    def history_memory_bytes(self) -> int:
+        """Return a reproducible estimate of retained compact history memory."""
+        return sys.getsizeof(self._history) + sum(sys.getsizeof(record) for record in self._history)
+
     def _record_history(self) -> None:
-        self._history.append({
+        self._history.append(_encode_history({
             "generation": self.generation,
             "states": [_compact_state(slot.state) for slot in self.slots],
-        })
+        }))
 
     def step(self) -> list[Any]:
         metrics = [step(slot.state) for slot in self.slots]
@@ -237,13 +264,17 @@ class Population:
         if generations < 0:
             raise ValueError("generations must be non-negative")
         target = self.generation - int(generations)
-        checkpoint = next((item for item in reversed(self._history) if item["generation"] == target), None)
+        checkpoint = next(
+            (item for item in reversed(self._history) if _decode_history(item)["generation"] == target),
+            None,
+        )
         if checkpoint is None:
             raise ValueError("requested rewind exceeds bounded history")
-        for slot, record in zip(self.slots, checkpoint["states"]):
+        decoded_checkpoint = _decode_history(checkpoint)
+        for slot, record in zip(self.slots, decoded_checkpoint["states"]):
             slot.state = _restore_compact(record)
         self._history = deque(
-            (item for item in self._history if item["generation"] <= target),
+            (item for item in self._history if _decode_history(item)["generation"] <= target),
             maxlen=self.history_length + 1,
         )
 
@@ -265,6 +296,10 @@ class Population:
             "active_cells": sum(len(slot.state.active_slots()) for slot in self.slots),
             "history_size": self.history_size,
             "history_length": self.history_length,
+            "history_entry_count": self.history_size,
+            "history_memory_bytes": self.history_memory_bytes,
+            "history_memory_budget_bytes": HISTORY_MEMORY_BUDGET_BYTES,
+            "history_memory_within_budget": self.history_memory_bytes <= HISTORY_MEMORY_BUDGET_BYTES,
         }
 
     def to_snapshot(self) -> dict[str, Any]:
@@ -294,8 +329,8 @@ class Population:
             raise ValueError("population snapshot requires slots and history")
         if len(raw_slots) != POPULATION_SIZE or not raw_history:
             raise ValueError("population snapshot has invalid dimensions")
-        latest = raw_history[-1]
-        states = latest.get("states") if isinstance(latest, dict) else None
+        latest = _decode_history(raw_history[-1])
+        states = latest.get("states")
         if not isinstance(states, list) or len(states) != POPULATION_SIZE:
             raise ValueError("population snapshot has invalid state records")
         slots = []
@@ -313,7 +348,10 @@ class Population:
                 )
             )
         population = cls(slots, history_length=int(payload["history_length"]))
-        population._history = deque(raw_history, maxlen=population.history_length + 1)
+        population._history = deque(
+            (_encode_history(_decode_history(record)) for record in raw_history),
+            maxlen=population.history_length + 1,
+        )
         return population
 
     def _slot(self, index: int) -> PopulationSlot:
