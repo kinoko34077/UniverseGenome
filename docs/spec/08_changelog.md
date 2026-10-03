@@ -1,5 +1,17 @@
 # Specification Changelog
 
+## 2026-10-03 — Issue #56 Phase 5 semantic corrections
+
+- corrected Phase 5 seed evidence to expand the same genome over a deterministic
+  4→8→16→32 seed set, separate from mutation-child creation;
+- added eight distinct deterministic initial parameter genomes per category;
+- normalized absolute fitness across evidence counts and mapped wrong outputs,
+  timeout, first-response latency, and physics activity to explicit observables;
+- gated growth history on 128 physical evaluation generations and corrected the
+  zero-median pruning threshold;
+- removed unused reconstructed universe snapshots from authoritative optimizer
+  persistence and updated the bounded headless evidence path.
+
 ## 2026-10-03 — Audit #27 remediation completed
 - Phase 4 remediation #28 / PR #32 (`4eccfddf4a2f14dfa423613499f22f67559aec24`)
   connects autonomous scoring to real output-edge collection while retaining

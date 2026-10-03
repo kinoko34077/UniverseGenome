@@ -7,7 +7,7 @@ import time
 from typing import Any, Iterable, Mapping
 
 from core.experiment import ExperimentConfig, LearningMeasurement, compare_baseline_trained
-from core.physics import PhysicsConfig, create_universe
+from core.physics import PhysicsConfig
 from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
 from .pruning import growth_flags, prune_candidates, protected_indices
@@ -36,7 +36,6 @@ class CandidateSlot:
     growth_windows: tuple[int, ...]
     seed_count: int = 4
     parent_index: int | None = None
-    universe_snapshot: dict[str, Any] | None = None
     last_mutation_field: str | None = None
     physical_generations: int = 0
     growth_reference: Fitness | None = None
@@ -52,8 +51,6 @@ class CandidateSlot:
             raise ValueError("candidate growth windows must fit uint8")
         if self.last_mutation_field is not None and self.last_mutation_field not in UNIVERSE_GENOME_FIELDS:
             raise ValueError("candidate mutation field must be a genome field")
-        if self.universe_snapshot is not None and not isinstance(self.universe_snapshot, dict):
-            raise ValueError("candidate universe_snapshot must be an object")
         if self.physical_generations < 0:
             raise ValueError("candidate physical_generations must be non-negative")
         if self.growth_reference is not None and not isinstance(self.growth_reference, Fitness):
@@ -73,7 +70,6 @@ class CandidateSlot:
             "growth_windows": list(self.growth_windows),
             "seed_count": self.seed_count,
             "parent_index": self.parent_index,
-            "universe_snapshot": self.universe_snapshot,
             "last_mutation_field": self.last_mutation_field,
             "physical_generations": self.physical_generations,
             "growth_reference": (
@@ -95,11 +91,6 @@ class CandidateSlot:
             growth_windows=tuple(int(window) for window in raw_windows),
             seed_count=int(payload.get("seed_count", 4)),
             parent_index=(None if payload.get("parent_index") is None else int(payload["parent_index"])),
-            universe_snapshot=(
-                None
-                if payload.get("universe_snapshot") is None
-                else dict(payload["universe_snapshot"])
-            ),
             last_mutation_field=(
                 None
                 if payload.get("last_mutation_field") is None
@@ -195,7 +186,6 @@ class SteadyStateOptimizer:
                         seed=seed,
                         fitness=Fitness(),
                         growth_windows=(),
-                        universe_snapshot=cls._make_universe_snapshot(genome, category, seed, base),
                     ))
                     index += 1
         return cls(slots, base_config=base, experiment=protocol)
@@ -209,19 +199,6 @@ class SteadyStateOptimizer:
         values = genome.to_physics_config(base_config).to_dict()
         values["latent_operator"] = category
         return PhysicsConfig(**values)
-
-    @classmethod
-    def _make_universe_snapshot(
-        cls,
-        genome: UniverseGenome,
-        category: str,
-        seed: int,
-        base_config: PhysicsConfig,
-    ) -> dict[str, Any]:
-        return create_universe(
-            seed=seed,
-            config=cls._effective_config(genome, category, base_config),
-        ).to_snapshot()
 
     @staticmethod
     def _fitness_from_measurement(measurement: LearningMeasurement) -> Fitness:
@@ -300,12 +277,7 @@ class SteadyStateOptimizer:
                 current_fitness,
                 measurement.evaluation_generations,
             )
-            evaluated.append(replace(
-                evaluated_slot,
-                universe_snapshot=slot.universe_snapshot or self._make_universe_snapshot(
-                    slot.genome, slot.category, slot.seed, self.base_config
-                ),
-            ))
+            evaluated.append(evaluated_slot)
         self.candidates = evaluated
         queued_indices = set(self.scheduler["escalation_queue"])
         self.scheduler["escalation_queue"] = []
@@ -348,12 +320,6 @@ class SteadyStateOptimizer:
                     parent=parent,
                     direction=1,
                     field=mutation_field,
-                )
-                child = replace(
-                    child,
-                    universe_snapshot=self._make_universe_snapshot(
-                        child.genome, child.category, child.seed, self.base_config
-                    ),
                 )
             self.candidates[target.index] = child
             replacements.append({
@@ -419,7 +385,7 @@ class SteadyStateOptimizer:
         if len(self.candidates) != OPTIMIZER_POPULATION_SIZE:
             raise ValueError(f"integrated optimizer requires {OPTIMIZER_POPULATION_SIZE} candidates")
         return {
-            "format_version": 2,
+            "format_version": 3,
             "kind": "UniverseGenomePhase5SteadyStateOptimizer",
             "generation": self.generation,
             "base_config": self.base_config.to_dict(),
@@ -430,7 +396,7 @@ class SteadyStateOptimizer:
 
     @classmethod
     def from_snapshot(cls, payload: Mapping[str, Any]) -> "SteadyStateOptimizer":
-        if payload.get("format_version") != 2 or payload.get("kind") != "UniverseGenomePhase5SteadyStateOptimizer":
+        if payload.get("format_version") not in (2, 3) or payload.get("kind") != "UniverseGenomePhase5SteadyStateOptimizer":
             raise ValueError("unsupported integrated Phase 5 optimizer snapshot")
         raw_candidates = payload.get("candidates")
         if not isinstance(raw_candidates, list) or len(raw_candidates) != OPTIMIZER_POPULATION_SIZE:
@@ -523,6 +489,11 @@ def _measurement_summary(measurement: LearningMeasurement) -> dict[str, Any]:
                 "trained_alternate_input_clean": item.trained_alternate.success,
                 "baseline_event_count": len(item.baseline.autonomous_events),
                 "trained_event_count": len(item.trained.autonomous_events),
+                "wrong_output_count": item.trained.wrong_output_count,
+                "timed_out": item.trained.timed_out,
+                "response_latency": item.trained.response_latency,
+                "activity_cost": item.trained.activity_cost,
+                "evaluation_generations": item.trained.evaluation_generations,
             }
             for item in measurement.per_seed
         ],

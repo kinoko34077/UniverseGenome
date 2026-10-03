@@ -144,7 +144,7 @@ def main(argv: list[str] | None = None) -> int:
         "--optimizer-iterations",
         type=int,
         default=1,
-        help="bounded integrated optimizer steps (use 3 to exercise 4→8→16→32 escalation)",
+        help="bounded integrated optimizer steps (use 4 to exercise 4→8→16→32 escalation)",
     )
     parser.add_argument(
         "--optimizer-timeout-generations",

@@ -207,16 +207,19 @@ absolute-fitness top 1/8 from growth-only pruning.
 
 ### TEST-P5-004 Steady-state escalation
 
-Category-local replacement is deterministic and seed escalation is bounded to
-4→8→16→32 without evolving seed as genome data. The integrated loop evaluates
-all 128 slots, uses real Phase 4 fitness/growth, and exercises multiple genome
-mutation fields.
+Category-local replacement is deterministic. Same-genome seed evidence expands
+4→8→16→32 without changing the genome/category/base seed, while mutation
+children are separate 4-seed candidates. The integrated loop evaluates all 128
+slots, uses normalized real Phase 4 fitness/growth, advances growth only at the
+128-generation physical cadence, and exercises multiple genome mutation fields.
 
 ### TEST-P5-005 Integrated persistence
 
 Optimizer persistence includes the effective base/protocol configuration,
-candidate universe snapshots, and scheduler state. Restore/resume produces the
-same bounded candidate population as uninterrupted continuation.
+authoritative candidate parameters, normalized fitness/growth references,
+physical cadence state, and scheduler state. It does not retain reconstructed
+universe snapshots. Restore/resume produces the same bounded candidate
+population as uninterrupted continuation.
 
 The headless performance path reports bounded optimizer iterations, evaluated
 slots, replacements, mutation fields, seed escalation, and throughput.

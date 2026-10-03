@@ -487,7 +487,14 @@ class Phase5OptimizerTests(unittest.TestCase):
                          {"masked_copy": 32, "masked_xor": 32, "rotate_copy": 32, "masked_and": 32})
         for category in ("masked_copy", "masked_xor", "rotate_copy", "masked_and"):
             slot = next(candidate for candidate in optimizer.candidates if candidate.category == category)
-            self.assertEqual(slot.universe_snapshot["config"]["latent_operator"], category)
+            self.assertEqual(
+                SteadyStateOptimizer._effective_config(
+                    slot.genome,
+                    category,
+                    optimizer.base_config,
+                ).latent_operator,
+                category,
+            )
 
         summary = optimizer.step()
 
@@ -501,7 +508,6 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(summary["cross_category_selection"], False)
         self.assertGreaterEqual(summary["replacement_count"], 4)
         self.assertGreaterEqual(len({slot.last_mutation_field for slot in optimizer.candidates if slot.last_mutation_field}), 2)
-        self.assertTrue(all(slot.universe_snapshot is not None for slot in optimizer.candidates))
 
     def test_p5_012_integrated_snapshot_restores_deterministic_continuation(self):
         protocol = ExperimentConfig(
@@ -527,7 +533,33 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIn("experiment", payload)
         self.assertIn("scheduler", payload)
         self.assertEqual(len(payload["candidates"]), 128)
-        self.assertTrue(all("universe_snapshot" in candidate for candidate in payload["candidates"]))
+        self.assertEqual(payload["format_version"], 3)
+        self.assertTrue(all("universe_snapshot" not in candidate for candidate in payload["candidates"]))
+        self.assertTrue(all("physical_generations" in candidate for candidate in payload["candidates"]))
+
+    def test_p5_023_headless_evidence_exposes_authoritative_metrics(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        result = run_optimizer_headless(
+            seeds=(3, 4),
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+            iterations=4,
+        )
+        self.assertEqual(result["replacement_seed_counts"], [4, 8, 16, 32])
+        per_seed = result["candidate_measurement"]["per_seed"]
+        self.assertTrue(per_seed)
+        self.assertTrue({
+            "wrong_output_count",
+            "timed_out",
+            "response_latency",
+            "activity_cost",
+        } <= set(per_seed[0]))
 
     def test_p5_013_headless_reports_integrated_multi_field_search(self):
         protocol = ExperimentConfig(
