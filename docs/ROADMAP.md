@@ -52,5 +52,9 @@ validated genome-to-physics mapping, real Phase 4 candidate evaluation,
 fitness/growth separation, category-local pruning, mutation, steady-state
 replacement, and bounded multi-seed escalation.
 
+Audit residuals #36 / PR #39 and #37 / PR #40 reconcile physical event
+semantics and optimizer persistence/performance. Residual #38 / PR #41
+reconciles implementation metadata and the fixed I/O/default-value contract.
+
 ## Phase 6+ — Capability ladder (handoff only after Phase 5)
 multiple mappings, sequence discrimination, multi-event output, forgetting/relearning, robustness, generalization, multi-byte/raw UTF-8 experiments.

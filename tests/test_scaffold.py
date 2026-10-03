@@ -7,10 +7,14 @@ import unittest
 from pathlib import Path
 
 from core import geometry
+from core import latent_ops
 from core.physics import PhysicsConfig, create_universe, step
 from core.runner import build_status, load_config
 from core.state import DEFAULT_MAX_CELLS, HP_BITS, LATENT_BITS, STRUCTURE_BITS
+import core
+import persistence
 from server.app import build_server
+import server
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -98,8 +102,29 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("PR #34", changelog)
         self.assertIn("02b07bb8dae7f649d543f8386d421064c6977a55", changelog)
         self.assertIn("02b07bb8dae7f649d543f8386d421064c6977a55", handoff)
-        self.assertIn("73/73", handoff)
+        self.assertIn("84/84", handoff)
+        self.assertIn("4fe87b2f32662d7445bc8084dc91d07e2a029d42", handoff)
         self.assertIn("Phase 5", roadmap)
+
+    def test_phase5_metadata_and_implemented_defaults_are_current(self):
+        functional = (ROOT / "docs" / "spec" / "02_functional_spec.md").read_text(encoding="utf-8")
+        behavior = (ROOT / "docs" / "spec" / "03_behavior_spec.md").read_text(encoding="utf-8")
+        implementation = (ROOT / "docs" / "spec" / "06_implementation_spec.md").read_text(encoding="utf-8")
+
+        self.assertEqual(core.PHASE, 5)
+        self.assertEqual(persistence.PHASE, 5)
+        self.assertEqual(server.PHASE, 5)
+        self.assertEqual(
+            latent_ops.LATENT_OPERATOR_CATEGORIES,
+            ("masked_copy", "masked_xor", "rotate_copy", "masked_and"),
+        )
+        self.assertIn("| IN0 | `(8, 12)` |", functional)
+        self.assertIn("| OUT7 | `(24, 19)` |", functional)
+        self.assertIn("OUT_NULL", functional)
+        self.assertIn("`(24, 22)`", functional)
+        self.assertIn("noise_attempts", behavior)
+        self.assertIn("one deterministic noise-event decision", behavior)
+        self.assertIn("black_hole_grace = 2", implementation)
 
     def test_runner_reports_phase1_physics(self):
         status = build_status(load_config(ROOT / "config" / "default.json"))

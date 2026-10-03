@@ -12,6 +12,15 @@
   the real Phase 4 collector, and exposes bounded replacement escalation.
 - Configuration, CI labels, specification status, README routing, roadmap,
   and Phase 6+ handoff wording were reconciled under remediation #31.
+- Residual P2 remediation #36 / PR #39 (`4da092151d7e89687515b9281209c5d1f79c7cd6`)
+  reconciles physical ordering, structure degradation, local BLACK_HOLE revival,
+  and one-event noise/randomness behavior.
+- Residual P2 remediation #37 / PR #40 (`4fe87b2f32662d7445bc8084dc91d07e2a029d42`)
+  adds bounded optimizer snapshot/restore, growth-only fitness/pruning fields,
+  and measured headless population performance.
+- Residual P3 remediation #38 / PR #41 reconciles package phase metadata,
+  canonical rotate-operator naming, fixed I/O coordinates, and documented
+  black-hole/noise defaults without rewriting historical records.
 
 ## 2026-10-03 — v0.1 specification basis established
 - Issue #2 preserves historical rationale.

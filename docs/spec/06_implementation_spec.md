@@ -1,6 +1,8 @@
 # Implementation and Phase Specification
 
-Implementation choices remain subordinate to requirements/behavior. Phase 0 is scaffold-only; Phase 1 is the first physics implementation phase.
+Implementation choices remain subordinate to requirements/behavior. Phase 0
+established the repository/specification scaffold; the accepted implementation
+frontier is Phase 1 through Phase 5.
 
 # 39. Existing asset reuse
 
@@ -191,10 +193,12 @@ These are not fixed enough to hard-code as hidden assumptions:
 - exact fusion threshold
 - exact contact gain/decay values
 - exact fragmentation probability family
-- exact black-hole duration choice
+- black-hole duration choice remains parameterized; the current default is
+  `black_hole_grace = 2`
 - exact bit-selection algorithm for mask
 - exact event-hash RNG primitive
-- exact I/O organ coordinates
+- exact I/O organ coordinates are fixed in the Phase 4 contract at
+  `docs/spec/02_functional_spec.md`
 - exact teacher repetitions/delay
 - exact success threshold for the first learning claim
 - whether Masked AND remains a productive fourth category

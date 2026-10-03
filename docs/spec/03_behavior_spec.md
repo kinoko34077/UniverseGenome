@@ -584,6 +584,10 @@ Grace family initially centered on:
 - 32
 - 64 generations
 
+The implemented default is `black_hole_grace = 2` generations. The value is
+still parameterized for bounded experiments; 32 and 64 are candidate values,
+not the current default.
+
 After expiration with no revival:
 
 `BLACK_HOLE → FREE`
@@ -612,6 +616,10 @@ If no free slot:
 If spawn overlaps:
 
 - normal physics resolves it
+
+The implementation makes one deterministic noise-event decision per
+generation. `noise_attempts` remains a readable legacy configuration field for
+snapshot/config compatibility, but it does not multiply event decisions.
 
 ---
 
