@@ -758,15 +758,46 @@ class Phase5OptimizerTests(unittest.TestCase):
         for slot in optimizer.slots:
             if slot.category == "masked_copy":
                 slot.growth_windows = (0x0F, 0x0F, 0x0F, 0x0F)
-        optimizer.slots[30].growth_windows = (0, 0, 0, 0)
+        optimizer.slots[0].growth_windows = (0, 0, 0, 0)
 
         summary = optimizer.step()
-        replacement = next(item for item in summary["replacements"] if item["index"] == 30)
+        replacement = next(item for item in summary["replacements"] if item["index"] == 0)
 
         self.assertEqual(replacement["allocation_reason"], "seed_evidence")
         self.assertEqual(replacement["parent_index"], 31)
         self.assertIsNone(replacement["mutation_field"])
         self.assertEqual(replacement["group_count"], 2)
+
+    def test_p5_033_incomplete_mutation_child_is_not_pruned_before_minimum_evidence(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=114,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        parent = next(slot for slot in optimizer.slots if slot.category == "masked_copy")
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=-1,
+            field="hp_decay",
+        )
+        optimizer.slots[31] = child
+        for slot in optimizer.slots:
+            if slot.category == "masked_copy":
+                slot.growth_windows = (0x0F, 0x0F, 0x0F, 0x0F)
+        child.growth_windows = (0, 0, 0, 0)
+
+        summary = optimizer.step()
+
+        self.assertEqual(summary["replacement_count"], 0)
+        self.assertIs(optimizer.slots[31], child)
 
 
 if __name__ == "__main__":

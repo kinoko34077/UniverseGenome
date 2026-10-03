@@ -499,7 +499,8 @@ class SteadyStateOptimizer:
         for category in CATEGORY_OPERATORS:
             local = [slot for slot in self.slots if slot.category == category]
             protected = self._protected_indices(local)
-            pruned = prune_candidates(local, protected=protected)
+            eligible = self._selection_eligible_slots(local)
+            pruned = prune_candidates(eligible, protected=protected)
             pruned_count += len(pruned)
             if not pruned:
                 continue
