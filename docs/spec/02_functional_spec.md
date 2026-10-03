@@ -87,6 +87,10 @@ Implemented v0.1 logical-tile coordinates:
 The coordinates are fixed non-cell organs and are sampled by the Phase 4
 input/output boundary.
 
+Initial-density and noise spawns reject every fixed-organ tile in the complete
+destination footprint of the candidate cell. Compound cells therefore cannot
+partially overlap an I/O line at creation time.
+
 ---
 
 ---
@@ -105,6 +109,13 @@ A later LOW then HIGH emits a new byte.
 NULL uses equivalent edge semantics.
 
 NULL ends one utterance but does not stop universe time.
+
+The evaluation detector is primed from the clone's current `OUT_VALID` level
+without emitting an event. A persistent HIGH already present at evaluation
+start is therefore not misclassified as a newly generated output.
+
+Output occupancy and input stimulation use every tile in a compound cell's
+destination footprint, not only its anchor tile.
 
 ---
 
@@ -145,6 +156,11 @@ Initial defaults:
 Teacher delay is parameterized.
 
 Do not make per-byte hold duration scale with entire input string length; that would create approximately quadratic total stimulus with string length.
+
+Autonomous evaluation also records two output-clean counterfactuals for each
+seed: no input signal and an alternate input byte. The learning claim requires
+the trained A→B→NULL result to beat baseline and both counterfactuals to emit
+no events across all evaluated seeds.
 
 ---
 

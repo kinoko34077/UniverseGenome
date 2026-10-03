@@ -141,6 +141,10 @@ def _measurement_summary(measurement: LearningMeasurement) -> dict[str, Any]:
                 "seed": item.seed,
                 "baseline_success": item.baseline.success,
                 "trained_success": item.trained.success,
+                "baseline_no_input_clean": item.baseline_no_input.success,
+                "trained_no_input_clean": item.trained_no_input.success,
+                "baseline_alternate_input_clean": item.baseline_alternate.success,
+                "trained_alternate_input_clean": item.trained_alternate.success,
                 "baseline_event_count": len(item.baseline.autonomous_events),
                 "trained_event_count": len(item.trained.autonomous_events),
             }
@@ -187,6 +191,10 @@ def run_optimizer_headless(
         "phase4_learning_claim": measurement.learning_claim,
         "candidate_genome": candidate.to_dict(),
         "candidate_measurement": _measurement_summary(measurement),
+        "counterfactual_clean": {
+            "no_input": measurement.no_input_clean,
+            "alternate_input": measurement.alternate_input_clean,
+        },
         "replacement_seed_counts": [item.seed_count for item in replacements],
         "replacement_categories": [item.category for item in replacements],
     }

@@ -174,6 +174,10 @@ def main(argv: list[str] | None = None) -> int:
             "seed_count": measurement.seed_count,
             "baseline_successes": measurement.baseline_successes,
             "trained_successes": measurement.trained_successes,
+            "baseline_no_input_clean": measurement.baseline_no_input_clean,
+            "trained_no_input_clean": measurement.trained_no_input_clean,
+            "baseline_alternate_input_clean": measurement.baseline_alternate_input_clean,
+            "trained_alternate_input_clean": measurement.trained_alternate_input_clean,
             "criterion": measurement.criterion,
             "learning_claim": measurement.learning_claim,
         }

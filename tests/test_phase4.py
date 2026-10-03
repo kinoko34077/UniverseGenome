@@ -12,8 +12,9 @@ from core.experiment import (
     IOExperiment,
     compare_baseline_trained,
 )
-from core.io_bus import InputBus, OutputEdgeDetector, OutputEvent, validate_byte
-from core.physics import PhysicsConfig, create_universe
+from core.io_bus import InputBus, OutputEdgeDetector, OutputEvent, read_output_signal, validate_byte
+from core.physics import PhysicsConfig, create_universe, destination_footprint, step
+from core.state import SHAPE_HORIZONTAL
 from core.runner import build_status, load_config
 
 
@@ -128,8 +129,56 @@ class Phase4IOTests(unittest.TestCase):
             experiment=ExperimentConfig(evaluation_timeout_generations=3),
         ).evaluate_autonomous(input_byte=65, expected=(OutputEvent.byte(66),))
 
-        self.assertEqual(result.autonomous_events, (OutputEvent.byte(66),))
-        self.assertTrue(result.success)
+        self.assertEqual(result.autonomous_events, ())
+        self.assertFalse(result.success)
+
+    def test_p4_009_persistent_high_at_evaluation_start_is_not_a_new_edge(self):
+        detector = OutputEdgeDetector()
+        detector.prime(valid=True, value=66)
+        self.assertEqual(detector.observe(valid=True, value=66), [])
+        detector.observe(valid=False)
+        self.assertEqual(detector.observe(valid=True, value=67), [OutputEvent.byte(67)])
+
+    def test_p4_010_initial_and_noise_spawns_avoid_fixed_organ_footprints(self):
+        config = experiment_physics_config(
+            max_cells=64,
+            initial_density=32,
+            noise_rate=0xFFFF,
+            noise_structure=SHAPE_HORIZONTAL,
+            noise_speed_code=0,
+            initial_speed_code=0,
+        )
+        state = create_universe(seed=92, config=config)
+        fixed = set(FixedOrgans.coordinates().values())
+        for slot in state.active_slots():
+            self.assertTrue(destination_footprint(state.structure[slot], state.x[slot], state.y[slot]).isdisjoint(fixed))
+        for _ in range(32):
+            step(state)
+        self.assertEqual(len(state.active_slots()), 64)
+        for slot in state.active_slots():
+            self.assertTrue(destination_footprint(state.structure[slot], state.x[slot], state.y[slot]).isdisjoint(fixed))
+
+    def test_p4_011_io_uses_compound_cell_footprint(self):
+        state = create_universe(seed=93, config=experiment_physics_config())
+        state.spawn(x=23 * 8, y=12 * 8, structure=SHAPE_HORIZONTAL, speed_code=0)
+        signal = read_output_signal(state)
+        self.assertEqual(signal.value, 1)
+
+        state.spawn(x=6 * 8, y=12 * 8, structure=SHAPE_HORIZONTAL, speed_code=0)
+        experiment = IOExperiment(state)
+        nearby = experiment._nearby_slots(((8, 12),))
+        self.assertEqual(nearby, (1,))
+
+    def test_p4_012_learning_measurement_requires_counterfactuals(self):
+        measurement = compare_baseline_trained(
+            seeds=(94, 95),
+            config=experiment_physics_config(),
+            experiment=ExperimentConfig(teacher_delay_generations=1, evaluation_timeout_generations=2),
+        )
+        self.assertEqual(measurement.no_input_clean, 2)
+        self.assertEqual(measurement.alternate_input_clean, 2)
+        self.assertIn("no-input", measurement.criterion)
+        self.assertIn("alternate-input", measurement.criterion)
 
     def test_p4_008_experiment_config_is_explicit_and_loadable(self):
         loader = getattr(experiment_module, "load_experiment_config", None)
