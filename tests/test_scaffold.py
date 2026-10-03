@@ -163,6 +163,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
             roadmap,
         )
         self.assertIn("Status: **blocked pending remediation #63/#65/#66; readiness rerun #60**", handoff)
+        self.assertIn("historical v0.1 physics/search contract", handoff)
         self.assertIn("Status is a single base term", overview)
         self.assertNotIn("Status: open / policy hook only", functional)
         self.assertNotIn("Status: accepted invariant", functional)

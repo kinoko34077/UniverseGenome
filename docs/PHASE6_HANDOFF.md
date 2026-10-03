@@ -76,7 +76,7 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 ## Phase 6 boundary
 
 Phase 6 must remain a new bounded capability layer rather than a silent change
-to the accepted Phase 0–5 physics/search contract.
+to the historical v0.1 physics/search contract.
 
 Before any Phase 6 mutation:
 
