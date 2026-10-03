@@ -1,8 +1,8 @@
 # World and Physics Behavior Specification
 
 Owns geometric/local-physics behavior. The accepted Phase 1 subset, Phase 2A
-contact/bond update, and Phase 2B latent propagation are implemented;
-fusion/fragmentation remain deferred.
+contact/bond update, Phase 2B latent propagation, and Phase 2C fusion are
+implemented; fragmentation remains deferred.
 
 # 2. World geometry
 
@@ -384,7 +384,7 @@ If this category collapses toward zero, record the result rather than silently r
 
 # 15. Fusion
 
-Specified for Phase 2+.
+Implemented in Phase 2C; fragmentation and aging remain deferred.
 
 ## SPEC-FUSION-001 — Eligibility
 **Status: accepted-default**

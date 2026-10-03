@@ -33,8 +33,8 @@ Deliverables:
 
 ## Phase 2 — Local learning physics
 2A contact/bond (accepted on `main`; #10 / PR #11)
-2B four latent operators (in progress; #12)
-2C fusion
+2B four latent operators (accepted on `main`; #12 / PR #13)
+2C fusion (in progress; #14)
 2D fragmentation
 2E aging
 

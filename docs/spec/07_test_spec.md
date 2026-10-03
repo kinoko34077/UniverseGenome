@@ -73,4 +73,22 @@ from 1 through 16 without duplicate bit positions.
 Compatible contact applies bounded latent updates from the pre-transmission
 state and counts successful transmission as meaningful activity for HP gain.
 
+## Phase 2C acceptance tests
+
+### TEST-P2C-001 Fusion eligibility and result
+
+An exact local 2×2 cover with compatible level, velocity and bond state fuses
+once into a level+1 1×1 core with the specified HP, direction, speed, age,
+bond, latent and slot lifecycle results.
+
+### TEST-P2C-002 Fusion rejection and bounded discovery
+
+Wrong-level, under-bonded, over-threshold-velocity and non-composing local
+groups remain unchanged; candidate discovery is local and bounded.
+
+### TEST-P2C-003 Fusion snapshot continuation
+
+Save/load restores fusion parameters and fused state; resumed execution equals
+uninterrupted execution.
+
 ---
