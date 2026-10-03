@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "UniverseGenome",
-  "phase": 0,
+  "phase": 1,
   "world": {
     "logical_size": 32,
     "subdivisions_per_tile": 8,
@@ -21,8 +21,21 @@
     "directions": 8,
     "destination_only_collision": true
   },
+  "physics": {
+    "noise_rate": 0,
+    "noise_attempts": 0,
+    "noise_spawn_hp": 255,
+    "noise_structure": 1,
+    "hp_decay": 1,
+    "recovery_hp": 32,
+    "collision_threshold": 8,
+    "collision_damage": 8,
+    "latent_damage_mask": 1,
+    "structure_damage_threshold": 16,
+    "black_hole_grace": 2
+  },
   "features": {
-    "phase1_physics": false,
+    "phase1_physics": true,
     "fusion": false,
     "fragmentation": false,
     "latent_runtime": false,

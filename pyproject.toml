@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "universegenome"
 version = "0.0.0"
-description = "Phase 0 scaffold for the UniverseGenome local-physics research project"
+description = "UniverseGenome deterministic local-physics research project"
 requires-python = ">=3.11"
 
 [project.scripts]
