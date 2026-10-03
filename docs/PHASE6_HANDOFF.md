@@ -16,13 +16,16 @@ handoff:
 - Phase 2E — PR #19, main `ff4135ae806994ee5f1f18077d241bdfc5f72212`
 - Phase 3 — original PR #21, then remediation PR #33, main `2ff7f429f332b4cbbe1fca4c886b0b5ec9e63b93`
 - Phase 4 — original PR #23, then remediation PR #32, main `4eccfddf4a2f14dfa423613499f22f67559aec24`
-- Phase 5 — original PR #25, then remediation PR #34, main `02b07bb8dae7f649d543f8386d421064c6977a55`
+- Phase 5 — original PR #25, remediation PR #34 (`02b07bb8dae7f649d543f8386d421064c6977a55`),
+  residual P2 PRs #39/#40, latest merged baseline
+  `4fe87b2f32662d7445bc8084dc91d07e2a029d42`
 
-Final implementation verification at main `02b07bb8dae7f649d543f8386d421064c6977a55`:
-full suite 73/73, Python compile checks successful, main CI `37114754431`
-successful, and the optimizer reports the real Phase 4 measurement plus a
-Phase 6+ handoff only. Remediation #31 adds consistency checks for the
-configuration, documentation, and CI projections.
+Latest merged implementation verification before the P3 metadata
+reconciliation at main `4fe87b2f32662d7445bc8084dc91d07e2a029d42`: full suite
+84/84, Python compile checks successful, main CI `37116004528` successful, and
+the optimizer reports the real Phase 4 measurement plus a Phase 6+ handoff
+only. Remediation #31 and residual remediation #38 add consistency checks for
+the configuration, documentation, package metadata, and CI projections.
 
 ## Phase 4 outcome
 

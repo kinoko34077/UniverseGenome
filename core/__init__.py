@@ -1,7 +1,3 @@
-"""UniverseGenome simulation-core package.
+"""UniverseGenome simulation-core package through the accepted Phase 5 boundary."""
 
-Phase 0 exposes contracts and entrypoints only. Phase 1 implements the first
-authoritative universe physics.
-"""
-
-PHASE = 0
+PHASE = 5

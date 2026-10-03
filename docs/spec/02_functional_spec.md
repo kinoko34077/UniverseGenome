@@ -1,6 +1,8 @@
 # Functional Specification
 
-Owns I/O, training/evaluation, population, mutation, fitness, pruning and evolution behavior. Later-phase items are specified but not Phase 0/1 runtime commitments.
+Owns I/O, training/evaluation, population, mutation, fitness, pruning and
+evolution behavior. Phase 4 and Phase 5 sections below describe the accepted
+implemented boundary; later capability-ladder work remains handoff-only.
 
 # 22. I/O organs
 
@@ -58,12 +60,32 @@ I/O organs:
 
 Do not place input and output on opposite torus edges.
 
-Initial placement concept:
+Implemented v0.1 logical-tile coordinates:
 
-- input region around x≈8
-- output region around x≈24
+| Organ | Coordinate |
+| --- | --- |
+| IN0 | `(8, 12)` |
+| IN1 | `(8, 13)` |
+| IN2 | `(8, 14)` |
+| IN3 | `(8, 15)` |
+| IN4 | `(8, 16)` |
+| IN5 | `(8, 17)` |
+| IN6 | `(8, 18)` |
+| IN7 | `(8, 19)` |
+| IN_VALID | `(8, 21)` |
+| OUT0 | `(24, 12)` |
+| OUT1 | `(24, 13)` |
+| OUT2 | `(24, 14)` |
+| OUT3 | `(24, 15)` |
+| OUT4 | `(24, 16)` |
+| OUT5 | `(24, 17)` |
+| OUT6 | `(24, 18)` |
+| OUT7 | `(24, 19)` |
+| OUT_VALID | `(24, 21)` |
+| OUT_NULL | `(24, 22)` |
 
-Final exact coordinates must be recorded before Phase 4 implementation.
+The coordinates are fixed non-cell organs and are sampled by the Phase 4
+input/output boundary.
 
 ---
 

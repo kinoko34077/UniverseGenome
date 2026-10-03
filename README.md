@@ -38,6 +38,12 @@ new bounded work unit.
 - Issue #24 owns the original Phase 5 optimizer mechanics; audit remediation
   #30 / PR #34 integrates genome mapping and real Phase 4 candidate evaluation.
 - Audit remediation #29 / PR #33 connects the Phase 3 GUI to the runtime API.
+- Audit remediation #36 / PR #39 reconciles physical identity, noise, structure,
+  and black-hole event semantics.
+- Audit remediation #37 / PR #40 adds optimizer snapshot/restore, growth-only
+  fitness/pruning fields, and bounded population performance reporting.
+- Audit remediation #38 / PR #41 reconciles package metadata, fixed I/O
+  coordinates, and documented implemented defaults.
 
 ## Headless verification commands
 
