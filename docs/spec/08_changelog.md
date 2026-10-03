@@ -13,8 +13,8 @@
 
 ## 2026-10-03 — Issue #56 Phase 5 semantic corrections
 
-- corrected Phase 5 seed evidence to expand the same genome over a deterministic
-  4→8→16→32 seed set, separate from mutation-child creation;
+- recorded the earlier Phase 5 seed-evidence model as superseded by the
+  authoritative-slot allocation model in the #58 entry above;
 - added eight distinct deterministic initial parameter genomes per category;
 - normalized absolute fitness across evidence counts and mapped wrong outputs,
   timeout, first-response latency, and physics activity to explicit observables;

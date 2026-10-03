@@ -399,9 +399,15 @@ When a slot becomes free:
 - add another seed for a promising genome, or
 - insert a mutation child
 
-Seed escalation for promising genome:
+Seed-evidence cardinalities for a promising genome are represented by actual
+occupied slots in the same category/genome group. The notation
 
 `4 → 8 → 16 → 32`
+
+describes those real group sizes; it is not a `seed_count` field and must not
+be implemented by packing multiple UniverseStates into one logical slot. A
+newly allocated evidence or mutation slot owns one fresh UniverseState at
+generation 0.
 
 ## SPEC-EVOL-002 — Promising allocation policy
 **Status: accepted-default**

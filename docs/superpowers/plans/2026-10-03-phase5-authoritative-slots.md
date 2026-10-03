@@ -85,11 +85,11 @@
 - `SteadyStateOptimizer.allocate_seed_slot(free_index, parent)` creates one new same-genome/category slot at a fresh deterministic seed and generation 0.
 - `SteadyStateOptimizer.replace_free_slot(free_index, parent)` creates one mutation-child slot with a fresh state and four-seed-group membership represented by actual slots only.
 
-- [ ] **Step 1: Write RED tests** for 128 real states, no state sharing, one-state-per-slot serialization, persistent generation continuity across optimizer steps, and real same-genome slot allocation.
-- [ ] **Step 2: Run focused Phase 5 tests and confirm current CandidateSlot metadata/fresh reconstruction fails those architecture assertions.**
-- [ ] **Step 3: Implement `UniverseSlot`, deterministic state creation, grouping-based evidence counts, and allocation operations without changing growth policy yet.
-- [ ] **Step 4: Run focused tests and confirm persistent slot/state assertions pass.
-- [ ] **Step 5: Commit `feat: restore authoritative phase5 universe slots`.
+- [x] **Step 1: Write RED tests** for 128 real states, no state sharing, one-state-per-slot serialization, persistent generation continuity across optimizer steps, and real same-genome slot allocation.
+- [x] **Step 2: Run focused Phase 5 tests and confirm current CandidateSlot metadata/fresh reconstruction fails those architecture assertions.**
+- [x] **Step 3:** Implement `UniverseSlot`, deterministic state creation, grouping-based evidence counts, and allocation operations without changing growth policy yet.
+- [x] **Step 4:** Run focused tests and confirm persistent slot/state assertions pass.
+- [x] **Step 5:** Commit `feat: restore authoritative phase5 universe slots`.
 
 ### Task 4: Tie growth to observed authoritative boundaries
 
@@ -105,11 +105,11 @@
 - No callback or measurement from evaluation clones changes `physical_generations`.
 - Four stored windows represent four actual 128-generation intervals; long evaluation time produces no synthetic zeros.
 
-- [ ] **Step 1: Write RED tests** for generation-0 reference, exact 128/256/384/512 boundary windows, default timeout isolation, and a training run that crosses a boundary without zero fabrication.
-- [ ] **Step 2: Run focused tests and confirm synthetic-zero/fresh-evaluation behavior fails.**
-- [ ] **Step 3: Implement boundary observation around the authoritative training callback and remove `record_candidate_evaluation()`’s disposable-generation accounting.
-- [ ] **Step 4: Run the growth/pruning tests and confirm only real windows reach pruning.
-- [ ] **Step 5: Commit `fix: measure phase5 growth on authoritative generations`.
+- [x] **Step 1: Write RED tests** for generation-0 reference, exact 128/256/384/512 boundary windows, default timeout isolation, and a training run that crosses a boundary without zero fabrication.
+- [x] **Step 2: Run focused tests and confirm synthetic-zero/fresh-evaluation behavior fails.**
+- [x] **Step 3:** Implement boundary observation around the authoritative training callback and remove `record_candidate_evaluation()`’s disposable-generation accounting.
+- [x] **Step 4:** Run the growth/pruning tests and confirm only real windows reach pruning.
+- [x] **Step 5:** Commit `fix: measure phase5 growth on authoritative generations`.
 
 ### Task 5: Restore slot-based allocation, policy hook, and persistence
 
@@ -122,17 +122,17 @@
 - Modify: `docs/spec/08_changelog.md`
 
 **Interfaces:**
-- Scheduler persists `promising_policy`, allocation cursor/state, category-local queues, and lineage.
+- Scheduler persists `promising_policy`, allocation/mutation cursors, evaluation/replacement counts, and lineage; category-local selection remains derived from the authoritative slots.
 - Default policy is explicit and tested; it is not hidden in `seed_count` logic.
 - Seed evidence summaries report actual per-genome slot counts; no `4→8→16→32` claim is emitted unless actual slots reach those counts.
 - Integrated snapshots use a new format version and serialize each occupied `UniverseSlot.state.to_snapshot()`; disposable clones are absent.
 - `SteadyStateOptimizer.from_snapshot()` restores all 128 authoritative states and deterministic continuation.
 
-- [ ] **Step 1: Write RED tests** for explicit promising policy, category-local actual slot allocation, mutation-child distinction, snapshot fields, no disposable clone serialization, and restore equivalence.
-- [ ] **Step 2: Run focused tests and confirm old scheduler/snapshot/headless evidence fails.**
-- [ ] **Step 3: Implement the policy hook, actual free-slot allocation, format migration, and headless evidence from slot groups.
-- [ ] **Step 4: Run focused Phase 5 tests and an optimizer smoke with a bounded training budget.
-- [ ] **Step 5: Commit `fix: persist phase5 slots and allocation policy`.
+- [x] **Step 1: Write RED tests** for explicit promising policy, category-local actual slot allocation, mutation-child distinction, snapshot fields, no disposable clone serialization, and restore equivalence.
+- [x] **Step 2: Run focused tests and confirm old scheduler/snapshot/headless evidence fails.**
+- [x] **Step 3:** Implement the policy hook, actual free-slot allocation, format migration, and headless evidence from slot groups.
+- [x] **Step 4:** Run focused Phase 5 tests and an optimizer smoke with a bounded training budget.
+- [x] **Step 5:** Commit `fix: persist phase5 slots and allocation policy`.
 
 ### Task 6: Final verification and review handoff
 

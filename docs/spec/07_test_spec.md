@@ -224,7 +224,9 @@ policy state. It does not retain disposable evaluation clones. Restore/resume
 produces the same bounded slot population as uninterrupted continuation.
 
 The headless performance path reports bounded optimizer iterations, evaluated
-slots, replacements, mutation fields, seed escalation, and throughput.
+slots, replacements, mutation fields, actual same-genome slot-group counts,
+and throughput. It does not report a seed-escalation level unless the
+corresponding number of real authoritative slots exists.
 
 ### TEST-P5-006 Phase 6+ handoff boundary
 

@@ -14,13 +14,12 @@ from core.io_bus import OutputEvent
 from core.population import run_population_headless
 from core.physics import PhysicsConfig, create_universe
 from core.runner import build_status, load_config
+from core.state import UniverseState
+from search import evolution as evolution_module
 from search.evolution import (
-    CandidateSlot,
     SteadyStateOptimizer,
-    record_candidate_evaluation,
+    UniverseSlot,
     evaluate_candidate,
-    optimizer_snapshot,
-    restore_optimizer_snapshot,
     run_optimizer_headless,
     seed_escalation,
 )
@@ -30,6 +29,32 @@ from search.pruning import GrowthHistory, growth_flags, prune_candidates, protec
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def make_slot(
+    *,
+    index: int,
+    category: str = "masked_copy",
+    seed: int = 0,
+    genome: UniverseGenome | None = None,
+    fitness: Fitness | None = None,
+    growth_windows: tuple[int, ...] = (),
+    generation: int = 0,
+    parent_index: int | None = None,
+) -> UniverseSlot:
+    config = PhysicsConfig(max_cells=8)
+    state = create_universe(seed=seed, config=config)
+    state.generation = generation
+    return UniverseSlot(
+        index=index,
+        category=category,
+        genome=genome or UniverseGenome.default(),
+        seed=seed,
+        state=state,
+        fitness=fitness or Fitness(),
+        growth_windows=growth_windows,
+        parent_index=parent_index,
+    )
 
 
 class Phase5OptimizerTests(unittest.TestCase):
@@ -143,7 +168,7 @@ class Phase5OptimizerTests(unittest.TestCase):
 
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=101)
         first_category = [
-            (slot.genome, slot.seed)
+            slot.genome
             for slot in optimizer.candidates
             if slot.category == "masked_copy"
         ]
@@ -151,40 +176,25 @@ class Phase5OptimizerTests(unittest.TestCase):
         for category in ("masked_xor", "rotate_copy", "masked_and"):
             self.assertEqual(
                 first_category,
-                [(slot.genome, slot.seed) for slot in optimizer.candidates if slot.category == category],
+                [slot.genome for slot in optimizer.candidates if slot.category == category],
             )
+        self.assertEqual(len({slot.seed for slot in optimizer.slots}), 128)
 
-    def test_p5_018_seed_escalation_preserves_genome_and_sample_prefix(self):
-        parent = CandidateSlot(
-            index=0,
-            category="masked_copy",
-            genome=UniverseGenome.default(),
-            seed=41,
-            seed_count=4,
-            fitness=Fitness(),
-            growth_windows=(),
-        )
-        optimizer = SteadyStateOptimizer()
-        expanded = optimizer.escalate_seed_evidence(parent=parent, target_index=12)
+    def test_p5_018_seed_evidence_allocates_a_fresh_same_genome_slot(self):
+        parent = make_slot(index=0, seed=41)
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=100)
+        expanded = optimizer.allocate_seed_slot(free_index=12, parent=parent)
 
         self.assertEqual(expanded.index, 12)
         self.assertEqual(expanded.category, parent.category)
         self.assertEqual(expanded.genome, parent.genome)
-        self.assertEqual(expanded.seed, parent.seed)
-        self.assertEqual(parent.seeds, (41, 42, 43, 44))
-        self.assertEqual(expanded.seeds, (41, 42, 43, 44, 45, 46, 47, 48))
+        self.assertNotEqual(expanded.seed, parent.seed)
+        self.assertEqual(expanded.state.generation, 0)
+        self.assertEqual(expanded.allocation_reason, "seed_evidence")
 
     def test_p5_019_mutation_child_is_separate_from_seed_escalation(self):
-        parent = CandidateSlot(
-            index=0,
-            category="masked_copy",
-            genome=UniverseGenome.default(),
-            seed=41,
-            seed_count=8,
-            fitness=Fitness(),
-            growth_windows=(),
-        )
-        optimizer = SteadyStateOptimizer()
+        parent = make_slot(index=0, seed=41)
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=100)
         child = optimizer.replace_free_slot(
             free_index=12,
             parent=parent,
@@ -193,12 +203,12 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
 
         self.assertNotEqual(child.genome, parent.genome)
-        self.assertEqual(child.seed_count, 4)
-        self.assertEqual(child.seed, 49)
+        self.assertNotEqual(child.seed, parent.seed)
+        self.assertEqual(child.state.generation, 0)
         self.assertEqual(child.last_mutation_field, "hp_decay")
-        self.assertEqual(parent.seed_count, 8)
+        self.assertEqual(child.allocation_reason, "mutation_child")
 
-    def test_p5_020_integrated_queue_escalates_same_genome_before_mutation(self):
+    def test_p5_020_integrated_loop_preserves_real_slots_between_steps(self):
         protocol = ExperimentConfig(
             byte_hold_generations=0,
             byte_gap_generations=0,
@@ -211,55 +221,38 @@ class Phase5OptimizerTests(unittest.TestCase):
             base_config=PhysicsConfig(max_cells=8),
             experiment=protocol,
         )
-        optimizer.step()
-        queued_before = {
-            slot.index: slot
-            for slot in optimizer.candidates
-            if slot.index in optimizer.scheduler["escalation_queue"]
-        }
-
+        first = optimizer.step()
         summary = optimizer.step()
-        self.assertEqual(
-            {item["reason"] for item in summary["replacements"]},
-            {"seed_escalation"},
-        )
-        for item in summary["replacements"]:
-            previous = queued_before[item["index"]]
-            current = optimizer.candidates[item["index"]]
-            self.assertEqual(current.genome, previous.genome)
-            self.assertEqual(current.category, previous.category)
-            self.assertEqual(current.seed, previous.seed)
-            self.assertEqual(current.seed_count, 8)
-            self.assertIsNone(current.last_mutation_field)
+        self.assertEqual(first["evaluated_slots"], 128)
+        self.assertEqual(summary["evaluated_slots"], 128)
+        self.assertTrue(all(item["allocation_reason"] in {"seed_evidence", "mutation_child"}
+                            for item in summary["replacements"]))
+        replaced = {item["index"] for item in summary["replacements"]}
+        self.assertTrue(all(slot.state.generation > 0
+                            for slot in optimizer.slots if slot.index not in replaced))
 
     def test_p5_021_growth_windows_follow_128_physical_generations(self):
-        candidate = CandidateSlot(
-            index=0,
-            category="masked_copy",
-            genome=UniverseGenome.default(),
-            seed=0,
-            fitness=Fitness(),
-            growth_windows=(),
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=256,
+            evaluation_timeout_generations=0,
         )
-        candidate = record_candidate_evaluation(candidate, Fitness(success=1), 127)
-        self.assertEqual(candidate.physical_generations, 127)
-        self.assertEqual(candidate.growth_windows, ())
-
-        candidate = record_candidate_evaluation(candidate, Fitness(success=1), 1)
-        self.assertEqual(candidate.physical_generations, 128)
-        self.assertEqual(len(candidate.growth_windows), 1)
-
-        for _ in range(3):
-            candidate = record_candidate_evaluation(candidate, Fitness(success=1), 128)
-        self.assertEqual(candidate.physical_generations, 512)
+        optimizer = SteadyStateOptimizer(
+            experiment=protocol,
+            base_config=PhysicsConfig(max_cells=8),
+        )
+        candidate = make_slot(index=0, seed=0, generation=127)
+        candidate.growth_reference = Fitness()
+        optimizer._evaluate_slot(candidate)
+        self.assertEqual(candidate.physical_generations, 639)
         self.assertEqual(len(candidate.growth_windows), 4)
 
     def test_p5_022_zero_median_growth_does_not_prune(self):
         records = [
-            CandidateSlot(
+            make_slot(
                 index=index,
-                category="masked_copy",
-                genome=UniverseGenome.default(),
                 seed=index,
                 fitness=Fitness(),
                 growth_windows=(0, 0, 0, 0),
@@ -282,22 +275,26 @@ class Phase5OptimizerTests(unittest.TestCase):
 
     def test_p5_004_pruning_protects_absolute_top_eighth(self):
         records = [
-            CandidateSlot(index=index, category="masked_copy", genome=UniverseGenome.default(), seed=index, fitness=Fitness(1 if index == 0 else 0, 0, 0, index, index), growth_windows=((0x0F, 0x0F, 0x0F, 0x0F) if index in (0, 4, 5, 6) else (0, 0, 0, 0)))
+            make_slot(index=index, seed=index,
+                      fitness=Fitness(1 if index == 0 else 0, 0, 0, index, index),
+                      growth_windows=((0x0F, 0x0F, 0x0F, 0x0F)
+                                      if index in (0, 4, 5, 6) else (0, 0, 0, 0)))
             for index in range(8)
         ]
         self.assertIn(0, protected_indices(records))
         self.assertNotIn(0, prune_candidates(records))
         self.assertIn(1, prune_candidates(records))
 
-    def test_p5_005_seed_escalation_and_replacement_are_deterministic(self):
+    def test_p5_005_real_slot_replacement_is_deterministic(self):
         self.assertEqual([seed_escalation(value) for value in (4, 8, 16, 32, 64)], [8, 16, 32, 32, 32])
-        parent = CandidateSlot(index=0, category="masked_copy", genome=UniverseGenome.default(), seed=41, fitness=Fitness(0, 0, 0, 0, 0), growth_windows=(1,))
-        optimizer = SteadyStateOptimizer()
+        parent = make_slot(index=0, seed=41, growth_windows=(1,))
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=100)
         replacement = optimizer.replace_free_slot(free_index=12, parent=parent, direction=1)
         self.assertEqual(replacement.index, 12)
         self.assertEqual(replacement.category, parent.category)
-        self.assertEqual(replacement.seed, 45)
-        self.assertEqual(replacement.seed_count, 4)
+        self.assertNotEqual(replacement.seed, parent.seed)
+        self.assertEqual(replacement.state.generation, 0)
+        self.assertEqual(replacement.allocation_reason, "mutation_child")
         self.assertNotIn("seed", replacement.genome.to_dict())
 
     def test_p5_006_status_and_flags(self):
@@ -367,21 +364,14 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertFalse(measurement.learning_claim)
         self.assertEqual(len(measurement.per_seed), 2)
 
-    def test_p5_009_replacement_escalates_evaluation_seed_count(self):
-        parent = CandidateSlot(
-            index=0,
-            category="masked_copy",
-            genome=UniverseGenome.default(),
-            seed=41,
-            seed_count=4,
-            fitness=Fitness(0, 0, 0, 0, 0),
-            growth_windows=(1,),
-        )
-        optimizer = SteadyStateOptimizer()
-        replacement = parent
-        for expected_count in (8, 16, 32, 32):
-            replacement = optimizer.escalate_seed_evidence(parent=replacement, target_index=12)
-            self.assertEqual(replacement.seed_count, expected_count)
+    def test_p5_009_repeated_evidence_uses_distinct_real_slots(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=100)
+        parent = optimizer.slots[0]
+        evidence = [optimizer.allocate_seed_slot(free_index=index, parent=parent)
+                    for index in (8, 9, 10, 11)]
+        self.assertEqual(len({slot.seed for slot in evidence}), 4)
+        self.assertTrue(all(slot.genome == parent.genome for slot in evidence))
+        self.assertTrue(all(slot.state.generation == 0 for slot in evidence))
 
     def test_p5_010_headless_output_contains_real_measurement_and_replacement_trace(self):
         protocol = ExperimentConfig(
@@ -398,24 +388,23 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
         self.assertEqual(result["candidate_measurement"]["seed_count"], 2)
         self.assertFalse(result["phase4_learning_claim"])
-        self.assertEqual(result["replacement_seed_counts"], [4, 8, 16, 32])
+        self.assertEqual(result["authoritative_slot_count"], 128)
+        self.assertEqual(result["category_counts"], {
+            "masked_copy": 32,
+            "masked_xor": 32,
+            "rotate_copy": 32,
+            "masked_and": 32,
+        })
 
     def test_p2g_optimizer_snapshot_roundtrip_preserves_bounded_state(self):
-        parent = CandidateSlot(
-            index=2,
-            category="masked_xor",
-            genome=UniverseGenome.default(),
-            seed=12,
-            fitness=Fitness(1, 2, 3, 4, 5, 6, 7),
-            growth_windows=(1, 3, 7, 15),
-            seed_count=16,
-            parent_index=1,
-        )
-        payload = optimizer_snapshot((parent,), generation=128)
-        generation, restored = restore_optimizer_snapshot(payload)
-        self.assertEqual(generation, 128)
-        self.assertEqual(restored, (parent,))
-        self.assertEqual(optimizer_snapshot(restored, generation=generation), payload)
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=100)
+        optimizer.generation = 128
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+        self.assertEqual(restored.to_snapshot(), payload)
+        self.assertEqual(payload["format_version"], 4)
+        self.assertEqual(len(payload["slots"]), 128)
+        self.assertTrue(all("state" in slot for slot in payload["slots"]))
 
     def test_p2g_growth_flags_include_retention_and_noise_robustness(self):
         before = Fitness(0, 4, 3, 8, 10, 0, 0)
@@ -424,10 +413,8 @@ class Phase5OptimizerTests(unittest.TestCase):
 
     def test_p2g_pruning_uses_growth_bit_count_not_numeric_byte_sum(self):
         records = [
-            CandidateSlot(
+            make_slot(
                 index=index,
-                category="masked_copy",
-                genome=UniverseGenome.default(),
                 seed=index,
                 fitness=Fitness(1 if index == 0 else 0),
                 growth_windows=(0xFF, 0xFF, 0xFF, 0xFF)
@@ -452,10 +439,9 @@ class Phase5OptimizerTests(unittest.TestCase):
 
     def test_p2g_pruning_protection_is_category_local(self):
         records = [
-            CandidateSlot(
+            make_slot(
                 index=index,
                 category="masked_copy" if index < 8 else "masked_xor",
-                genome=UniverseGenome.default(),
                 seed=index,
                 fitness=Fitness(1 if index in (0, 1) else 0, response_latency=index),
                 growth_windows=(0xFF, 0xFF, 0xFF, 0xFF)
@@ -532,10 +518,10 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIn("base_config", payload)
         self.assertIn("experiment", payload)
         self.assertIn("scheduler", payload)
-        self.assertEqual(len(payload["candidates"]), 128)
-        self.assertEqual(payload["format_version"], 3)
-        self.assertTrue(all("universe_snapshot" not in candidate for candidate in payload["candidates"]))
-        self.assertTrue(all("physical_generations" in candidate for candidate in payload["candidates"]))
+        self.assertEqual(len(payload["slots"]), 128)
+        self.assertEqual(payload["format_version"], 4)
+        self.assertTrue(all("state" in slot for slot in payload["slots"]))
+        self.assertTrue(all("training_states" not in slot for slot in payload["slots"]))
 
     def test_p5_023_headless_evidence_exposes_authoritative_metrics(self):
         protocol = ExperimentConfig(
@@ -551,7 +537,7 @@ class Phase5OptimizerTests(unittest.TestCase):
             experiment=protocol,
             iterations=4,
         )
-        self.assertEqual(result["replacement_seed_counts"], [4, 8, 16, 32])
+        self.assertEqual(result["authoritative_slot_count"], 128)
         per_seed = result["candidate_measurement"]["per_seed"]
         self.assertTrue(per_seed)
         self.assertTrue({
@@ -585,11 +571,8 @@ class Phase5OptimizerTests(unittest.TestCase):
         })
         self.assertGreaterEqual(result["replacement_count"], 4)
         self.assertGreaterEqual(len(result["mutation_fields"]), 2)
-        self.assertEqual(result["seed_escalation"], [8, 16, 32, 32])
-        self.assertEqual(
-            result["integrated_seed_counts"],
-            [4] * 4 + [8] * 4 + [16] * 4 + [32] * 4,
-        )
+        self.assertEqual(result["authoritative_slot_count"], 128)
+        self.assertTrue(result["group_counts"])
 
     def test_p5_014_integrated_loop_does_not_prune_before_physical_window(self):
         protocol = ExperimentConfig(
@@ -608,6 +591,87 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(summary["pruned_count"], 0)
         self.assertFalse(any(item["reason"] == "growth_pruned" for item in summary["replacements"]))
         self.assertTrue(all(not slot.growth_windows for slot in optimizer.candidates))
+
+    def test_p5_024_initial_population_has_128_authoritative_universe_slots(self):
+        self.assertTrue(hasattr(evolution_module, "UniverseSlot"))
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=105)
+        slots = optimizer.slots
+
+        self.assertEqual(len(slots), 128)
+        self.assertTrue(all(isinstance(slot.state, UniverseState) for slot in slots))
+        self.assertEqual(len({id(slot.state) for slot in slots}), 128)
+        self.assertEqual({slot.state.generation for slot in slots}, {0})
+        self.assertFalse(any(hasattr(slot, "training_states") for slot in slots))
+
+    def test_p5_025_optimizer_steps_continue_authoritative_slot_state(self):
+        self.assertTrue(hasattr(evolution_module, "UniverseSlot"))
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=8,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=106,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        identities = {slot.index: id(slot.state) for slot in optimizer.slots}
+        summary = optimizer.step()
+        replaced = {item["index"] for item in summary["replacements"]}
+
+        self.assertTrue(all(
+            id(slot.state) == identities[slot.index]
+            for slot in optimizer.slots
+            if slot.index not in replaced
+        ))
+        self.assertTrue(all(
+            slot.state.generation > 0
+            for slot in optimizer.slots
+            if slot.index not in replaced
+        ))
+        self.assertTrue(all(slot.physical_generations == slot.state.generation for slot in optimizer.slots))
+
+    def test_p5_026_same_genome_evidence_allocates_a_fresh_universe_slot(self):
+        self.assertTrue(hasattr(SteadyStateOptimizer, "allocate_seed_slot"))
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=107)
+        parent = next(slot for slot in optimizer.slots if slot.category == "masked_copy")
+        allocated = optimizer.allocate_seed_slot(free_index=31, parent=parent)
+
+        self.assertEqual(allocated.category, parent.category)
+        self.assertEqual(allocated.genome, parent.genome)
+        self.assertNotEqual(allocated.seed, parent.seed)
+        self.assertEqual(allocated.state.generation, 0)
+        self.assertIsNot(allocated.state, parent.state)
+        self.assertEqual(allocated.allocation_reason, "seed_evidence")
+
+    def test_p5_027_snapshot_contains_one_authoritative_state_per_slot(self):
+        self.assertTrue(hasattr(SteadyStateOptimizer, "from_snapshot"))
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=108)
+        payload = optimizer.to_snapshot()
+
+        self.assertEqual(payload["format_version"], 4)
+        self.assertEqual(len(payload["slots"]), 128)
+        self.assertTrue(all("state" in record for record in payload["slots"]))
+        self.assertTrue(all("training_states" not in record for record in payload["slots"]))
+
+    def test_p5_028_promising_policy_is_explicit_and_slot_group_counts_are_real(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=109)
+        local = [slot for slot in optimizer.slots if slot.category == "masked_copy"]
+        local[0].fitness = Fitness(success=1)
+        self.assertEqual(optimizer.promising_policy, "strict_fitness")
+        self.assertTrue(optimizer._is_promising(local[0], local))
+        self.assertFalse(optimizer._is_promising(local[1], local))
+
+        parent = local[0]
+        allocated = optimizer.allocate_seed_slot(free_index=31, parent=parent)
+        optimizer.slots[31] = allocated
+        group_key = f"{parent.category}:{parent.genome_key}"
+        self.assertEqual(optimizer.group_counts()[group_key], 5)
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(restored.promising_policy, "strict_fitness")
+        self.assertEqual(restored.group_counts()[group_key], 5)
 
 
 if __name__ == "__main__":

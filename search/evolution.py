@@ -1,13 +1,22 @@
-"""Deterministic bounded steady-state replacement primitives."""
+"""Deterministic bounded Phase 5 optimizer over authoritative Universe slots."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
+import json
+import statistics
 import time
 from typing import Any, Iterable, Mapping
 
-from core.experiment import ExperimentConfig, LearningMeasurement, compare_baseline_trained
-from core.physics import PhysicsConfig
+from core.experiment import (
+    ExperimentConfig,
+    IOExperiment,
+    LearningMeasurement,
+    compare_baseline_trained,
+    measure_trained_state,
+)
+from core.physics import PhysicsConfig, create_universe
+from core.state import UniverseState
 from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
 from .pruning import growth_flags, prune_candidates, protected_indices
@@ -15,50 +24,68 @@ from .pruning import growth_flags, prune_candidates, protected_indices
 IMPLEMENTATION_PHASE = 5
 CATEGORY_OPERATORS = ("masked_copy", "masked_xor", "rotate_copy", "masked_and")
 SLOTS_PER_CATEGORY = 32
-OPTIMIZER_POPULATION_SIZE = len(CATEGORY_OPERATORS) * SLOTS_PER_CATEGORY
+OPTIMIZER_POPULATION_SIZE = 128
 GROWTH_WINDOW_GENERATIONS = 128
+PROMISING_POLICIES = ("strict_fitness",)
 
 
 def seed_escalation(seed_count: int) -> int:
+    """Retain the historical pure escalation helper for callers and reports."""
     value = int(seed_count)
     if value < 4:
         raise ValueError("seed_count must start at 4")
     return min(32, value * 2)
 
 
-@dataclass(frozen=True)
-class CandidateSlot:
+def _genome_key(genome: UniverseGenome) -> str:
+    return json.dumps(genome.to_dict(), sort_keys=True, separators=(",", ":"))
+
+
+@dataclass
+class UniverseSlot:
+    """One occupied authoritative search slot and its persistent universe."""
+
     index: int
     category: str
     genome: UniverseGenome
     seed: int
-    fitness: Fitness
-    growth_windows: tuple[int, ...]
-    seed_count: int = 4
+    state: UniverseState
+    fitness: Fitness = Fitness()
+    growth_windows: tuple[int, ...] = ()
+    growth_reference: Fitness | None = None
     parent_index: int | None = None
     last_mutation_field: str | None = None
-    physical_generations: int = 0
-    growth_reference: Fitness | None = None
+    allocation_reason: str = "initial"
 
     def __post_init__(self) -> None:
-        if self.index < 0:
-            raise ValueError("candidate index must be non-negative")
-        if self.seed_count not in (4, 8, 16, 32):
-            raise ValueError("candidate seed_count must be one of 4, 8, 16, 32")
+        if not 0 <= self.index < OPTIMIZER_POPULATION_SIZE:
+            raise ValueError("universe slot index must be within the fixed population")
+        if self.category not in CATEGORY_OPERATORS:
+            raise ValueError("unsupported universe slot category")
+        if int(self.seed) != int(self.state.seed):
+            raise ValueError("slot seed must match authoritative UniverseState seed")
         if self.parent_index is not None and self.parent_index < 0:
-            raise ValueError("candidate parent_index must be non-negative")
+            raise ValueError("slot parent_index must be non-negative")
         if any(not 0 <= int(window) <= 0xFF for window in self.growth_windows):
-            raise ValueError("candidate growth windows must fit uint8")
-        if self.last_mutation_field is not None and self.last_mutation_field not in UNIVERSE_GENOME_FIELDS:
-            raise ValueError("candidate mutation field must be a genome field")
-        if self.physical_generations < 0:
-            raise ValueError("candidate physical_generations must be non-negative")
+            raise ValueError("slot growth windows must fit uint8")
         if self.growth_reference is not None and not isinstance(self.growth_reference, Fitness):
-            raise ValueError("candidate growth_reference must be Fitness")
+            raise ValueError("slot growth_reference must be Fitness")
+        if self.last_mutation_field is not None and self.last_mutation_field not in UNIVERSE_GENOME_FIELDS:
+            raise ValueError("slot mutation field must be a genome field")
+        if self.allocation_reason not in ("initial", "seed_evidence", "mutation_child"):
+            raise ValueError("unsupported slot allocation reason")
 
     @property
-    def seeds(self) -> tuple[int, ...]:
-        return tuple(range(self.seed, self.seed + self.seed_count))
+    def physical_generations(self) -> int:
+        return int(self.state.generation)
+
+    @property
+    def genome_key(self) -> str:
+        return _genome_key(self.genome)
+
+    @property
+    def evidence_group(self) -> tuple[str, str]:
+        return self.category, self.genome_key
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -66,102 +93,109 @@ class CandidateSlot:
             "category": self.category,
             "genome": self.genome.to_dict(),
             "seed": self.seed,
+            "state": self.state.to_snapshot(),
             "fitness": self.fitness.to_dict(),
             "growth_windows": list(self.growth_windows),
-            "seed_count": self.seed_count,
-            "parent_index": self.parent_index,
-            "last_mutation_field": self.last_mutation_field,
-            "physical_generations": self.physical_generations,
             "growth_reference": (
                 None if self.growth_reference is None else self.growth_reference.to_dict()
             ),
+            "parent_index": self.parent_index,
+            "last_mutation_field": self.last_mutation_field,
+            "allocation_reason": self.allocation_reason,
         }
 
     @classmethod
-    def from_dict(cls, payload: Mapping[str, Any]) -> "CandidateSlot":
+    def from_dict(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        base_config: PhysicsConfig,
+    ) -> "UniverseSlot":
+        raw_state = payload.get("state")
+        if not isinstance(raw_state, Mapping):
+            raise ValueError("authoritative slot state is required")
+        raw_config = raw_state.get("config")
+        state_config = (
+            PhysicsConfig.from_mapping(raw_config)
+            if isinstance(raw_config, Mapping)
+            else base_config
+        )
+        state = UniverseState.from_snapshot(dict(raw_state), config=state_config)
         raw_windows = payload.get("growth_windows", ())
         if not isinstance(raw_windows, (list, tuple)):
-            raise ValueError("candidate growth_windows must be an array")
+            raise ValueError("slot growth_windows must be an array")
         return cls(
             index=int(payload["index"]),
             category=str(payload["category"]),
-            genome=UniverseGenome.from_dict(payload["genome"]),
+            genome=UniverseGenome.from_dict(dict(payload["genome"])),
             seed=int(payload["seed"]),
-            fitness=Fitness.from_dict(payload.get("fitness", {})),
+            state=state,
+            fitness=Fitness.from_dict(dict(payload.get("fitness", {}))),
             growth_windows=tuple(int(window) for window in raw_windows),
-            seed_count=int(payload.get("seed_count", 4)),
-            parent_index=(None if payload.get("parent_index") is None else int(payload["parent_index"])),
+            growth_reference=(
+                None
+                if payload.get("growth_reference") is None
+                else Fitness.from_dict(dict(payload["growth_reference"]))
+            ),
+            parent_index=(
+                None
+                if payload.get("parent_index") is None
+                else int(payload["parent_index"])
+            ),
             last_mutation_field=(
                 None
                 if payload.get("last_mutation_field") is None
                 else str(payload["last_mutation_field"])
             ),
-            physical_generations=int(payload.get("physical_generations", 0)),
-            growth_reference=(
-                None
-                if payload.get("growth_reference") is None
-                else Fitness.from_dict(payload["growth_reference"])
-            ),
+            allocation_reason=str(payload.get("allocation_reason", "initial")),
         )
 
 
-def record_candidate_evaluation(
-    slot: CandidateSlot,
-    current_fitness: Fitness,
-    evaluation_generations: int,
-) -> CandidateSlot:
-    if evaluation_generations < 0:
-        raise ValueError("evaluation_generations must be non-negative")
-    previous_generations = slot.physical_generations
-    physical_generations = previous_generations + int(evaluation_generations)
-    crossed_windows = (
-        physical_generations // GROWTH_WINDOW_GENERATIONS
-        - previous_generations // GROWTH_WINDOW_GENERATIONS
-    )
-    growth_reference = slot.growth_reference or slot.fitness
-    growth_windows = list(slot.growth_windows)
-    if crossed_windows:
-        flags = growth_flags(growth_reference, current_fitness)
-        growth_windows.extend([flags] + [0] * (crossed_windows - 1))
-        growth_reference = current_fitness
-    return replace(
-        slot,
-        fitness=current_fitness,
-        growth_windows=tuple(growth_windows[-4:]),
-        physical_generations=physical_generations,
-        growth_reference=growth_reference,
-    )
-
-
 class SteadyStateOptimizer:
+    """Steady-state optimizer whose slots are the authoritative universes."""
+
     def __init__(
         self,
-        candidates: Iterable[CandidateSlot] = (),
+        slots: Iterable[UniverseSlot] = (),
         *,
         base_config: PhysicsConfig | None = None,
         experiment: ExperimentConfig | None = None,
         generation: int = 0,
         scheduler: Mapping[str, Any] | None = None,
+        promising_policy: str = "strict_fitness",
     ) -> None:
         if generation < 0:
             raise ValueError("optimizer generation must be non-negative")
-        self.candidates = list(candidates)
+        if promising_policy not in PROMISING_POLICIES:
+            raise ValueError("unsupported promising policy")
+        self.slots = list(slots)
         self.base_config = base_config or PhysicsConfig()
         self.experiment = experiment or ExperimentConfig()
         self.generation = int(generation)
         self.scheduler: dict[str, Any] = {
             "mutation_cursor": 0,
+            "allocation_cursor": 0,
             "replacement_count": 0,
             "evaluation_count": 0,
-            "replacement_seed_counts": [],
-            "escalation_queue": [],
+            "promising_policy": promising_policy,
         }
         if scheduler is not None:
             for key, value in scheduler.items():
-                if key in ("replacement_seed_counts", "escalation_queue"):
-                    self.scheduler[key] = [int(item) for item in value]
+                if key == "promising_policy":
+                    if value not in PROMISING_POLICIES:
+                        raise ValueError("unsupported promising policy in scheduler")
+                    self.scheduler[key] = str(value)
                 else:
                     self.scheduler[key] = int(value)
+
+    @property
+    def candidates(self) -> list[UniverseSlot]:
+        """Compatibility view; each item is still one real authoritative slot."""
+        return self.slots
+
+    @property
+    def promising_policy(self) -> str:
+        return str(self.scheduler["promising_policy"])
 
     @classmethod
     def from_defaults(
@@ -170,25 +204,36 @@ class SteadyStateOptimizer:
         base_seed: int = 0,
         base_config: PhysicsConfig | None = None,
         experiment: ExperimentConfig | None = None,
+        promising_policy: str = "strict_fitness",
     ) -> "SteadyStateOptimizer":
         base = base_config or PhysicsConfig()
         protocol = experiment or ExperimentConfig()
-        slots: list[CandidateSlot] = []
+        slots: list[UniverseSlot] = []
         index = 0
+        next_seed = int(base_seed)
         for category in CATEGORY_OPERATORS:
-            for genome_id, genome in enumerate(UniverseGenome.initial_population()):
-                for seed_offset in range(4):
-                    seed = int(base_seed) + (genome_id * 4) + seed_offset
-                    slots.append(CandidateSlot(
-                        index=index,
-                        category=category,
-                        genome=genome,
-                        seed=seed,
-                        fitness=Fitness(),
-                        growth_windows=(),
-                    ))
+            for genome in UniverseGenome.initial_population():
+                for _ in range(4):
+                    config = cls._effective_config(genome, category, base)
+                    state = create_universe(seed=next_seed, config=config)
+                    slots.append(
+                        UniverseSlot(
+                            index=index,
+                            category=category,
+                            genome=genome,
+                            seed=next_seed,
+                            state=state,
+                        )
+                    )
                     index += 1
-        return cls(slots, base_config=base, experiment=protocol)
+                    next_seed += 1
+        return cls(
+            slots,
+            base_config=base,
+            experiment=protocol,
+            promising_policy=promising_policy,
+            scheduler={"allocation_cursor": next_seed},
+        )
 
     @staticmethod
     def _effective_config(
@@ -214,125 +259,186 @@ class SteadyStateOptimizer:
             noise_robustness=measurement.trained_alternate_input_clean / denominator,
         )
 
-    def _evaluate_slot(self, slot: CandidateSlot) -> LearningMeasurement:
-        return evaluate_candidate(
-            genome=slot.genome,
-            seeds=slot.seeds,
-            base_config=self.base_config,
-            experiment=self.experiment,
-            category=slot.category,
-        )
+    def _measure_slot(self, slot: UniverseSlot) -> tuple[LearningMeasurement, Fitness]:
+        measurement = measure_trained_state(slot.state, experiment=self.experiment)
+        return measurement, self._fitness_from_measurement(measurement)
 
-    def _mutation_field(self, parent: CandidateSlot) -> str:
+    def _observe_growth_boundary(self, slot: UniverseSlot) -> None:
+        measurement, observed_fitness = self._measure_slot(slot)
+        if slot.growth_reference is not None:
+            flags = growth_flags(slot.growth_reference, observed_fitness)
+            slot.growth_windows = (*slot.growth_windows, flags)[-4:]
+        slot.growth_reference = observed_fitness
+        slot.fitness = observed_fitness
+        del measurement
+
+    def _evaluate_slot(self, slot: UniverseSlot) -> LearningMeasurement:
+        if slot.growth_reference is None:
+            _, slot.fitness = self._measure_slot(slot)
+
+        def on_generation(generation: int) -> None:
+            if generation > 0 and generation % GROWTH_WINDOW_GENERATIONS == 0:
+                self._observe_growth_boundary(slot)
+
+        trainer = IOExperiment(slot.state, experiment=self.experiment)
+        trainer.train_a_to_b_null(on_generation=on_generation)
+        measurement, slot.fitness = self._measure_slot(slot)
+        return measurement
+
+    def _mutation_field(self, parent: UniverseSlot) -> str:
         cursor = int(self.scheduler["mutation_cursor"])
         category_offset = parent.index // SLOTS_PER_CATEGORY
-        field = UNIVERSE_GENOME_FIELDS[(category_offset + cursor) % len(UNIVERSE_GENOME_FIELDS)]
+        field = UNIVERSE_GENOME_FIELDS[
+            (category_offset + cursor) % len(UNIVERSE_GENOME_FIELDS)
+        ]
         self.scheduler["mutation_cursor"] = cursor + 1
         return field
+
+    def _next_seed(self) -> int:
+        occupied = {slot.seed for slot in self.slots}
+        candidate = int(self.scheduler["allocation_cursor"])
+        while candidate in occupied:
+            candidate += 1
+        self.scheduler["allocation_cursor"] = candidate + 1
+        return candidate
+
+    def allocate_seed_slot(
+        self,
+        *,
+        free_index: int,
+        parent: UniverseSlot,
+    ) -> UniverseSlot:
+        if not 0 <= free_index < OPTIMIZER_POPULATION_SIZE:
+            raise ValueError("free_index must be within the fixed population")
+        if parent.index == free_index:
+            raise ValueError("seed evidence must use a free slot distinct from parent")
+        seed = self._next_seed()
+        config = self._effective_config(parent.genome, parent.category, self.base_config)
+        state = create_universe(seed=seed, config=config)
+        return UniverseSlot(
+            index=free_index,
+            category=parent.category,
+            genome=parent.genome,
+            seed=seed,
+            state=state,
+            parent_index=parent.index,
+            allocation_reason="seed_evidence",
+        )
 
     def replace_free_slot(
         self,
         *,
         free_index: int,
-        parent: CandidateSlot,
+        parent: UniverseSlot,
         direction: int = 1,
         field: str | None = None,
-    ) -> CandidateSlot:
-        if free_index < 0:
-            raise ValueError("free_index must be non-negative")
+    ) -> UniverseSlot:
+        if not 0 <= free_index < OPTIMIZER_POPULATION_SIZE:
+            raise ValueError("free_index must be within the fixed population")
+        if parent.index == free_index:
+            raise ValueError("mutation child must use a free slot distinct from parent")
         mutation_field = field or self._mutation_field(parent)
         child_genome = parent.genome.mutate(mutation_field, direction=direction)
-        return CandidateSlot(
-            index=int(free_index),
+        seed = self._next_seed()
+        config = self._effective_config(child_genome, parent.category, self.base_config)
+        state = create_universe(seed=seed, config=config)
+        return UniverseSlot(
+            index=free_index,
             category=parent.category,
             genome=child_genome,
-            seed=parent.seed + parent.seed_count,
-            fitness=Fitness(),
-            growth_windows=(),
-            seed_count=4,
+            seed=seed,
+            state=state,
             parent_index=parent.index,
             last_mutation_field=mutation_field,
+            allocation_reason="mutation_child",
         )
 
-    def escalate_seed_evidence(self, *, parent: CandidateSlot, target_index: int) -> CandidateSlot:
-        return replace(
-            parent,
-            index=int(target_index),
-            seed_count=seed_escalation(parent.seed_count),
-            last_mutation_field=None,
+    def _is_promising(self, slot: UniverseSlot, local: list[UniverseSlot]) -> bool:
+        if self.promising_policy != "strict_fitness":
+            raise ValueError("unsupported promising policy")
+        median_key = statistics.median_low(
+            [candidate.fitness.sort_key() for candidate in local]
         )
+        return slot.fitness.sort_key() < median_key
+
+    def group_counts(self) -> dict[str, int]:
+        counts: dict[tuple[str, str], int] = {}
+        for slot in self.slots:
+            counts[slot.evidence_group] = counts.get(slot.evidence_group, 0) + 1
+        return {
+            f"{category}:{genome}": count
+            for (category, genome), count in sorted(counts.items())
+        }
+
+    def _category_counts(self) -> dict[str, int]:
+        return {
+            category: sum(slot.category == category for slot in self.slots)
+            for category in CATEGORY_OPERATORS
+        }
 
     def step(self) -> dict[str, Any]:
-        if len(self.candidates) != OPTIMIZER_POPULATION_SIZE:
-            raise ValueError(f"integrated optimizer requires {OPTIMIZER_POPULATION_SIZE} candidates")
-        started = time.perf_counter()
-        evaluated: list[CandidateSlot] = []
-        measurements: dict[int, LearningMeasurement] = {}
-        for slot in self.candidates:
-            measurement = self._evaluate_slot(slot)
-            measurements[slot.index] = measurement
-            current_fitness = self._fitness_from_measurement(measurement)
-            evaluated_slot = record_candidate_evaluation(
-                slot,
-                current_fitness,
-                measurement.evaluation_generations,
+        if len(self.slots) != OPTIMIZER_POPULATION_SIZE:
+            raise ValueError(
+                f"integrated optimizer requires {OPTIMIZER_POPULATION_SIZE} authoritative slots"
             )
-            evaluated.append(evaluated_slot)
-        self.candidates = evaluated
-        queued_indices = set(self.scheduler["escalation_queue"])
-        self.scheduler["escalation_queue"] = []
+        started = time.perf_counter()
+        measurements: dict[int, LearningMeasurement] = {}
+        for slot in self.slots:
+            measurements[slot.index] = self._evaluate_slot(slot)
+
         replacements: list[dict[str, Any]] = []
         pruned_count = 0
         for category in CATEGORY_OPERATORS:
-            local = [slot for slot in self.candidates if slot.category == category]
+            local = [slot for slot in self.slots if slot.category == category]
             protected = protected_indices(local)
             pruned = prune_candidates(local)
             pruned_count += len(pruned)
-            queued = [slot for slot in local if slot.index in queued_indices]
             if pruned:
                 target_index = max(
                     pruned,
-                    key=lambda index: next(slot for slot in local if slot.index == index).fitness.sort_key(),
+                    key=lambda index: next(
+                        item for item in local if item.index == index
+                    ).fitness.sort_key(),
                 )
                 reason = "growth_pruned"
-            elif queued:
-                target = min(queued, key=lambda slot: slot.index)
-                target_index = target.index
-                reason = "seed_escalation"
             else:
-                eligible = [slot for slot in local if slot.index not in protected]
-                target = max(eligible, key=lambda slot: slot.fitness.sort_key())
+                target = max(
+                    (slot for slot in local if slot.index not in protected),
+                    key=lambda slot: slot.fitness.sort_key(),
+                )
                 target_index = target.index
                 reason = "steady_state_exploration"
+
             target = next(slot for slot in local if slot.index == target_index)
-            if reason == "seed_escalation":
-                parent = target
+            sources = [slot for slot in local if slot.index != target_index]
+            promising = [slot for slot in sources if self._is_promising(slot, local)]
+            if promising:
+                parent = min(promising, key=lambda slot: slot.fitness.sort_key())
+                child = self.allocate_seed_slot(free_index=target.index, parent=parent)
+                reason = "seed_evidence"
             else:
-                parents = [slot for slot in local if slot.index != target.index]
-                parent = min(parents, key=lambda slot: slot.fitness.sort_key())
-            if reason == "seed_escalation":
-                mutation_field = None
-                child = self.escalate_seed_evidence(parent=parent, target_index=target.index)
-            else:
-                mutation_field = self._mutation_field(parent)
+                parent = min(sources, key=lambda slot: slot.fitness.sort_key())
                 child = self.replace_free_slot(
                     free_index=target.index,
                     parent=parent,
                     direction=1,
-                    field=mutation_field,
                 )
-            self.candidates[target.index] = child
-            replacements.append({
-                "index": child.index,
-                "category": child.category,
-                "parent_index": child.parent_index,
-                "mutation_field": child.last_mutation_field,
-                "seed_count": child.seed_count,
-                "reason": reason,
-            })
-            self.scheduler["replacement_seed_counts"].append(child.seed_count)
-            if child.seed_count < 32:
-                self.scheduler["escalation_queue"].append(child.index)
+            self.slots[target.index] = child
+            replacements.append(
+                {
+                    "index": child.index,
+                    "category": child.category,
+                    "parent_index": child.parent_index,
+                    "mutation_field": child.last_mutation_field,
+                    "allocation_reason": child.allocation_reason,
+                    "seed": child.seed,
+                    "group_count": self.group_counts()[
+                        f"{child.category}:{child.genome_key}"
+                    ],
+                    "reason": reason,
+                }
+            )
+
         self.generation += 1
         self.scheduler["replacement_count"] += len(replacements)
         self.scheduler["evaluation_count"] += len(measurements)
@@ -340,10 +446,8 @@ class SteadyStateOptimizer:
         return {
             "generation": self.generation,
             "evaluated_slots": len(measurements),
-            "category_counts": {
-                category: sum(slot.category == category for slot in self.candidates)
-                for category in CATEGORY_OPERATORS
-            },
+            "category_counts": self._category_counts(),
+            "group_counts": self.group_counts(),
             "cross_category_selection": False,
             "replacement_count": len(replacements),
             "pruned_count": pruned_count,
@@ -357,10 +461,8 @@ class SteadyStateOptimizer:
         summary: dict[str, Any] = {
             "generation": self.generation,
             "evaluated_slots": 0,
-            "category_counts": {
-                category: sum(slot.category == category for slot in self.candidates)
-                for category in CATEGORY_OPERATORS
-            },
+            "category_counts": self._category_counts(),
+            "group_counts": self.group_counts(),
             "cross_category_selection": False,
             "replacement_count": 0,
             "pruned_count": 0,
@@ -378,70 +480,62 @@ class SteadyStateOptimizer:
             summary["evaluated_slots"] = total_evaluated
             summary["replacement_count"] = len(all_replacements)
             summary["replacements"] = all_replacements
-            summary["generations_per_second"] = iterations / max(time.perf_counter() - started, 1e-12)
+            summary["generations_per_second"] = iterations / max(
+                time.perf_counter() - started, 1e-12
+            )
         return summary
 
     def to_snapshot(self) -> dict[str, Any]:
-        if len(self.candidates) != OPTIMIZER_POPULATION_SIZE:
-            raise ValueError(f"integrated optimizer requires {OPTIMIZER_POPULATION_SIZE} candidates")
+        if len(self.slots) != OPTIMIZER_POPULATION_SIZE:
+            raise ValueError(
+                f"integrated optimizer requires {OPTIMIZER_POPULATION_SIZE} authoritative slots"
+            )
         return {
-            "format_version": 3,
+            "format_version": 4,
             "kind": "UniverseGenomePhase5SteadyStateOptimizer",
             "generation": self.generation,
             "base_config": self.base_config.to_dict(),
             "experiment": self.experiment.to_dict(),
             "scheduler": dict(self.scheduler),
-            "candidates": [slot.to_dict() for slot in self.candidates],
+            "slots": [slot.to_dict() for slot in self.slots],
         }
 
     @classmethod
     def from_snapshot(cls, payload: Mapping[str, Any]) -> "SteadyStateOptimizer":
-        if payload.get("format_version") not in (2, 3) or payload.get("kind") != "UniverseGenomePhase5SteadyStateOptimizer":
-            raise ValueError("unsupported integrated Phase 5 optimizer snapshot")
-        raw_candidates = payload.get("candidates")
-        if not isinstance(raw_candidates, list) or len(raw_candidates) != OPTIMIZER_POPULATION_SIZE:
-            raise ValueError("integrated optimizer snapshot must contain 128 candidates")
-        candidates = [CandidateSlot.from_dict(record) for record in raw_candidates]
-        if [slot.index for slot in candidates] != list(range(OPTIMIZER_POPULATION_SIZE)):
-            raise ValueError("integrated optimizer candidate indices must be complete")
-        if {slot.category for slot in candidates} != set(CATEGORY_OPERATORS):
-            raise ValueError("integrated optimizer categories do not match Phase 5")
-        if any(sum(slot.category == category for slot in candidates) != SLOTS_PER_CATEGORY
-               for category in CATEGORY_OPERATORS):
-            raise ValueError("integrated optimizer categories must contain 32 slots each")
+        if (
+            payload.get("format_version") != 4
+            or payload.get("kind") != "UniverseGenomePhase5SteadyStateOptimizer"
+        ):
+            raise ValueError("unsupported authoritative Phase 5 optimizer snapshot")
+        raw_slots = payload.get("slots")
+        if not isinstance(raw_slots, list) or len(raw_slots) != OPTIMIZER_POPULATION_SIZE:
+            raise ValueError("authoritative optimizer snapshot must contain 128 slots")
+        base_config = PhysicsConfig.from_mapping(payload["base_config"])
+        slots = [
+            UniverseSlot.from_dict(record, base_config=base_config)
+            for record in raw_slots
+        ]
+        if [slot.index for slot in slots] != list(range(OPTIMIZER_POPULATION_SIZE)):
+            raise ValueError("authoritative slot indices must be complete")
+        if any(
+            sum(slot.category == category for slot in slots) != SLOTS_PER_CATEGORY
+            for category in CATEGORY_OPERATORS
+        ):
+            raise ValueError("authoritative categories must contain 32 slots each")
+        scheduler = payload.get("scheduler", {})
+        promising_policy = (
+            str(scheduler.get("promising_policy", "strict_fitness"))
+            if isinstance(scheduler, Mapping)
+            else "strict_fitness"
+        )
         return cls(
-            candidates,
-            base_config=PhysicsConfig.from_mapping(payload["base_config"]),
+            slots,
+            base_config=base_config,
             experiment=ExperimentConfig.from_mapping(payload["experiment"]),
             generation=int(payload["generation"]),
-            scheduler=payload.get("scheduler", {}),
+            scheduler=scheduler if isinstance(scheduler, Mapping) else {},
+            promising_policy=promising_policy,
         )
-
-
-def optimizer_snapshot(candidates: Iterable[CandidateSlot], *, generation: int = 0) -> dict[str, Any]:
-    records = tuple(candidates)
-    if generation < 0:
-        raise ValueError("optimizer generation must be non-negative")
-    if len({record.index for record in records}) != len(records):
-        raise ValueError("optimizer candidate indices must be unique")
-    return {
-        "format_version": 1,
-        "kind": "UniverseGenomePhase5Optimizer",
-        "generation": int(generation),
-        "candidates": [record.to_dict() for record in records],
-    }
-
-
-def restore_optimizer_snapshot(payload: Mapping[str, Any]) -> tuple[int, tuple[CandidateSlot, ...]]:
-    if payload.get("format_version") != 1 or payload.get("kind") != "UniverseGenomePhase5Optimizer":
-        raise ValueError("unsupported Phase 5 optimizer snapshot")
-    raw_candidates = payload.get("candidates")
-    if not isinstance(raw_candidates, list):
-        raise ValueError("optimizer snapshot candidates must be an array")
-    records = tuple(CandidateSlot.from_dict(record) for record in raw_candidates)
-    if len({record.index for record in records}) != len(records):
-        raise ValueError("optimizer snapshot candidate indices must be unique")
-    return int(payload["generation"]), records
 
 
 def evaluate_candidate(
@@ -452,7 +546,7 @@ def evaluate_candidate(
     experiment: ExperimentConfig | None = None,
     category: str | None = None,
 ) -> LearningMeasurement:
-    """Evaluate a genome through the real Phase 4 baseline/trained collector."""
+    """Evaluate a disposable candidate without touching authoritative slots."""
     effective = genome.to_physics_config(base_config)
     if category is not None:
         if category not in CATEGORY_OPERATORS:
@@ -524,43 +618,24 @@ def run_optimizer_headless(
         experiment=experiment,
     )
     integrated_summary = optimizer.run(iterations=iterations)
-    replacement = CandidateSlot(
-        index=0,
-        category="masked_copy",
-        genome=candidate,
-        seed=0,
-        fitness=Fitness(),
-        growth_windows=(),
-    )
-    replacements: list[CandidateSlot] = [
-        optimizer.replace_free_slot(
-            free_index=1,
-            parent=replacement,
-            direction=1,
-        )
-    ]
-    for _ in range(3):
-        replacement = optimizer.escalate_seed_evidence(
-            parent=replacements[-1],
-            target_index=1,
-        )
-        replacements.append(replacement)
     return {
-        "population_size": len(optimizer.candidates),
+        "population_size": len(optimizer.slots),
+        "authoritative_slot_count": len(optimizer.slots),
         "category_counts": integrated_summary["category_counts"],
         "integrated_generation": integrated_summary["generation"],
         "optimizer_iterations": iterations,
         "evaluated_slots": integrated_summary["evaluated_slots"],
         "replacement_count": integrated_summary["replacement_count"],
-        "integrated_seed_counts": list(optimizer.scheduler["replacement_seed_counts"]),
-        "mutation_fields": sorted({
-            item["mutation_field"]
-            for item in integrated_summary["replacements"]
-            if item["mutation_field"] is not None
-        }),
+        "mutation_fields": sorted(
+            {
+                item["mutation_field"]
+                for item in integrated_summary["replacements"]
+                if item["mutation_field"] is not None
+            }
+        ),
         "genome_fields": list(UNIVERSE_GENOME_FIELDS),
-        "seed_escalation": [seed_escalation(value) for value in (4, 8, 16, 32)],
         "cross_category_selection": False,
+        "group_counts": integrated_summary["group_counts"],
         "phase4_learning_claim": measurement.learning_claim,
         "candidate_genome": candidate.to_dict(),
         "candidate_measurement": _measurement_summary(measurement),
@@ -568,6 +643,5 @@ def run_optimizer_headless(
             "no_input": measurement.no_input_clean,
             "alternate_input": measurement.alternate_input_clean,
         },
-        "replacement_seed_counts": [item.seed_count for item in replacements],
-        "replacement_categories": [item.category for item in replacements],
+        "replacements": integrated_summary["replacements"],
     }
