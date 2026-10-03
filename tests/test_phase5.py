@@ -474,7 +474,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIn(0, protected)
         self.assertIn(8, protected)
 
-    def test_p5_011_integrated_optimizer_evaluates_128_and_replaces_locally(self):
+    def test_p5_011_integrated_optimizer_evaluates_128_without_forced_replacement(self):
         protocol = ExperimentConfig(
             byte_hold_generations=0,
             byte_gap_generations=0,
@@ -512,8 +512,8 @@ class Phase5OptimizerTests(unittest.TestCase):
             "masked_and": 32,
         })
         self.assertEqual(summary["cross_category_selection"], False)
-        self.assertGreaterEqual(summary["replacement_count"], 4)
-        self.assertGreaterEqual(len({slot.last_mutation_field for slot in optimizer.candidates if slot.last_mutation_field}), 2)
+        self.assertEqual(summary["replacement_count"], 0)
+        self.assertFalse(any(slot.last_mutation_field for slot in optimizer.candidates))
 
     def test_p5_012_integrated_snapshot_restores_deterministic_continuation(self):
         protocol = ExperimentConfig(
@@ -567,7 +567,7 @@ class Phase5OptimizerTests(unittest.TestCase):
             "activity_cost",
         } <= set(per_seed[0]))
 
-    def test_p5_013_headless_reports_integrated_multi_field_search(self):
+    def test_p5_013_headless_reports_integrated_search_without_forced_replacement(self):
         protocol = ExperimentConfig(
             byte_hold_generations=0,
             byte_gap_generations=0,
@@ -589,8 +589,8 @@ class Phase5OptimizerTests(unittest.TestCase):
             "rotate_copy": 32,
             "masked_and": 32,
         })
-        self.assertGreaterEqual(result["replacement_count"], 4)
-        self.assertGreaterEqual(len(result["mutation_fields"]), 2)
+        self.assertEqual(result["replacement_count"], 0)
+        self.assertEqual(result["mutation_fields"], [])
         self.assertEqual(result["authoritative_slot_count"], 128)
         self.assertTrue(result["group_counts"])
 

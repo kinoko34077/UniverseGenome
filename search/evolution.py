@@ -25,6 +25,7 @@ CATEGORY_OPERATORS = ("masked_copy", "masked_xor", "rotate_copy", "masked_and")
 SLOTS_PER_CATEGORY = 32
 OPTIMIZER_POPULATION_SIZE = 128
 GROWTH_WINDOW_GENERATIONS = 128
+MINIMUM_EVIDENCE_SEEDS = 4
 
 
 def seed_escalation(seed_count: int) -> int:
@@ -393,15 +394,64 @@ class SteadyStateOptimizer:
     ) -> tuple[tuple[float, float, float, float, float], tuple[str, str], int]:
         return aggregates[slot.evidence_group].sort_key(), slot.evidence_group, slot.index
 
+    @staticmethod
+    def _evidence_group_counts(
+        records: Iterable[UniverseSlot],
+    ) -> dict[tuple[str, str], int]:
+        counts: dict[tuple[str, str], int] = {}
+        for slot in records:
+            counts[slot.evidence_group] = counts.get(slot.evidence_group, 0) + 1
+        return counts
+
+    @classmethod
+    def _selection_eligible_slots(
+        cls,
+        records: Iterable[UniverseSlot],
+    ) -> list[UniverseSlot]:
+        values = list(records)
+        counts = cls._evidence_group_counts(values)
+        return [
+            slot
+            for slot in values
+            if counts[slot.evidence_group] >= MINIMUM_EVIDENCE_SEEDS
+        ]
+
+    def _incomplete_mutation_parent(
+        self,
+        local: list[UniverseSlot],
+        *,
+        excluded_index: int,
+    ) -> UniverseSlot | None:
+        groups: dict[tuple[str, str], list[UniverseSlot]] = {}
+        for slot in local:
+            groups.setdefault(slot.evidence_group, []).append(slot)
+        for group_key in sorted(groups):
+            group = groups[group_key]
+            if len(group) >= MINIMUM_EVIDENCE_SEEDS:
+                continue
+            if not any(slot.allocation_reason == "mutation_child" for slot in group):
+                continue
+            sources = [slot for slot in group if slot.index != excluded_index]
+            if sources:
+                return min(sources, key=lambda slot: slot.index)
+        return None
+
     def _select_parent(
         self,
         local: list[UniverseSlot],
         *,
         excluded_index: int,
     ) -> UniverseSlot:
-        sources = [slot for slot in local if slot.index != excluded_index]
+        eligible_indices = {
+            slot.index for slot in self._selection_eligible_slots(local)
+        }
+        sources = [
+            slot
+            for slot in local
+            if slot.index != excluded_index and slot.index in eligible_indices
+        ]
         if not sources:
-            raise ValueError("a category must retain a parent source")
+            raise ValueError("a category must retain a minimum-evidence parent source")
         aggregates = self.group_fitnesses(local)
         return min(sources, key=lambda slot: self._selection_key(slot, aggregates))
 
@@ -414,8 +464,9 @@ class SteadyStateOptimizer:
 
     def _protected_indices(self, local: list[UniverseSlot]) -> set[int]:
         aggregates = self.group_fitnesses(local)
-        count = max(1, len(local) // 8)
-        ordered = sorted(local, key=lambda slot: self._selection_key(slot, aggregates))
+        eligible = self._selection_eligible_slots(local)
+        count = min(max(1, len(local) // 8), len(eligible))
+        ordered = sorted(eligible, key=lambda slot: self._selection_key(slot, aggregates))
         return {slot.index for slot in ordered[:count]}
 
     def group_counts(self) -> dict[str, int]:
@@ -450,38 +501,52 @@ class SteadyStateOptimizer:
             protected = self._protected_indices(local)
             pruned = prune_candidates(local, protected=protected)
             pruned_count += len(pruned)
+            if not pruned:
+                continue
+
             aggregates = self.group_fitnesses(local)
-            if pruned:
-                target_index = max(
-                    pruned,
-                    key=lambda index: self._selection_key(
-                        next(item for item in local if item.index == index),
-                        aggregates,
-                    ),
-                )
-                reason = "growth_pruned"
-            else:
-                target = max(
-                    (slot for slot in local if slot.index not in protected),
-                    key=lambda slot: self._selection_key(slot, aggregates),
-                )
-                target_index = target.index
-                reason = "steady_state_exploration"
+            target_index = max(
+                pruned,
+                key=lambda index: self._selection_key(
+                    next(item for item in local if item.index == index),
+                    aggregates,
+                ),
+            )
+            reason = "growth_pruned"
 
             target = next(slot for slot in local if slot.index == target_index)
             sources = [slot for slot in local if slot.index != target_index]
-            promising = [slot for slot in sources if self._is_promising(slot, local)]
-            if promising:
-                parent = min(promising, key=lambda slot: self._selection_key(slot, aggregates))
-                child = self.allocate_seed_slot(free_index=target.index, parent=parent)
-                reason = "seed_evidence"
-            else:
-                parent = self._select_parent(local, excluded_index=target_index)
-                child = self.replace_free_slot(
+            completion_parent = self._incomplete_mutation_parent(
+                local,
+                excluded_index=target_index,
+            )
+            if completion_parent is not None:
+                parent = completion_parent
+                child = self.allocate_seed_slot(
                     free_index=target.index,
                     parent=parent,
-                    direction=1,
                 )
+                reason = "seed_evidence"
+            else:
+                eligible_indices = {
+                    slot.index for slot in self._selection_eligible_slots(local)
+                }
+                promising = [
+                    slot
+                    for slot in sources
+                    if slot.index in eligible_indices and self._is_promising(slot, local)
+                ]
+                if promising:
+                    parent = min(promising, key=lambda slot: self._selection_key(slot, aggregates))
+                    child = self.allocate_seed_slot(free_index=target.index, parent=parent)
+                    reason = "seed_evidence"
+                else:
+                    parent = self._select_parent(local, excluded_index=target_index)
+                    child = self.replace_free_slot(
+                        free_index=target.index,
+                        parent=parent,
+                        direction=1,
+                    )
             self.slots[target.index] = child
             replacements.append(
                 {
