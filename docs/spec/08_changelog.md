@@ -1,5 +1,19 @@
 # Specification Changelog
 
+## 2026-10-04 — Issue #65 Phase 5 search-liveness remediation
+
+- connected the accepted 16-generation short-health cadence to authoritative
+  physical-step metrics and recorded distinct all-active-cell-loss and
+  persistent-non-response failure reasons;
+- made absolute failures retirement-eligible independently of growth history,
+  leader protection, or provisional minimum-evidence maturity;
+- constrained integrated mutation to valid adjacent binary-grid values,
+  including the effective `initial_density <= max_cells` bound and deterministic
+  opposite-direction fallback;
+- made the distinct trained no-input-clean and trained alternate-input-clean
+  sources of growth bits 5 and 6 explicit; the promising-allocation policy
+  remains an unresolved Human decision gate.
+
 ## 2026-10-03 — Issue #58 Phase 5 authoritative Universe-slot corrections
 
 - restored the original 128-authoritative-Universe architecture: one persistent

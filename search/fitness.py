@@ -39,6 +39,20 @@ class Fitness:
             self.activity_cost,
         )
 
+    @property
+    def trained_no_input_clean(self) -> float:
+        """Canonical source metric for growth bit 5.
+
+        ``retention`` remains the persisted v0.1 field name, but growth
+        semantics are defined by the trained no-input counterfactual result.
+        """
+        return self.retention
+
+    @property
+    def trained_alternate_input_clean(self) -> float:
+        """Canonical source metric for growth bit 6."""
+        return self.noise_robustness
+
     def to_dict(self) -> dict[str, float]:
         return {
             "success": self.success,

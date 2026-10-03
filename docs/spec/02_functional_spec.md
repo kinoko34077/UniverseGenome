@@ -319,9 +319,15 @@ Initial candidate bits:
 - bit2 timeout improved
 - bit3 latency improved
 - bit4 activity efficiency improved
-- bit5 retention improved
-- bit6 noise robustness improved
+- bit5 trained no-input-clean rate improved (`Fitness.retention`)
+- bit6 trained alternate-input-clean rate improved (`Fitness.noise_robustness`)
 - bit7 reserved
+
+The persisted `retention` and `noise_robustness` names are compatibility
+labels for these two distinct trained counterfactual measurements. They are
+not interchangeable aliases: bit 5 compares the trained no-input-clean rate,
+while bit 6 compares the trained alternate-input-clean rate. Both remain
+growth-only dimensions and are not added to the absolute-fitness ordering.
 
 ---
 
@@ -350,6 +356,14 @@ Recent growth score may use:
 - 16-generation short health window
 - 128-generation growth window
 - 512-generation stagnation horizon
+
+At each authoritative multiple of 16 generations, short health records
+whether active cells remain and whether the physical step produced measurable
+activity. A window with no active cells is an `all_active_cells_gone`
+absolute failure. Two consecutive windows with active cells but no measurable
+activity are a `persistent_non_response` absolute failure. These failure
+reasons are distinct from ordinary low growth and are eligible for retirement
+without waiting for four 128-generation growth windows.
 
 ---
 
@@ -382,6 +396,10 @@ Examples:
 “Chaos” is not a visual label. If chaos-based pruning is introduced, it must be defined through measurable conditions.
 
 Implementation corruption is an error, not evolutionary death.
+
+The v0.1 implementation uses only the measurable short-health predicates
+above. Absolute failures take precedence over growth-only protection and
+minimum-evidence maturity; malformed state/configuration remains an error.
 
 ---
 

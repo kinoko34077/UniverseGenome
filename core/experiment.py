@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
 from .io_bus import FixedOrgans, InputBus, OutputEdgeDetector, OutputEvent, read_output_signal
-from .physics import PhysicsConfig, create_universe, destination_footprint, step
+from .physics import PhysicsConfig, StepMetrics, create_universe, destination_footprint, step
 from .state import UniverseState
 
 
@@ -222,10 +222,13 @@ class IOExperiment:
         event: OutputEvent,
         *,
         on_generation: Callable[[int], None] | None = None,
+        on_step: Callable[[int, StepMetrics], None] | None = None,
     ) -> None:
         """Apply teacher-side stimulation without passing the event to autonomous scoring."""
         self.teacher_events.append(event)
-        self._advance(self._teacher_coordinates(event))
+        metrics = self._advance(self._teacher_coordinates(event))
+        if on_step is not None:
+            on_step(self.state.generation, metrics)
         if on_generation is not None:
             on_generation(self.state.generation)
 
@@ -235,11 +238,14 @@ class IOExperiment:
         input_byte: int = 65,
         output_byte: int = 66,
         on_generation: Callable[[int], None] | None = None,
+        on_step: Callable[[int, StepMetrics], None] | None = None,
     ) -> TrainingRecord:
         teacher_events: list[OutputEvent] = []
 
         def advance(anchors: Iterable[tuple[int, int]]) -> None:
-            self._advance(anchors)
+            metrics = self._advance(anchors)
+            if on_step is not None:
+                on_step(self.state.generation, metrics)
             if on_generation is not None:
                 on_generation(self.state.generation)
 
@@ -255,8 +261,16 @@ class IOExperiment:
                 advance(())
             byte_event = OutputEvent.byte(output_byte)
             null_event = OutputEvent.null()
-            self.teacher_output(byte_event, on_generation=on_generation)
-            self.teacher_output(null_event, on_generation=on_generation)
+            self.teacher_output(
+                byte_event,
+                on_generation=on_generation,
+                on_step=on_step,
+            )
+            self.teacher_output(
+                null_event,
+                on_generation=on_generation,
+                on_step=on_step,
+            )
             teacher_events.extend((byte_event, null_event))
         return TrainingRecord(
             input_byte=input_byte,

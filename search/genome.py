@@ -113,18 +113,89 @@ class UniverseGenome:
             raise ValueError(f"unknown universe genome fields: {sorted(unknown)}")
         return cls(**{name: int(payload.get(name, getattr(cls(), name))) for name in UNIVERSE_GENOME_FIELDS})
 
-    def mutate(self, field: str, *, direction: int) -> "UniverseGenome":
+    def effective_bounds(
+        self,
+        field: str,
+        *,
+        base: PhysicsConfig | None = None,
+    ) -> tuple[int, int]:
+        """Return genome bounds after applying dependent physics limits."""
+        if field not in UNIVERSE_GENOME_FIELDS:
+            raise ValueError(f"cannot mutate non-genome field: {field}")
+        resolved = base or PhysicsConfig()
+        lower, upper = GENOME_BOUNDS[field]
+        if field == "initial_density":
+            upper = min(upper, resolved.max_cells)
+        return lower, upper
+
+    @staticmethod
+    def _next_mutation_value(
+        current: int,
+        *,
+        direction: int,
+        lower: int,
+        upper: int,
+    ) -> int:
+        if direction > 0:
+            next_value = 1 if current == 0 else current * 2
+        else:
+            next_value = 0 if current <= 1 else current // 2
+        return min(upper, max(lower, next_value))
+
+    def mutation_directions(
+        self,
+        field: str,
+        *,
+        base: PhysicsConfig | None = None,
+    ) -> tuple[int, ...]:
+        """Return directions that produce a valid, changed effective genome."""
+        lower, upper = self.effective_bounds(field, base=base)
+        resolved = base or PhysicsConfig()
+        current = int(getattr(self, field))
+        valid: list[int] = []
+        for direction in (-1, 1):
+            next_value = self._next_mutation_value(
+                current,
+                direction=direction,
+                lower=lower,
+                upper=upper,
+            )
+            if next_value == current:
+                continue
+            values = self.to_dict()
+            values[field] = next_value
+            candidate = type(self)(**values)
+            try:
+                candidate.to_physics_config(resolved)
+            except ValueError:
+                continue
+            valid.append(direction)
+        return tuple(valid)
+
+    def mutate(
+        self,
+        field: str,
+        *,
+        direction: int,
+        base: PhysicsConfig | None = None,
+    ) -> "UniverseGenome":
         if field not in UNIVERSE_GENOME_FIELDS:
             raise ValueError(f"cannot mutate non-genome field: {field}")
         if direction not in (-1, 1):
             raise ValueError("direction must be -1 or 1")
         current = int(getattr(self, field))
-        lower, upper = GENOME_BOUNDS[field]
-        if direction > 0:
-            next_value = 1 if current == 0 else current * 2
-        else:
-            next_value = 0 if current <= 1 else current // 2
-        next_value = min(upper, max(lower, next_value))
+        valid_directions = self.mutation_directions(field, base=base)
+        if direction not in valid_directions:
+            raise ValueError(
+                f"mutation direction {direction} does not produce a valid adjacent value"
+            )
+        lower, upper = self.effective_bounds(field, base=base)
+        next_value = self._next_mutation_value(
+            current,
+            direction=direction,
+            lower=lower,
+            upper=upper,
+        )
         values = self.to_dict()
         values[field] = next_value
         return type(self)(**values)

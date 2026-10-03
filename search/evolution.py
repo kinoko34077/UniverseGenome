@@ -14,11 +14,18 @@ from core.experiment import (
     compare_baseline_trained,
     measure_trained_state,
 )
-from core.physics import PhysicsConfig, create_universe
+from core.physics import PhysicsConfig, StepMetrics, create_universe
 from core.state import UniverseState
 from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
-from .pruning import growth_flags, prune_candidates
+from .pruning import (
+    PERSISTENT_NON_RESPONSE_WINDOWS,
+    SHORT_WINDOW,
+    absolute_failure_reason,
+    growth_flags,
+    prune_candidates,
+    short_health_flags,
+)
 
 IMPLEMENTATION_PHASE = 5
 CATEGORY_OPERATORS = ("masked_copy", "masked_xor", "rotate_copy", "masked_and")
@@ -56,6 +63,10 @@ class UniverseSlot:
     last_mutation_field: str | None = None
     allocation_reason: str = "initial"
     evidence_mature: bool = False
+    short_health_windows: tuple[int, ...] = ()
+    short_health_activity_cost: int = 0
+    absolute_failure: bool = False
+    absolute_failure_reason: str | None = None
 
     def __post_init__(self) -> None:
         if not 0 <= self.index < OPTIMIZER_POPULATION_SIZE:
@@ -68,6 +79,10 @@ class UniverseSlot:
             raise ValueError("slot parent_index must be non-negative")
         if any(not 0 <= int(window) <= 0xFF for window in self.growth_windows):
             raise ValueError("slot growth windows must fit uint8")
+        if any(not 0 <= int(window) <= 0b11 for window in self.short_health_windows):
+            raise ValueError("slot short-health windows must fit two bits")
+        if self.short_health_activity_cost < 0:
+            raise ValueError("slot short-health activity cost must be non-negative")
         if self.growth_reference is not None and not isinstance(self.growth_reference, Fitness):
             raise ValueError("slot growth_reference must be Fitness")
         if self.last_mutation_field is not None and self.last_mutation_field not in UNIVERSE_GENOME_FIELDS:
@@ -76,6 +91,16 @@ class UniverseSlot:
             raise ValueError("unsupported slot allocation reason")
         if not isinstance(self.evidence_mature, bool):
             raise ValueError("slot evidence_mature must be bool")
+        if not isinstance(self.absolute_failure, bool):
+            raise ValueError("slot absolute_failure must be bool")
+        if self.absolute_failure_reason not in (
+            None,
+            "all_active_cells_gone",
+            "persistent_non_response",
+        ):
+            raise ValueError("unsupported slot absolute failure reason")
+        if self.absolute_failure_reason is not None and not self.absolute_failure:
+            raise ValueError("absolute failure reason requires absolute_failure")
 
     @property
     def physical_generations(self) -> int:
@@ -105,6 +130,10 @@ class UniverseSlot:
             "last_mutation_field": self.last_mutation_field,
             "allocation_reason": self.allocation_reason,
             "evidence_mature": self.evidence_mature,
+            "short_health_windows": list(self.short_health_windows),
+            "short_health_activity_cost": self.short_health_activity_cost,
+            "absolute_failure": self.absolute_failure,
+            "absolute_failure_reason": self.absolute_failure_reason,
         }
 
     @classmethod
@@ -134,6 +163,13 @@ class UniverseSlot:
         raw_windows = payload.get("growth_windows", ())
         if not isinstance(raw_windows, (list, tuple)):
             raise ValueError("slot growth_windows must be an array")
+        raw_health_windows = payload.get("short_health_windows", ())
+        if not isinstance(raw_health_windows, (list, tuple)):
+            raise ValueError("slot short_health_windows must be an array")
+        absolute_failure = bool(payload.get("absolute_failure", False))
+        absolute_failure_reason_value = payload.get("absolute_failure_reason")
+        if absolute_failure_reason_value is not None:
+            absolute_failure_reason_value = str(absolute_failure_reason_value)
         return cls(
             index=int(payload["index"]),
             category=category,
@@ -159,6 +195,10 @@ class UniverseSlot:
             ),
             allocation_reason=str(payload.get("allocation_reason", "initial")),
             evidence_mature=bool(payload["evidence_mature"]),
+            short_health_windows=tuple(int(window) for window in raw_health_windows),
+            short_health_activity_cost=int(payload.get("short_health_activity_cost", 0)),
+            absolute_failure=absolute_failure,
+            absolute_failure_reason=absolute_failure_reason_value,
         )
 
 
@@ -274,6 +314,42 @@ class SteadyStateOptimizer:
         measurement = measure_trained_state(slot.state, experiment=self.experiment)
         return measurement, self._fitness_from_measurement(measurement)
 
+    def _observe_short_health(
+        self,
+        slot: UniverseSlot,
+        metrics: StepMetrics,
+        *,
+        activity_cost: int | None = None,
+    ) -> None:
+        flags = short_health_flags(
+            active_cells=metrics.active_cells,
+            activity_cost=metrics.activity_cost if activity_cost is None else activity_cost,
+        )
+        slot.short_health_windows = (
+            *slot.short_health_windows,
+            flags,
+        )[-PERSISTENT_NON_RESPONSE_WINDOWS:]
+        reason = absolute_failure_reason(slot.short_health_windows)
+        if not slot.absolute_failure and reason is not None:
+            slot.absolute_failure = True
+            slot.absolute_failure_reason = reason
+
+    def _record_short_health_step(
+        self,
+        slot: UniverseSlot,
+        generation: int,
+        metrics: StepMetrics,
+    ) -> None:
+        """Accumulate one physical step and close an aligned short window."""
+        slot.short_health_activity_cost += metrics.activity_cost
+        if generation > 0 and generation % SHORT_WINDOW == 0:
+            self._observe_short_health(
+                slot,
+                metrics,
+                activity_cost=slot.short_health_activity_cost,
+            )
+            slot.short_health_activity_cost = 0
+
     def _observe_growth_boundary(self, slot: UniverseSlot) -> None:
         measurement, observed_fitness = self._measure_slot(slot)
         if slot.growth_reference is not None:
@@ -292,8 +368,11 @@ class SteadyStateOptimizer:
             if generation > 0 and generation % GROWTH_WINDOW_GENERATIONS == 0:
                 self._observe_growth_boundary(slot)
 
+        def on_step(generation: int, metrics: StepMetrics) -> None:
+            self._record_short_health_step(slot, generation, metrics)
+
         trainer = IOExperiment(slot.state, experiment=self.experiment)
-        trainer.train_a_to_b_null(on_generation=on_generation)
+        trainer.train_a_to_b_null(on_generation=on_generation, on_step=on_step)
         measurement, slot.fitness = self._measure_slot(slot)
         return measurement
 
@@ -343,7 +422,7 @@ class SteadyStateOptimizer:
         *,
         free_index: int,
         parent: UniverseSlot,
-        direction: int = 1,
+        direction: int | None = None,
         field: str | None = None,
     ) -> UniverseSlot:
         if not 0 <= free_index < OPTIMIZER_POPULATION_SIZE:
@@ -351,7 +430,30 @@ class SteadyStateOptimizer:
         if parent.index == free_index:
             raise ValueError("mutation child must use a free slot distinct from parent")
         mutation_field = field or self._mutation_field(parent)
-        child_genome = parent.genome.mutate(mutation_field, direction=direction)
+        if direction is not None and direction not in (-1, 1):
+            raise ValueError("direction must be -1 or 1")
+        valid_directions = parent.genome.mutation_directions(
+            mutation_field,
+            base=self.base_config,
+        )
+        if not valid_directions:
+            raise ValueError(f"no valid adjacent mutation exists for {mutation_field}")
+        preferred_direction = direction
+        if preferred_direction is None:
+            cursor = int(self.scheduler["mutation_cursor"])
+            field_offset = UNIVERSE_GENOME_FIELDS.index(mutation_field)
+            preferred_direction = -1 if (cursor + parent.index + field_offset) % 2 else 1
+        if preferred_direction not in valid_directions:
+            preferred_direction = next(
+                candidate
+                for candidate in valid_directions
+                if candidate != preferred_direction
+            )
+        child_genome = parent.genome.mutate(
+            mutation_field,
+            direction=preferred_direction,
+            base=self.base_config,
+        )
         seed = self._next_seed(parent.category)
         config = self._effective_config(child_genome, parent.category, self.base_config)
         state = create_universe(seed=seed, config=config)
@@ -434,7 +536,7 @@ class SteadyStateOptimizer:
     @staticmethod
     def _pruning_eligible_slots(records: Iterable[UniverseSlot]) -> list[UniverseSlot]:
         """Return slots whose group has established the minimum evidence tier at least once."""
-        return [slot for slot in records if slot.evidence_mature]
+        return [slot for slot in records if slot.evidence_mature or slot.absolute_failure]
 
     def _incomplete_mutation_parent(
         self,
@@ -569,7 +671,6 @@ class SteadyStateOptimizer:
                     child = self.replace_free_slot(
                         free_index=target.index,
                         parent=parent,
-                        direction=1,
                     )
             self.slots[target.index] = child
             self._refresh_evidence_maturity(child.evidence_group)

@@ -198,12 +198,16 @@ binary-grid parameter without changing category or seed.
 ### TEST-P5-002 Fitness and growth
 
 Absolute fitness follows the lexicographic specification, while growth flags
-and four 8-bit windows remain separate and bounded.
+and four 8-bit windows remain separate and bounded. Growth bit 5 is sourced
+from the trained no-input-clean counterfactual rate, and bit 6 is sourced from
+the trained alternate-input-clean counterfactual rate.
 
 ### TEST-P5-003 Pruning and protection
 
 Category-relative low-growth eligibility uses four windows and protects the
-absolute-fitness top 1/8 from growth-only pruning.
+absolute-fitness top 1/8 from growth-only pruning. Authoritative 16-generation
+health boundaries detect all-active-cell loss and persistent non-response as
+separate absolute-failure reasons, including for a provisional slot.
 
 ### TEST-P5-004 Steady-state escalation
 
@@ -221,15 +225,19 @@ sub-four mutation groups temporarily pruning-protected, preserves an
 ever-mature marker once a group first reaches four real seeds, and keeps a
 later-depleted mature group pruning-eligible without restoring parent/protection
 eligibility. It also exercises multiple genome mutation fields and directly
-covers the real growth sequence `0 → 128 → 256 → 384 → 512`.
+covers the real growth sequence `0 → 128 → 256 → 384 → 512`. Integrated
+mutation uses both directions of the adjacent binary grid, falls back from an
+invalid bound direction, and never creates a no-op or an `initial_density`
+value above effective `PhysicsConfig.max_cells`.
 
 ### TEST-P5-005 Integrated persistence
 
 Optimizer persistence includes the effective base/protocol configuration,
 all 128 authoritative Universe states and their parameters, normalized
-fitness/growth references, physical cadence state, lineage, and scheduler
-policy state. It does not retain disposable evaluation clones. Restore/resume
-produces the same bounded slot population as uninterrupted continuation.
+fitness/growth references, short-health/failure state, physical cadence state,
+lineage, and scheduler policy state. It does not retain disposable evaluation
+clones. Restore/resume produces the same bounded slot population as
+uninterrupted continuation.
 
 The headless performance path reports bounded optimizer iterations, evaluated
 slots, replacements, mutation fields, actual same-genome slot-group counts,
