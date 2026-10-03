@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 
 from core import geometry
-from core.physics import PhysicsNotImplemented, step
+from core.physics import step
 from core.runner import build_status, load_config
 from core.state import DEFAULT_MAX_CELLS, HP_BITS, LATENT_BITS, STRUCTURE_BITS
 from server.app import build_server
@@ -57,7 +57,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertEqual(config["world"]["fixed_point_size"], 256)
         self.assertEqual(config["world"]["max_cells"], 1024)
         self.assertFalse(config["state"]["permanent_cell_id"])
-        self.assertFalse(config["features"]["phase1_physics"])
+        self.assertTrue(config["features"]["phase1_physics"])
 
     def test_experiment_config_is_explicitly_deferred(self):
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
@@ -65,14 +65,17 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertEqual(config["task"], "A->B->NULL")
         self.assertEqual(config["status"], "specified_deferred_until_phase4")
 
-    def test_runner_reports_scaffold_not_physics(self):
+    def test_runner_reports_phase1_physics(self):
         status = build_status(load_config(ROOT / "config" / "default.json"))
-        self.assertTrue(status["phase0_scaffold"])
-        self.assertFalse(status["phase1_physics_implemented"])
+        self.assertFalse(status["phase0_scaffold"])
+        self.assertTrue(status["phase1_physics_implemented"])
 
-    def test_physics_entrypoint_cannot_be_mistaken_for_implementation(self):
-        with self.assertRaises(PhysicsNotImplemented):
-            step()
+    def test_physics_entrypoint_runs_a_universe_step(self):
+        from core.physics import create_universe
+
+        state = create_universe(seed=0)
+        metrics = step(state)
+        self.assertEqual(metrics.generation, 1)
 
     def test_ui_scaffold_exists_and_declares_external_clock(self):
         html = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
@@ -104,8 +107,8 @@ class Phase0ScaffoldTests(unittest.TestCase):
             text=True,
         )
         status = json.loads(proc.stdout)
-        self.assertEqual(status["phase"], 0)
-        self.assertFalse(status["phase1_physics_implemented"])
+        self.assertEqual(status["phase"], 1)
+        self.assertTrue(status["phase1_physics_implemented"])
 
 
 if __name__ == "__main__":

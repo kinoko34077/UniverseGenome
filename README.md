@@ -6,9 +6,11 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current accepted state
 
-**Phase 0 scaffold.** The repository contains the canonical v0.1 requirements/specification, architecture decisions, configuration boundaries, headless/UI scaffolds, and smoke verification.
-
-Phase 1 deterministic single-universe physics is **not implemented yet**.
+**Phase 1 implementation in progress.** The repository contains the canonical
+v0.1 requirements/specification, architecture decisions, a deterministic
+single-universe core on the dedicated Phase 1 branch, headless snapshot and
+performance verification, and the unchanged observer/UI scaffold. Acceptance
+and merge are tracked by Issue #8 under the parent Work Order #7.
 
 ## Canonical entry points
 
@@ -22,10 +24,10 @@ Phase 1 deterministic single-universe physics is **not implemented yet**.
 - Repository Issues #2, #3, #4 preserve design/review history.
 - Issue #5 owns Phase 0 implementation history.
 
-## Phase 0 smoke commands
+## Headless verification commands
 
 ```bash
-python -m core.runner --config config/default.json --json
+python -m core.runner --config config/default.json --generations 8 --json
 python -m unittest discover -s tests -v
 python -m server.app --help
 ```

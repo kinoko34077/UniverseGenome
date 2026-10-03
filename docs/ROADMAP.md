@@ -15,7 +15,7 @@ Deliverables:
 - automated smoke verification
 - README routing
 
-## Phase 1 — Minimal deterministic universe
+## Phase 1 — Minimal deterministic universe (implementation in progress; #8)
 - 32×32 torus
 - 256×256 fixed-point position
 - fixed slot pool
