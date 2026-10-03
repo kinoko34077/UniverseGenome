@@ -436,6 +436,22 @@ seed result must not make its Genome promising by itself. The aggregate uses
 the normalized absolute-fitness fields while retaining growth-only fields for
 growth and pruning decisions.
 
+## SPEC-EVOL-003 — Minimum evidence eligibility
+**Status: accepted invariant**
+
+A category/genome group must have at least four currently allocated real seed
+Universes before any of its slots may participate in parent selection or
+absolute-fitness protection. This is the minimum evidence tier from the
+canonical `4 → 8 → 16 → 32` real-slot ladder, not a new promising threshold
+and not a change to the five-field absolute fitness ordering.
+
+A newly inserted mutation child therefore remains selection-ineligible while
+its group has fewer than four real seed slots. When a later pruning decision
+frees another slot, the optimizer may allocate that slot as additional seed
+evidence for an incomplete mutation-child group until the four-seed minimum
+is reached. Only after that gate is satisfied can the still-open promising
+allocation policy govern any later evidence expansion.
+
 At generation 0, 128, 256, 384, and 512, the slot has an observed fitness
 measurement. Each 128-generation interval derives one growth flag set from the
 two real boundary measurements. No unobserved interval is represented by a

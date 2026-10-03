@@ -214,7 +214,11 @@ maintains all 128 authoritative Universe states, measures normalized fitness
 from evaluation clones of those states, aggregates evidence across each real
 same-genome seed group, advances growth only at real 128-generation boundaries,
 leaves promising allocation policy selection open until explicitly approved,
-and exercises multiple genome mutation fields.
+does not replace a live slot without a real free/prune-eligible target, keeps
+groups below four real seed slots out of parent/protection selection, completes
+incomplete mutation evidence through later freed slots, exercises multiple
+genome mutation fields, and directly covers the real growth sequence
+`0 → 128 → 256 → 384 → 512`.
 
 ### TEST-P5-005 Integrated persistence
 
