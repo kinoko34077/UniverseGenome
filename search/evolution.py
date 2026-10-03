@@ -671,6 +671,15 @@ class SteadyStateOptimizer:
             for category in CATEGORY_OPERATORS
         ):
             raise ValueError("authoritative categories must contain 32 slots each")
+        maturity_groups: dict[tuple[str, str], list[UniverseSlot]] = {}
+        for slot in slots:
+            maturity_groups.setdefault(slot.evidence_group, []).append(slot)
+        for group in maturity_groups.values():
+            markers = {slot.evidence_mature for slot in group}
+            if len(markers) != 1:
+                raise ValueError("evidence maturity must be consistent within one genome group")
+            if len(group) >= MINIMUM_EVIDENCE_SEEDS and not next(iter(markers)):
+                raise ValueError("minimum-evidence group must be marked mature")
         scheduler = payload.get("scheduler", {})
         promising_policy = (
             scheduler.get("promising_policy")
