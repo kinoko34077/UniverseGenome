@@ -98,6 +98,9 @@ class Phase3PopulationTests(unittest.TestCase):
         summary = run_population_headless(seed=75, generations=2, config=population_config())
         self.assertEqual(summary["slot_count"], 128)
         self.assertEqual(summary["generation"], 2)
+        self.assertEqual(summary["generation_count"], 2)
+        self.assertEqual(summary["slot_steps"], 256)
+        self.assertGreaterEqual(summary["generations_per_second"], 0.0)
         self.assertEqual(summary["category_counts"], {name: 32 for name in CATEGORY_OPERATORS})
 
     def test_p3_006_status_config_and_ui_surface(self):

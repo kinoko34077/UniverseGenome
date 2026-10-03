@@ -24,6 +24,10 @@ def growth_flags(previous: Fitness, current: Fitness) -> int:
         flags |= 1 << 3
     if current.activity_cost < previous.activity_cost:
         flags |= 1 << 4
+    if current.retention > previous.retention:
+        flags |= 1 << 5
+    if current.noise_robustness > previous.noise_robustness:
+        flags |= 1 << 6
     return flags
 
 
@@ -60,11 +64,15 @@ def prune_candidates(records: list[object]) -> set[int]:
     for category_records in by_category.values():
         if not category_records:
             continue
-        scores = [sum(category_record.growth_windows) for category_record in category_records]
+        scores = [
+            sum(int(window).bit_count() for window in category_record.growth_windows)
+            for category_record in category_records
+        ]
         threshold = int(median(scores)) >> 1
         for record, score in zip(category_records, scores):
+            recent_windows = tuple(int(window).bit_count() for window in record.growth_windows[-4:])
             if record.index in protected:
                 continue
-            if len(record.growth_windows) >= 4 and score < threshold:
+            if len(recent_windows) == 4 and all(window < threshold for window in recent_windows):
                 result.add(record.index)
     return result
