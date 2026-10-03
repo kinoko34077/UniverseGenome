@@ -30,8 +30,16 @@ class Fitness:
         )):
             raise ValueError("fitness values must be non-negative")
 
-    def sort_key(self) -> tuple[int, int, int, int, int]:
-        return (-self.success, self.wrong_outputs, self.timeouts, self.response_latency, self.activity_cost)
+    def sort_key(self) -> tuple[int, int, int, int, int, int, int]:
+        return (
+            -self.success,
+            self.wrong_outputs,
+            self.timeouts,
+            self.response_latency,
+            self.activity_cost,
+            -self.retention,
+            -self.noise_robustness,
+        )
 
     def to_dict(self) -> dict[str, int]:
         return {

@@ -224,6 +224,129 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(summary["slot_steps"], 256)
         self.assertGreaterEqual(summary["generations_per_second"], 0.0)
 
+    def test_p2g_pruning_protection_is_category_local(self):
+        records = [
+            CandidateSlot(
+                index=index,
+                category="masked_copy" if index < 8 else "masked_xor",
+                genome=UniverseGenome.default(),
+                seed=index,
+                fitness=Fitness(1 if index in (0, 1) else 0, response_latency=index),
+                growth_windows=(0xFF, 0xFF, 0xFF, 0xFF)
+                if index in (0, 8)
+                else (0, 0, 0, 0),
+            )
+            for index in range(16)
+        ]
+        protected = protected_indices(records)
+        self.assertIn(0, protected)
+        self.assertIn(8, protected)
+
+    def test_p5_011_integrated_optimizer_evaluates_128_and_replaces_locally(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=101,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        self.assertEqual(len(optimizer.candidates), 128)
+        self.assertEqual({category: sum(slot.category == category for slot in optimizer.candidates)
+                          for category in ("masked_copy", "masked_xor", "rotate_copy", "masked_and")},
+                         {"masked_copy": 32, "masked_xor": 32, "rotate_copy": 32, "masked_and": 32})
+        for category in ("masked_copy", "masked_xor", "rotate_copy", "masked_and"):
+            slot = next(candidate for candidate in optimizer.candidates if candidate.category == category)
+            self.assertEqual(slot.universe_snapshot["config"]["latent_operator"], category)
+
+        summary = optimizer.step()
+
+        self.assertEqual(summary["evaluated_slots"], 128)
+        self.assertEqual(summary["category_counts"], {
+            "masked_copy": 32,
+            "masked_xor": 32,
+            "rotate_copy": 32,
+            "masked_and": 32,
+        })
+        self.assertEqual(summary["cross_category_selection"], False)
+        self.assertGreaterEqual(summary["replacement_count"], 4)
+        self.assertGreaterEqual(len({slot.last_mutation_field for slot in optimizer.candidates if slot.last_mutation_field}), 2)
+        self.assertTrue(all(slot.universe_snapshot is not None for slot in optimizer.candidates))
+
+    def test_p5_012_integrated_snapshot_restores_deterministic_continuation(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        first = SteadyStateOptimizer.from_defaults(
+            base_seed=102,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        first.step()
+        restored = SteadyStateOptimizer.from_snapshot(first.to_snapshot())
+        first.step()
+        restored.step()
+        self.assertEqual(first.to_snapshot(), restored.to_snapshot())
+
+        payload = restored.to_snapshot()
+        self.assertIn("base_config", payload)
+        self.assertIn("experiment", payload)
+        self.assertIn("scheduler", payload)
+        self.assertEqual(len(payload["candidates"]), 128)
+        self.assertTrue(all("universe_snapshot" in candidate for candidate in payload["candidates"]))
+
+    def test_p5_013_headless_reports_integrated_multi_field_search(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        result = run_optimizer_headless(
+            seeds=(3, 4),
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+            iterations=3,
+        )
+        self.assertEqual(result["population_size"], 128)
+        self.assertEqual(result["optimizer_iterations"], 3)
+        self.assertEqual(result["category_counts"], {
+            "masked_copy": 32,
+            "masked_xor": 32,
+            "rotate_copy": 32,
+            "masked_and": 32,
+        })
+        self.assertGreaterEqual(result["replacement_count"], 4)
+        self.assertGreaterEqual(len(result["mutation_fields"]), 2)
+        self.assertEqual(result["seed_escalation"], [8, 16, 32, 32])
+        self.assertEqual(result["integrated_seed_counts"], [8] * 4 + [16] * 4 + [32] * 4)
+
+    def test_p5_014_integrated_loop_reaches_growth_pruning(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=103,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        summary = optimizer.run(iterations=5)
+        self.assertGreater(summary["pruned_count"], 0)
+        self.assertTrue(any(item["reason"] == "growth_pruned" for item in summary["replacements"]))
+
 
 if __name__ == "__main__":
     unittest.main()

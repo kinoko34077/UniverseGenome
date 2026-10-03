@@ -50,13 +50,18 @@ class GrowthHistory:
 def protected_indices(records: list[object]) -> set[int]:
     if not records:
         return set()
-    count = max(1, len(records) // 8)
-    ordered = sorted(records, key=lambda record: record.fitness.sort_key())
-    return {record.index for record in ordered[:count]}
+    by_category: dict[str, list[object]] = {}
+    for record in records:
+        by_category.setdefault(record.category, []).append(record)
+    protected: set[int] = set()
+    for category_records in by_category.values():
+        count = max(1, len(category_records) // 8)
+        ordered = sorted(category_records, key=lambda record: record.fitness.sort_key())
+        protected.update(record.index for record in ordered[:count])
+    return protected
 
 
 def prune_candidates(records: list[object]) -> set[int]:
-    protected = protected_indices(records)
     result: set[int] = set()
     by_category: dict[str, list[object]] = {}
     for record in records:
@@ -64,15 +69,25 @@ def prune_candidates(records: list[object]) -> set[int]:
     for category_records in by_category.values():
         if not category_records:
             continue
-        scores = [
-            sum(int(window).bit_count() for window in category_record.growth_windows)
-            for category_record in category_records
-        ]
-        threshold = int(median(scores)) >> 1
-        for record, score in zip(category_records, scores):
-            recent_windows = tuple(int(window).bit_count() for window in record.growth_windows[-4:])
+        protected = protected_indices(category_records)
+        recent_by_record = {
+            record.index: tuple(int(window).bit_count() for window in record.growth_windows[-4:])
+            for record in category_records
+        }
+        complete_records = [record for record in category_records if len(recent_by_record[record.index]) == 4]
+        if not complete_records:
+            continue
+        medians = tuple(
+            median(recent_by_record[record.index][offset] for record in complete_records)
+            for offset in range(4)
+        )
+        # Keep a zero-median category able to discard candidates with no
+        # observed growth while retaining the per-window scale.
+        thresholds = tuple(max(1, int(value) >> 1) for value in medians)
+        for record in complete_records:
+            recent_windows = recent_by_record[record.index]
             if record.index in protected:
                 continue
-            if len(recent_windows) == 4 and all(window < threshold for window in recent_windows):
+            if all(window < threshold for window, threshold in zip(recent_windows, thresholds)):
                 result.add(record.index)
     return result
