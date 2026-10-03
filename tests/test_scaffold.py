@@ -116,6 +116,17 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("readiness audit #60", handoff)
         self.assertIn("Phase 5", roadmap)
 
+    def test_current_state_separates_implementation_from_readiness(self):
+        status = build_status(load_config(ROOT / "config" / "default.json"))
+
+        self.assertTrue(status["phase5_optimizer_implemented"])
+        self.assertEqual(status["acceptance_state"], "remediation_in_progress")
+        self.assertFalse(status["phase6_ready"])
+        self.assertEqual(status["blocking_owners"], ["#63", "#65", "#66"])
+        self.assertEqual(status["readiness_owner"], "#60")
+        self.assertIn("Phase 5 acceptance remediation", status["next_phase"])
+        self.assertNotIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
+
     def test_phase5_metadata_and_implemented_defaults_are_current(self):
         functional = (ROOT / "docs" / "spec" / "02_functional_spec.md").read_text(encoding="utf-8")
         behavior = (ROOT / "docs" / "spec" / "03_behavior_spec.md").read_text(encoding="utf-8")
