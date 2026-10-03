@@ -224,7 +224,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(child.last_mutation_field, "hp_decay")
         self.assertEqual(child.allocation_reason, "mutation_child")
 
-    def test_p5_020_integrated_loop_preserves_real_slots_between_steps(self):
+    def test_p5_020_integrated_loop_does_not_replace_live_slot_without_free_slot(self):
         protocol = ExperimentConfig(
             byte_hold_generations=0,
             byte_gap_generations=0,
@@ -237,18 +237,19 @@ class Phase5OptimizerTests(unittest.TestCase):
             base_config=PhysicsConfig(max_cells=8),
             experiment=protocol,
         )
+        identities = {slot.index: id(slot.state) for slot in optimizer.slots}
+
         first = optimizer.step()
-        summary = optimizer.step()
+        second = optimizer.step()
+
         self.assertEqual(first["evaluated_slots"], 128)
-        self.assertEqual(summary["evaluated_slots"], 128)
-        self.assertTrue(all(
-            item["allocation_reason"] == "mutation_child"
-            and item["reason"] == "steady_state_exploration"
-            for item in summary["replacements"]
-        ))
-        replaced = {item["index"] for item in summary["replacements"]}
-        self.assertTrue(all(slot.state.generation > 0
-                            for slot in optimizer.slots if slot.index not in replaced))
+        self.assertEqual(second["evaluated_slots"], 128)
+        self.assertEqual(first["replacement_count"], 0)
+        self.assertEqual(second["replacement_count"], 0)
+        self.assertEqual(first["replacements"], [])
+        self.assertEqual(second["replacements"], [])
+        self.assertTrue(all(id(slot.state) == identities[slot.index] for slot in optimizer.slots))
+        self.assertTrue(all(slot.state.generation > 0 for slot in optimizer.slots))
 
     def test_p5_021_growth_windows_follow_128_physical_generations(self):
         protocol = ExperimentConfig(
@@ -262,9 +263,9 @@ class Phase5OptimizerTests(unittest.TestCase):
             experiment=protocol,
             base_config=PhysicsConfig(max_cells=8),
         )
-        candidate = make_slot(index=0, seed=0, generation=127)
+        candidate = make_slot(index=0, seed=0, generation=0)
         optimizer._evaluate_slot(candidate)
-        self.assertEqual(candidate.physical_generations, 639)
+        self.assertEqual(candidate.physical_generations, 512)
         self.assertEqual(len(candidate.growth_windows), 4)
         self.assertIsNotNone(candidate.growth_reference)
 
@@ -713,6 +714,59 @@ class Phase5OptimizerTests(unittest.TestCase):
         payload["slots"][0]["genome"]["hp_decay"] = 2
         with self.assertRaises(ValueError):
             SteadyStateOptimizer.from_snapshot(payload)
+
+    def test_p5_031_one_seed_mutation_child_is_not_selection_eligible(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=112)
+        local = [slot for slot in optimizer.slots if slot.category == "masked_copy"]
+        parent = local[0]
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=-1,
+            field="hp_decay",
+        )
+        optimizer.slots[31] = child
+        child.fitness = Fitness(success=1)
+
+        local = [slot for slot in optimizer.slots if slot.category == "masked_copy"]
+        self.assertNotIn(31, optimizer._protected_indices(local))
+        selected = optimizer._select_parent(local, excluded_index=30)
+        self.assertNotEqual(selected.index, 31)
+
+    def test_p5_032_incomplete_mutation_child_group_is_completed_from_pruned_slot(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=113,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        local = [slot for slot in optimizer.slots if slot.category == "masked_copy"]
+        parent = local[0]
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=-1,
+            field="hp_decay",
+        )
+        optimizer.slots[31] = child
+        for slot in optimizer.slots:
+            if slot.category == "masked_copy":
+                slot.growth_windows = (0x0F, 0x0F, 0x0F, 0x0F)
+        optimizer.slots[30].growth_windows = (0, 0, 0, 0)
+
+        summary = optimizer.step()
+        replacement = next(item for item in summary["replacements"] if item["index"] == 30)
+
+        self.assertEqual(replacement["allocation_reason"], "seed_evidence")
+        self.assertEqual(replacement["parent_index"], 31)
+        self.assertIsNone(replacement["mutation_field"])
+        self.assertEqual(replacement["group_count"], 2)
 
 
 if __name__ == "__main__":
