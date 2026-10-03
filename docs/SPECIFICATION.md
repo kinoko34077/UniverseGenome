@@ -38,7 +38,7 @@ An implementation default does not promote `accepted-default` or `parameterized`
 ## Current implementation frontier
 
 Phase 0: repository/specification scaffold.  
-Phase 1 through Phase 3 are accepted; Phase 4 is the active bounded I/O and
-learning-experiment implementation.
+Phase 1 through Phase 4 are accepted; Phase 5 is the active bounded
+outer-optimizer implementation. Phase 4 recorded no learning claim.
 
 See `docs/ROADMAP.md`.

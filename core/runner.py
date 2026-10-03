@@ -11,6 +11,7 @@ from typing import Any
 from .physics import PhysicsConfig, create_universe, step
 from .population import run_population_headless
 from .experiment import compare_baseline_trained
+from search.evolution import run_optimizer_headless
 from .state import DEFAULT_MAX_CELLS, HP_BITS, LATENT_BITS, STRUCTURE_BITS
 
 
@@ -31,10 +32,13 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
     phase2e = bool(config.get("features", {}).get("aging", False))
     phase3 = bool(config.get("features", {}).get("multi_universe_runtime", False))
     phase4 = bool(config.get("features", {}).get("io_learning", False))
+    phase5 = bool(config.get("features", {}).get("evolution", False))
     return {
         "project": "UniverseGenome",
         "phase": (
-            4
+            5
+            if phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
+            else 4
             if phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
             else 3
             if phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
@@ -53,6 +57,7 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
         "phase2e_aging_implemented": phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase3_runtime_implemented": phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase4_io_learning_implemented": phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
+        "phase5_optimizer_implemented": phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "logical_size": config["world"]["logical_size"],
         "subdivisions_per_tile": config["world"]["subdivisions_per_tile"],
         "fixed_point_size": config["world"]["fixed_point_size"],
@@ -63,7 +68,9 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
             "hp": HP_BITS,
         },
         "next_phase": (
-            "Phase 5 UniverseGenome optimizer"
+            "Phase 6+ capability ladder (handoff only)"
+            if phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
+            else "Phase 5 UniverseGenome optimizer"
             if phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
             else "Phase 4 I/O learning"
             if phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
@@ -127,6 +134,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--generations", type=int, default=0)
     parser.add_argument("--population", action="store_true", help="run the Phase 3 128-slot population")
     parser.add_argument("--experiment", action="store_true", help="run the Phase 4 baseline/trained measurement")
+    parser.add_argument("--optimizer", action="store_true", help="run the Phase 5 optimizer diagnostics")
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
 
@@ -159,6 +167,10 @@ def main(argv: list[str] | None = None) -> int:
             "criterion": measurement.criterion,
             "learning_claim": measurement.learning_claim,
         }
+    if args.optimizer:
+        if not status["phase5_optimizer_implemented"]:
+            raise ValueError("config must explicitly enable Phase 5 optimizer")
+        status["optimizer_diagnostics"] = run_optimizer_headless()
     if args.as_json:
         print(json.dumps(status, sort_keys=True))
     else:

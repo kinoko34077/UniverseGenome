@@ -108,7 +108,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
             text=True,
         )
         status = json.loads(proc.stdout)
-        self.assertEqual(status["phase"], 4)
+        self.assertEqual(status["phase"], 5)
         self.assertTrue(status["phase1_physics_implemented"])
 
 

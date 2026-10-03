@@ -52,9 +52,10 @@
     "fragmentation": true,
     "latent_runtime": true,
     "multi_universe_runtime": true,
-    "multi_universe_search": false,
+    "multi_universe_search": true,
     "io_learning": true,
-    "evolution": false,
+    "evolution": true,
+    "phase6_capabilities": false,
     "aging": true
   }
 }

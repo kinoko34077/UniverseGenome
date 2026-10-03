@@ -6,13 +6,13 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current accepted state
 
-**Phase 1 through Phase 3 are accepted on `main`; Phase 4 I/O is implemented on the active branch.**
+**Phase 1 through Phase 4 are accepted on `main`; Phase 5 optimizer is implemented on the active branch.**
 The repository contains the canonical v0.1 requirements/specification,
 architecture decisions, a deterministic single-universe core, headless
 snapshot/performance verification, and the unchanged observer/UI scaffold.
-Phase 4 is tracked by Issue #22 under the parent Work Order #7; its first
-multi-seed learning measurement is recorded honestly, with no success claim.
-Phase 5 and later phases remain deferred until the Phase 4 acceptance gate.
+Phase 4 Issue #22 recorded baseline 0 / trained 0 with no learning claim.
+Phase 5 Issue #24 implements diagnostic optimizer mechanics; Phase 6+ remains
+handoff-only.
 
 ## Canonical entry points
 
@@ -33,6 +33,7 @@ Phase 5 and later phases remain deferred until the Phase 4 acceptance gate.
 - Issue #18 owns the bounded Phase 2E aging implementation.
 - Issue #20 owns the bounded Phase 3 runtime/observation implementation.
 - Issue #22 owns the bounded Phase 4 I/O and A→B→NULL experiment.
+- Issue #24 owns the bounded Phase 5 optimizer and steady-state diagnostics.
 
 ## Headless verification commands
 

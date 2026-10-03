@@ -139,7 +139,7 @@ class Phase1PhysicsTests(unittest.TestCase):
             text=True,
         )
         status = json.loads(proc.stdout)
-        self.assertEqual(status["phase"], 4)
+        self.assertEqual(status["phase"], 5)
         self.assertEqual(status["generations"], 3)
         self.assertIn("active_cells", status["performance"])
 

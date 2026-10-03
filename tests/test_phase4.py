@@ -100,9 +100,9 @@ class Phase4IOTests(unittest.TestCase):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
         self.assertTrue(status["phase4_io_learning_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 5 UniverseGenome optimizer")
+        self.assertEqual(status["next_phase"], "Phase 6+ capability ladder (handoff only)")
         self.assertTrue(raw["features"]["io_learning"])
-        self.assertFalse(raw["features"]["evolution"])
+        self.assertTrue(raw["features"]["evolution"])
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             experiment = json.load(handle)
         self.assertEqual(experiment["status"], "implemented_phase4_learning_outcome_recorded")
