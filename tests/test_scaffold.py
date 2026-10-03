@@ -127,6 +127,45 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("Phase 5 acceptance remediation", status["next_phase"])
         self.assertNotIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
 
+    def test_post_audit_documentation_routes_to_blocked_remediation(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        specification = (ROOT / "docs" / "SPECIFICATION.md").read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
+        handoff = (ROOT / "docs" / "PHASE6_HANDOFF.md").read_text(encoding="utf-8")
+        overview = (ROOT / "docs" / "spec" / "00_overview.md").read_text(encoding="utf-8")
+        functional = (ROOT / "docs" / "spec" / "02_functional_spec.md").read_text(encoding="utf-8")
+        changelog = (ROOT / "docs" / "spec" / "08_changelog.md").read_text(encoding="utf-8")
+        historical_plans = [
+            (
+                ROOT / "docs" / "superpowers" / "plans" / name
+            ).read_text(encoding="utf-8")
+            for name in (
+                "2026-10-03-phase5-authoritative-slots.md",
+                "2026-10-03-phase5-semantic-corrections.md",
+                "2026-10-04-phase5-free-slot-evidence.md",
+            )
+        ]
+
+        self.assertIn("Phase 0 through Phase 5 implementation is present", readme)
+        self.assertIn("Phase 6+ is blocked", readme)
+        self.assertIn("#63", readme)
+        self.assertIn("#65", readme)
+        self.assertNotIn("Phase 1 through Phase 5 are accepted on `main`", readme)
+        self.assertIn("acceptance remediation is active", specification)
+        self.assertIn("Phase 6+ is blocked", specification)
+        self.assertIn(
+            "Phase 6+ — Capability ladder (blocked pending #63/#65/#66; readiness rerun #60)",
+            roadmap,
+        )
+        self.assertIn("Status: **blocked pending remediation #63/#65/#66; readiness rerun #60**", handoff)
+        self.assertIn("Status is a single base term", overview)
+        self.assertNotIn("Status: open / policy hook only", functional)
+        self.assertNotIn("Status: accepted invariant", functional)
+        self.assertIn("Phase 2D accepted (#16 / PR #17)", changelog)
+        self.assertIn("REQ-083", changelog)
+        for historical_plan in historical_plans:
+            self.assertIn("Historical execution record; not Current State authority.", historical_plan)
+
     def test_phase5_metadata_and_implemented_defaults_are_current(self):
         functional = (ROOT / "docs" / "spec" / "02_functional_spec.md").read_text(encoding="utf-8")
         behavior = (ROOT / "docs" / "spec" / "03_behavior_spec.md").read_text(encoding="utf-8")
