@@ -9,6 +9,7 @@ from pathlib import Path
 
 from core.physics import PhysicsConfig, create_universe, step
 from core.runner import build_status
+from core.state import Lifecycle, SHAPE_HORIZONTAL, SHAPE_SINGLE, degrade_structure
 from persistence.snapshot import load_snapshot, save_snapshot
 
 
@@ -16,6 +17,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class Phase2ABondTests(unittest.TestCase):
+    def test_p2f_structure_degradation_lowers_hierarchy_and_collapses_level_zero(self):
+        self.assertEqual(degrade_structure(SHAPE_HORIZONTAL), SHAPE_SINGLE)
+        self.assertEqual(degrade_structure(SHAPE_SINGLE << 2), SHAPE_SINGLE)
+        self.assertEqual(degrade_structure(SHAPE_SINGLE), 0)
+
+    def test_p2f_collision_level_zero_single_enters_free_transition(self):
+        config = PhysicsConfig(
+            hp_decay=0,
+            bond_gain=0,
+            bond_decay=0,
+            collision_threshold=0,
+            collision_damage=0,
+            structure_damage_threshold=0,
+        )
+        state = create_universe(seed=27, config=config)
+        first = state.spawn(x=0, y=0, direction=0, speed_code=0)
+        second = state.spawn(x=0, y=0, direction=0, speed_code=0)
+        self.assertEqual(step(state).collision_count, 1)
+        self.assertEqual(state.lifecycle[first], Lifecycle.FREE)
+        self.assertEqual(state.lifecycle[second], Lifecycle.FREE)
+
     def test_p2a_001_compatible_contact_saturates_bond_gain(self):
         config = PhysicsConfig(
             hp_decay=0,

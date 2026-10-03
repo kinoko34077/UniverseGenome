@@ -54,6 +54,11 @@ class Phase2BLatentTests(unittest.TestCase):
         self.assertEqual(wide, 0xFFFF)
         self.assertEqual(wide, again)
 
+    def test_p2f_transmission_event_key_does_not_use_storage_slot_pair(self):
+        first = transmission_mask(seed=31, generation=4, address=9, pair=(2, 7), bond_strength=16)
+        equivalent = transmission_mask(seed=31, generation=4, address=9, pair=(99, 101), bond_strength=16)
+        self.assertEqual(first, equivalent)
+
     def test_p2b_003_contact_transmits_synchronously_and_recovers_hp(self):
         config = PhysicsConfig(
             hp_decay=0,
@@ -71,6 +76,7 @@ class Phase2BLatentTests(unittest.TestCase):
             0,
             (source, destination),
             bond_strength=16,
+            participant=state,
         )
         destination_mask = transmission_mask(
             state.seed,
@@ -78,6 +84,7 @@ class Phase2BLatentTests(unittest.TestCase):
             0,
             (destination, source),
             bond_strength=16,
+            participant=state,
         )
 
         metrics = step(state)

@@ -6,6 +6,7 @@ from threading import Event, RLock, Thread
 from typing import Any
 
 from core.population import Population
+from core.physics import PhysicsConfig
 
 
 class PopulationRuntime:
@@ -13,11 +14,19 @@ class PopulationRuntime:
 
     MAX_CONTROL_GENERATIONS = 512
 
-    def __init__(self, *, base_seed: int = 0, history_length: int = 128) -> None:
+    def __init__(
+        self,
+        *,
+        base_seed: int = 0,
+        history_length: int = 128,
+        config: PhysicsConfig | None = None,
+    ) -> None:
         self.base_seed = int(base_seed)
         self.history_length = int(history_length)
+        self.config = config or PhysicsConfig(initial_density=4)
         self.population = Population.from_defaults(
             base_seed=self.base_seed,
+            config=self.config,
             history_length=self.history_length,
         )
         self.selected_index = 0
@@ -107,6 +116,7 @@ class PopulationRuntime:
                 self.pause()
                 self.population = Population.from_defaults(
                     base_seed=self.base_seed,
+                    config=self.config,
                     history_length=self.history_length,
                 )
                 self.selected_index = 0
@@ -135,6 +145,9 @@ class PopulationRuntime:
                 self.pause()
                 self.population = Population.from_snapshot(payload["snapshot"])
                 self.history_length = self.population.history_length
+                loaded_config = self.population.slots[0].state.config
+                if isinstance(loaded_config, PhysicsConfig):
+                    self.config = loaded_config
                 self.selected_index = min(self.selected_index, len(self.population.slots) - 1)
             elif action == "save":
                 return {**self.state(), "snapshot": self.population.to_snapshot()}

@@ -76,9 +76,15 @@ class Phase1PhysicsTests(unittest.TestCase):
         config = PhysicsConfig(noise_rate=65535, noise_attempts=4, hp_decay=0)
         left = create_universe(seed=99, config=config)
         right = create_universe(seed=99, config=config)
-        self.assertEqual(step(left).noise_spawn_count, 4)
-        self.assertEqual(step(right).noise_spawn_count, 4)
+        self.assertEqual(step(left).noise_spawn_count, 1)
+        self.assertEqual(step(right).noise_spawn_count, 1)
         self.assertEqual(left.to_snapshot(), right.to_snapshot())
+
+    def test_p2f_noise_has_one_event_decision_per_generation(self):
+        config = PhysicsConfig(noise_rate=65535, noise_attempts=4, max_cells=8, hp_decay=0)
+        state = create_universe(seed=99, config=config)
+        self.assertEqual(step(state).noise_spawn_count, 1)
+        self.assertEqual(len(state.active_slots()), 1)
 
     def test_p1_005_full_capacity_discards_noise_without_growth(self):
         config = PhysicsConfig(max_cells=1, noise_rate=65535, noise_attempts=4)
@@ -113,6 +119,19 @@ class Phase1PhysicsTests(unittest.TestCase):
         self.assertEqual(state.lifecycle[doomed], Lifecycle.FREE)
         reused = state.spawn(x=16, y=0, hp=10)
         self.assertEqual(reused, doomed)
+
+    def test_p2f_local_latent_signal_can_revive_black_hole(self):
+        config = PhysicsConfig(hp_decay=1, black_hole_grace=3, recovery_hp=32)
+        state = create_universe(seed=44, config=config)
+        black_hole = state.spawn(x=0, y=0, direction=0, speed_code=0, hp=1)
+        signal = state.spawn(x=8, y=0, direction=0, speed_code=0, hp=100, latent=1)
+        step(state)
+        self.assertEqual(state.lifecycle[black_hole], Lifecycle.BLACK_HOLE)
+        state.x[signal] = 0
+        state.latent[signal] = 1
+        step(state)
+        self.assertEqual(state.lifecycle[black_hole], Lifecycle.ACTIVE)
+        self.assertGreater(state.hp[black_hole], 0)
 
     def test_p1_008_snapshot_roundtrip_continuation(self):
         config = PhysicsConfig(noise_rate=8192, noise_attempts=2, hp_decay=1)

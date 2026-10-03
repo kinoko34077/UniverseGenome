@@ -37,6 +37,7 @@ class ServerRuntimeTests(unittest.TestCase):
         self.assertEqual(initial["generation"], 0)
         self.assertEqual(initial["slot_count"], 128)
         self.assertEqual(len(initial["summaries"]), 128)
+        self.assertGreater(initial["active_cells"], 0)
         self.assertEqual(initial["selected_index"], 0)
 
         stepped = self.request("POST", "/api/control", {"action": "step"})

@@ -43,14 +43,15 @@ def structure_shape(structure: int) -> int:
 
 
 def degrade_structure(structure: int) -> int:
-    """Reduce compound geometry by one shape step without adding identity."""
+    """Reduce collision damage to one lower structure step without identity."""
     value = int(structure) & 0xFFFF
     level = structure_level(value)
     shape = structure_shape(value)
-    if shape in (SHAPE_HORIZONTAL, SHAPE_VERTICAL):
-        mask = 0b11 << (level * 2)
-        return (value & ~mask) | (SHAPE_SINGLE << (level * 2))
-    return value
+    if level == 0:
+        if shape in (SHAPE_HORIZONTAL, SHAPE_VERTICAL):
+            return SHAPE_SINGLE
+        return SHAPE_EMPTY
+    return SHAPE_SINGLE << ((level - 1) * 2)
 
 
 @dataclass

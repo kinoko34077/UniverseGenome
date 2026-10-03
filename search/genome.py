@@ -39,7 +39,7 @@ GENOME_BOUNDS = {
 
 @dataclass(frozen=True)
 class UniverseGenome:
-    initial_density: int = 0
+    initial_density: int = 4
     hp_decay: int = 1
     hp_gain: int = 32
     noise_rate: int = 0
