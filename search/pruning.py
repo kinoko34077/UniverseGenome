@@ -10,8 +10,6 @@ from .fitness import Fitness
 SHORT_WINDOW = 16
 GROWTH_WINDOW = 128
 STAGNATION_HORIZON = 512
-GROWTH_BIT_NO_INPUT_CLEAN = 5
-GROWTH_BIT_ALTERNATE_INPUT_CLEAN = 6
 SHORT_HEALTH_ACTIVE_CELLS = 1 << 0
 SHORT_HEALTH_MEANINGFUL_ACTIVITY = 1 << 1
 PERSISTENT_NON_RESPONSE_WINDOWS = 2
@@ -60,10 +58,10 @@ def growth_flags(previous: Fitness, current: Fitness) -> int:
         flags |= 1 << 3
     if current.activity_cost < previous.activity_cost:
         flags |= 1 << 4
-    if current.trained_no_input_clean > previous.trained_no_input_clean:
-        flags |= 1 << GROWTH_BIT_NO_INPUT_CLEAN
-    if current.trained_alternate_input_clean > previous.trained_alternate_input_clean:
-        flags |= 1 << GROWTH_BIT_ALTERNATE_INPUT_CLEAN
+    if current.retention > previous.retention:
+        flags |= 1 << 5
+    if current.noise_robustness > previous.noise_robustness:
+        flags |= 1 << 6
     return flags
 
 

@@ -14,9 +14,9 @@ do not add a 4→8→16→32 threshold or silently choose one.
 2. Make integrated mutation deterministic, adjacent-grid, bidirectional, and
    bounded by the effective `PhysicsConfig` so mutation cannot be a no-op or
    create an invalid child.
-3. Pin the accepted growth-bit semantics in code/tests and documentation:
-   bit 5 is the trained no-input-clean metric and bit 6 is the trained
-   alternate-input-clean metric. Do not relabel them as interchangeable.
+3. Keep the accepted growth-bit names and semantics unchanged. Do not
+   relabel retention/noise robustness as no-input/alternate-input cleanliness;
+   that mapping remains an explicit specification decision gate.
 4. Preserve the unresolved promising-policy gate and update the durable
    handoff evidence after verification.
 
@@ -39,6 +39,6 @@ do not add a 4→8→16→32 threshold or silently choose one.
 - A mutation at either bound selects the opposite valid adjacent direction or
   reports that no valid mutation exists; no unchanged child is admitted.
 - Mutation of `initial_density` respects the effective `max_cells` bound.
-- Growth bits 5 and 6 have independent regression tests and explicit
-  canonical wording.
+- Growth bits 5 and 6 retain their existing canonical names without a new
+  proxy equivalence.
 - The promising allocation policy remains a documented unresolved gate.

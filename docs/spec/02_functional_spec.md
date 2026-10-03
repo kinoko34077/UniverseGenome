@@ -323,15 +323,9 @@ Initial candidate bits:
 - bit2 timeout improved
 - bit3 latency improved
 - bit4 activity efficiency improved
-- bit5 trained no-input-clean rate improved (`Fitness.retention`)
-- bit6 trained alternate-input-clean rate improved (`Fitness.noise_robustness`)
+- bit5 retention improved
+- bit6 noise robustness improved
 - bit7 reserved
-
-The persisted `retention` and `noise_robustness` names are compatibility
-labels for these two distinct trained counterfactual measurements. They are
-not interchangeable aliases: bit 5 compares the trained no-input-clean rate,
-while bit 6 compares the trained alternate-input-clean rate. Both remain
-growth-only dimensions and are not added to the absolute-fitness ordering.
 
 ---
 

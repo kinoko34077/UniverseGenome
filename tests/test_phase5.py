@@ -26,8 +26,6 @@ from search.evolution import (
 from search.fitness import Fitness, compare_fitness
 from search.genome import UniverseGenome
 from search.pruning import (
-    GROWTH_BIT_ALTERNATE_INPUT_CLEAN,
-    GROWTH_BIT_NO_INPUT_CLEAN,
     GrowthHistory,
     absolute_failure_reason,
     growth_flags,
@@ -1020,26 +1018,20 @@ class Phase5OptimizerTests(unittest.TestCase):
         ]
         self.assertLess(len(surviving), 3)
 
-    def test_p5_041_growth_bits_name_the_authoritative_counterfactual_metrics(self):
+    def test_p5_041_growth_bits_keep_canonical_field_names_without_proxy_aliases(self):
         before = Fitness(retention=0, noise_robustness=0)
         no_input_after = Fitness(retention=1, noise_robustness=0)
         alternate_after = Fitness(retention=0, noise_robustness=1)
 
-        self.assertEqual(
-            before.trained_no_input_clean,
-            before.retention,
-        )
-        self.assertEqual(
-            before.trained_alternate_input_clean,
-            before.noise_robustness,
-        )
+        self.assertFalse(hasattr(before, "trained_no_input_clean"))
+        self.assertFalse(hasattr(before, "trained_alternate_input_clean"))
         self.assertEqual(
             growth_flags(before, no_input_after),
-            1 << GROWTH_BIT_NO_INPUT_CLEAN,
+            1 << 5,
         )
         self.assertEqual(
             growth_flags(before, alternate_after),
-            1 << GROWTH_BIT_ALTERNATE_INPUT_CLEAN,
+            1 << 6,
         )
 
     def test_p5_042_short_health_runs_at_authoritative_16_generation_boundaries(self):

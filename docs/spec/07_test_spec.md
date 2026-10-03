@@ -198,9 +198,7 @@ binary-grid parameter without changing category or seed.
 ### TEST-P5-002 Fitness and growth
 
 Absolute fitness follows the lexicographic specification, while growth flags
-and four 8-bit windows remain separate and bounded. Growth bit 5 is sourced
-from the trained no-input-clean counterfactual rate, and bit 6 is sourced from
-the trained alternate-input-clean counterfactual rate.
+and four 8-bit windows remain separate and bounded.
 
 ### TEST-P5-003 Pruning and protection
 
