@@ -800,5 +800,109 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIs(optimizer.slots[31], child)
 
 
+    def test_p5_034_initial_groups_are_mature_and_mutation_groups_start_provisional(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=115)
+        initial = [
+            slot for slot in optimizer.slots
+            if slot.category == "masked_copy"
+            and slot.genome == UniverseGenome.initial_population()[0]
+        ]
+        self.assertEqual(len(initial), 4)
+        self.assertTrue(all(slot.evidence_mature for slot in initial))
+
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=initial[0],
+            direction=-1,
+            field="hp_decay",
+        )
+        self.assertFalse(child.evidence_mature)
+
+    def test_p5_035_mutation_group_becomes_mature_at_four_real_seed_slots(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=116)
+        parent = next(slot for slot in optimizer.slots if slot.category == "masked_copy")
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=-1,
+            field="hp_decay",
+        )
+        optimizer.slots[31] = child
+        evidence_slots = [child]
+        for free_index in (30, 29, 28):
+            evidence = optimizer.allocate_seed_slot(
+                free_index=free_index,
+                parent=child,
+            )
+            optimizer.slots[free_index] = evidence
+            evidence_slots.append(evidence)
+            optimizer._refresh_evidence_maturity(child.evidence_group)
+
+        self.assertEqual(len(evidence_slots), 4)
+        self.assertTrue(all(slot.evidence_mature for slot in evidence_slots))
+        self.assertTrue(all(
+            slot.index in {
+                candidate.index
+                for candidate in optimizer._selection_eligible_slots(
+                    [item for item in optimizer.slots if item.category == "masked_copy"]
+                )
+            }
+            for slot in evidence_slots
+        ))
+
+    def test_p5_036_depleted_mature_group_stays_prunable_but_not_selectable(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=117)
+        genome = UniverseGenome.initial_population()[0]
+        original = [
+            slot for slot in optimizer.slots
+            if slot.category == "masked_copy" and slot.genome == genome
+        ]
+        self.assertEqual(len(original), 4)
+        victim = original[-1]
+        child = optimizer.replace_free_slot(
+            free_index=victim.index,
+            parent=next(
+                slot for slot in optimizer.slots
+                if slot.category == "masked_copy" and slot.genome != genome
+            ),
+            direction=1,
+            field="hp_decay",
+        )
+        optimizer.slots[victim.index] = child
+
+        local = [slot for slot in optimizer.slots if slot.category == "masked_copy"]
+        remaining = [slot for slot in local if slot.genome == genome]
+        self.assertEqual(len(remaining), 3)
+        self.assertTrue(all(slot.evidence_mature for slot in remaining))
+
+        selection_indices = {
+            slot.index for slot in optimizer._selection_eligible_slots(local)
+        }
+        pruning_indices = {
+            slot.index for slot in optimizer._pruning_eligible_slots(local)
+        }
+        self.assertTrue(all(slot.index not in selection_indices for slot in remaining))
+        self.assertTrue(all(slot.index in pruning_indices for slot in remaining))
+        self.assertNotIn(child.index, pruning_indices)
+
+    def test_p5_037_evidence_maturity_roundtrips_in_snapshot(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=118)
+        parent = next(slot for slot in optimizer.slots if slot.category == "masked_copy")
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=-1,
+            field="hp_decay",
+        )
+        optimizer.slots[31] = child
+
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+
+        self.assertTrue(restored.slots[parent.index].evidence_mature)
+        self.assertFalse(restored.slots[31].evidence_mature)
+        self.assertEqual(restored.to_snapshot(), payload)
+
+
 if __name__ == "__main__":
     unittest.main()
