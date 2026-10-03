@@ -16,6 +16,7 @@ IMPLEMENTATION_PHASE = 5
 CATEGORY_OPERATORS = ("masked_copy", "masked_xor", "rotate_copy", "masked_and")
 SLOTS_PER_CATEGORY = 32
 OPTIMIZER_POPULATION_SIZE = len(CATEGORY_OPERATORS) * SLOTS_PER_CATEGORY
+GROWTH_WINDOW_GENERATIONS = 128
 
 
 def seed_escalation(seed_count: int) -> int:
@@ -37,6 +38,8 @@ class CandidateSlot:
     parent_index: int | None = None
     universe_snapshot: dict[str, Any] | None = None
     last_mutation_field: str | None = None
+    physical_generations: int = 0
+    growth_reference: Fitness | None = None
 
     def __post_init__(self) -> None:
         if self.index < 0:
@@ -51,6 +54,10 @@ class CandidateSlot:
             raise ValueError("candidate mutation field must be a genome field")
         if self.universe_snapshot is not None and not isinstance(self.universe_snapshot, dict):
             raise ValueError("candidate universe_snapshot must be an object")
+        if self.physical_generations < 0:
+            raise ValueError("candidate physical_generations must be non-negative")
+        if self.growth_reference is not None and not isinstance(self.growth_reference, Fitness):
+            raise ValueError("candidate growth_reference must be Fitness")
 
     @property
     def seeds(self) -> tuple[int, ...]:
@@ -68,6 +75,10 @@ class CandidateSlot:
             "parent_index": self.parent_index,
             "universe_snapshot": self.universe_snapshot,
             "last_mutation_field": self.last_mutation_field,
+            "physical_generations": self.physical_generations,
+            "growth_reference": (
+                None if self.growth_reference is None else self.growth_reference.to_dict()
+            ),
         }
 
     @classmethod
@@ -94,7 +105,41 @@ class CandidateSlot:
                 if payload.get("last_mutation_field") is None
                 else str(payload["last_mutation_field"])
             ),
+            physical_generations=int(payload.get("physical_generations", 0)),
+            growth_reference=(
+                None
+                if payload.get("growth_reference") is None
+                else Fitness.from_dict(payload["growth_reference"])
+            ),
         )
+
+
+def record_candidate_evaluation(
+    slot: CandidateSlot,
+    current_fitness: Fitness,
+    evaluation_generations: int,
+) -> CandidateSlot:
+    if evaluation_generations < 0:
+        raise ValueError("evaluation_generations must be non-negative")
+    previous_generations = slot.physical_generations
+    physical_generations = previous_generations + int(evaluation_generations)
+    crossed_windows = (
+        physical_generations // GROWTH_WINDOW_GENERATIONS
+        - previous_generations // GROWTH_WINDOW_GENERATIONS
+    )
+    growth_reference = slot.growth_reference or slot.fitness
+    growth_windows = list(slot.growth_windows)
+    if crossed_windows:
+        flags = growth_flags(growth_reference, current_fitness)
+        growth_windows.extend([flags] + [0] * (crossed_windows - 1))
+        growth_reference = current_fitness
+    return replace(
+        slot,
+        fitness=current_fitness,
+        growth_windows=tuple(growth_windows[-4:]),
+        physical_generations=physical_generations,
+        growth_reference=growth_reference,
+    )
 
 
 class SteadyStateOptimizer:
@@ -250,20 +295,16 @@ class SteadyStateOptimizer:
             measurement = self._evaluate_slot(slot)
             measurements[slot.index] = measurement
             current_fitness = self._fitness_from_measurement(measurement)
-            flags = growth_flags(slot.fitness, current_fitness)
-            evaluated.append(CandidateSlot(
-                index=slot.index,
-                category=slot.category,
-                genome=slot.genome,
-                seed=slot.seed,
-                fitness=current_fitness,
-                growth_windows=(*slot.growth_windows, flags)[-4:],
-                seed_count=slot.seed_count,
-                parent_index=slot.parent_index,
+            evaluated_slot = record_candidate_evaluation(
+                slot,
+                current_fitness,
+                measurement.evaluation_generations,
+            )
+            evaluated.append(replace(
+                evaluated_slot,
                 universe_snapshot=slot.universe_snapshot or self._make_universe_snapshot(
                     slot.genome, slot.category, slot.seed, self.base_config
                 ),
-                last_mutation_field=slot.last_mutation_field,
             ))
         self.candidates = evaluated
         queued_indices = set(self.scheduler["escalation_queue"])

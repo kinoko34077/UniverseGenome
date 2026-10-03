@@ -17,6 +17,7 @@ from core.runner import build_status, load_config
 from search.evolution import (
     CandidateSlot,
     SteadyStateOptimizer,
+    record_candidate_evaluation,
     evaluate_candidate,
     optimizer_snapshot,
     restore_optimizer_snapshot,
@@ -231,6 +232,42 @@ class Phase5OptimizerTests(unittest.TestCase):
             self.assertEqual(current.seed_count, 8)
             self.assertIsNone(current.last_mutation_field)
 
+    def test_p5_021_growth_windows_follow_128_physical_generations(self):
+        candidate = CandidateSlot(
+            index=0,
+            category="masked_copy",
+            genome=UniverseGenome.default(),
+            seed=0,
+            fitness=Fitness(),
+            growth_windows=(),
+        )
+        candidate = record_candidate_evaluation(candidate, Fitness(success=1), 127)
+        self.assertEqual(candidate.physical_generations, 127)
+        self.assertEqual(candidate.growth_windows, ())
+
+        candidate = record_candidate_evaluation(candidate, Fitness(success=1), 1)
+        self.assertEqual(candidate.physical_generations, 128)
+        self.assertEqual(len(candidate.growth_windows), 1)
+
+        for _ in range(3):
+            candidate = record_candidate_evaluation(candidate, Fitness(success=1), 128)
+        self.assertEqual(candidate.physical_generations, 512)
+        self.assertEqual(len(candidate.growth_windows), 4)
+
+    def test_p5_022_zero_median_growth_does_not_prune(self):
+        records = [
+            CandidateSlot(
+                index=index,
+                category="masked_copy",
+                genome=UniverseGenome.default(),
+                seed=index,
+                fitness=Fitness(),
+                growth_windows=(0, 0, 0, 0),
+            )
+            for index in range(8)
+        ]
+        self.assertEqual(prune_candidates(records), set())
+
     def test_p5_003_growth_flags_and_history_are_bounded(self):
         before = Fitness(0, 4, 3, 8, 10)
         after = Fitness(1, 3, 2, 7, 9)
@@ -245,7 +282,7 @@ class Phase5OptimizerTests(unittest.TestCase):
 
     def test_p5_004_pruning_protects_absolute_top_eighth(self):
         records = [
-            CandidateSlot(index=index, category="masked_copy", genome=UniverseGenome.default(), seed=index, fitness=Fitness(1 if index == 0 else 0, 0, 0, index, index), growth_windows=((4, 4, 4, 4) if index in (0, 4, 5, 6) else (0, 0, 0, 0)))
+            CandidateSlot(index=index, category="masked_copy", genome=UniverseGenome.default(), seed=index, fitness=Fitness(1 if index == 0 else 0, 0, 0, index, index), growth_windows=((0x0F, 0x0F, 0x0F, 0x0F) if index in (0, 4, 5, 6) else (0, 0, 0, 0)))
             for index in range(8)
         ]
         self.assertIn(0, protected_indices(records))
@@ -522,7 +559,7 @@ class Phase5OptimizerTests(unittest.TestCase):
             [4] * 4 + [8] * 4 + [16] * 4 + [32] * 4,
         )
 
-    def test_p5_014_integrated_loop_reaches_growth_pruning(self):
+    def test_p5_014_integrated_loop_does_not_prune_before_physical_window(self):
         protocol = ExperimentConfig(
             byte_hold_generations=0,
             byte_gap_generations=0,
@@ -536,8 +573,9 @@ class Phase5OptimizerTests(unittest.TestCase):
             experiment=protocol,
         )
         summary = optimizer.run(iterations=5)
-        self.assertGreater(summary["pruned_count"], 0)
-        self.assertTrue(any(item["reason"] == "growth_pruned" for item in summary["replacements"]))
+        self.assertEqual(summary["pruned_count"], 0)
+        self.assertFalse(any(item["reason"] == "growth_pruned" for item in summary["replacements"]))
+        self.assertTrue(all(not slot.growth_windows for slot in optimizer.candidates))
 
 
 if __name__ == "__main__":
