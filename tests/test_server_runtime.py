@@ -38,6 +38,8 @@ class ServerRuntimeTests(unittest.TestCase):
         self.assertEqual(initial["slot_count"], 128)
         self.assertEqual(len(initial["summaries"]), 128)
         self.assertGreater(initial["active_cells"], 0)
+        self.assertEqual(initial["history_length"], 512)
+        self.assertEqual(initial["observation_target"], "authoritative")
         self.assertEqual(initial["selected_index"], 0)
 
         stepped = self.request("POST", "/api/control", {"action": "step"})
@@ -47,6 +49,7 @@ class ServerRuntimeTests(unittest.TestCase):
         clone = self.request("POST", "/api/control", {"action": "clone"})
         self.assertEqual(clone["clone"]["index"], 7)
         self.assertEqual(clone["generation"], 1)
+        self.assertEqual(clone["observation_target"], "clone")
 
     def test_api_rewind_snapshot_reset_and_run_pause_are_bounded(self):
         self.request("POST", "/api/control", {"action": "step", "generations": 3})

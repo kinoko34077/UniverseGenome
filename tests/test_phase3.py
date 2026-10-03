@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections import Counter
 from pathlib import Path
+import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -14,6 +16,7 @@ from core.population import (
     save_population,
 )
 from core.runner import build_status, load_config
+from server.runtime import PopulationRuntime
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -124,6 +127,52 @@ class Phase3PopulationTests(unittest.TestCase):
         self.assertIn("fetch(", js)
         self.assertIn("universeGenomeControl", controls)
         self.assertIn("--surface", html)
+
+    def test_p3f_visual_observer_contract_is_authoritative_and_bounded(self):
+        runtime = PopulationRuntime(history_length=512, config=population_config(initial_density=4))
+        initial = runtime.state()
+
+        self.assertEqual(initial["history_length"], 512)
+        self.assertEqual(len(initial["summaries"][0]["overview"]), 64)
+        self.assertTrue({"activity", "hierarchy", "occupied"} <= set(initial["summaries"][0]["overview"][0]))
+        self.assertTrue({"activity", "hierarchy", "latent", "hp", "bond"} <= set(initial["selected"]["cells"][0]))
+
+        clone = runtime.control("clone")
+        self.assertEqual(clone["observation_target"], "clone")
+        clone_generation = clone["selected"]["generation"]
+        runtime.control("step")
+        observed = runtime.state()
+        self.assertEqual(observed["observation_target"], "clone")
+        self.assertEqual(observed["selected"]["generation"], clone_generation)
+
+        html = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
+        js = (ROOT / "ui" / "sim_view.js").read_text(encoding="utf-8")
+        self.assertIn("8×8", html)
+        self.assertIn("mode-lock", html)
+        self.assertIn("125", js)
+        self.assertIn("500", js)
+        self.assertIn("observation_target", js)
+
+    def test_p3f_view_model_modes_and_visual_values_are_executable(self):
+        node = shutil.which("node")
+        if node is None:
+            self.skipTest("node is required for the browser view-model contract")
+        script = """
+import { DETAIL_MODES, modeValue, hierarchyLevel } from './ui/view_model.mjs';
+if (DETAIL_MODES.length !== 20) throw new Error('detail mode count');
+if (modeValue({ latent: 8 }, 'latent bit 3') !== 1) throw new Error('latent bit mode');
+if (modeValue({ structure: 1 << 6 }, 'hierarchy') !== 3) throw new Error('hierarchy mode');
+if (modeValue({ activity: 77 }, 'activity') !== 77) throw new Error('activity mode');
+if (hierarchyLevel(1 << 14) !== 7) throw new Error('hierarchy level');
+"""
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":
