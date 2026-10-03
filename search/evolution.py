@@ -55,6 +55,7 @@ class UniverseSlot:
     parent_index: int | None = None
     last_mutation_field: str | None = None
     allocation_reason: str = "initial"
+    evidence_mature: bool = False
 
     def __post_init__(self) -> None:
         if not 0 <= self.index < OPTIMIZER_POPULATION_SIZE:
@@ -73,6 +74,8 @@ class UniverseSlot:
             raise ValueError("slot mutation field must be a genome field")
         if self.allocation_reason not in ("initial", "seed_evidence", "mutation_child"):
             raise ValueError("unsupported slot allocation reason")
+        if not isinstance(self.evidence_mature, bool):
+            raise ValueError("slot evidence_mature must be bool")
 
     @property
     def physical_generations(self) -> int:
@@ -101,6 +104,7 @@ class UniverseSlot:
             "parent_index": self.parent_index,
             "last_mutation_field": self.last_mutation_field,
             "allocation_reason": self.allocation_reason,
+            "evidence_mature": self.evidence_mature,
         }
 
     @classmethod
@@ -154,6 +158,7 @@ class UniverseSlot:
                 else str(payload["last_mutation_field"])
             ),
             allocation_reason=str(payload.get("allocation_reason", "initial")),
+            evidence_mature=bool(payload["evidence_mature"]),
         )
 
 
@@ -229,6 +234,7 @@ class SteadyStateOptimizer:
                             genome=genome,
                             seed=seed,
                             state=state,
+                            evidence_mature=True,
                         )
                     )
                     index += 1
@@ -329,6 +335,7 @@ class SteadyStateOptimizer:
             state=state,
             parent_index=parent.index,
             allocation_reason="seed_evidence",
+            evidence_mature=parent.evidence_mature,
         )
 
     def replace_free_slot(
@@ -357,6 +364,7 @@ class SteadyStateOptimizer:
             parent_index=parent.index,
             last_mutation_field=mutation_field,
             allocation_reason="mutation_child",
+            evidence_mature=False,
         )
 
     @staticmethod
@@ -416,6 +424,18 @@ class SteadyStateOptimizer:
             if counts[slot.evidence_group] >= MINIMUM_EVIDENCE_SEEDS
         ]
 
+    def _refresh_evidence_maturity(self, group_key: tuple[str, str]) -> None:
+        group = [slot for slot in self.slots if slot.evidence_group == group_key]
+        if len(group) < MINIMUM_EVIDENCE_SEEDS:
+            return
+        for slot in group:
+            slot.evidence_mature = True
+
+    @staticmethod
+    def _pruning_eligible_slots(records: Iterable[UniverseSlot]) -> list[UniverseSlot]:
+        """Return slots whose group has established the minimum evidence tier at least once."""
+        return [slot for slot in records if slot.evidence_mature]
+
     def _incomplete_mutation_parent(
         self,
         local: list[UniverseSlot],
@@ -428,6 +448,8 @@ class SteadyStateOptimizer:
         for group_key in sorted(groups):
             group = groups[group_key]
             if len(group) >= MINIMUM_EVIDENCE_SEEDS:
+                continue
+            if any(slot.evidence_mature for slot in group):
                 continue
             if not any(slot.allocation_reason == "mutation_child" for slot in group):
                 continue
@@ -500,7 +522,8 @@ class SteadyStateOptimizer:
             local = [slot for slot in self.slots if slot.category == category]
             protected = self._protected_indices(local)
             eligible = self._selection_eligible_slots(local)
-            pruned = prune_candidates(eligible, protected=protected)
+            pruning_eligible = self._pruning_eligible_slots(local)
+            pruned = prune_candidates(pruning_eligible, protected=protected)
             pruned_count += len(pruned)
             if not pruned:
                 continue
@@ -549,6 +572,7 @@ class SteadyStateOptimizer:
                         direction=1,
                     )
             self.slots[target.index] = child
+            self._refresh_evidence_maturity(child.evidence_group)
             replacements.append(
                 {
                     "index": child.index,
