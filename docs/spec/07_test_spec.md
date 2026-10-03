@@ -174,4 +174,26 @@ evaluation on a clone leaves the authoritative training state unchanged.
 Baseline and trained A→B→NULL measurements run across multiple seeds with a
 predeclared criterion; a failed criterion is recorded as failure, not success.
 
+## Phase 5 acceptance tests
+
+### TEST-P5-001 Genome separation and mutation
+
+Genome fields exclude seed and protocol fields; mutation changes one adjacent
+binary-grid parameter without changing category or seed.
+
+### TEST-P5-002 Fitness and growth
+
+Absolute fitness follows the lexicographic specification, while growth flags
+and four 8-bit windows remain separate and bounded.
+
+### TEST-P5-003 Pruning and protection
+
+Category-relative low-growth eligibility uses four windows and protects the
+absolute-fitness top 1/8 from growth-only pruning.
+
+### TEST-P5-004 Steady-state escalation
+
+Free-slot replacement is deterministic and seed escalation is bounded to
+4→8→16→32 without evolving seed as genome data.
+
 ---

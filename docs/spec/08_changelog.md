@@ -85,3 +85,11 @@ Future physical-rule changes must record affected REQ/SPEC IDs, old/new behavior
   and a multi-seed baseline-vs-trained measurement.
 - Current measurement is baseline 0 / trained 0; no learning claim is made.
 - Phase 5 optimization and later work remain deferred pending #22 acceptance.
+
+## 2026-10-03 — Phase 5 optimizer implementation candidate (#24)
+- `search/genome.py`, `search/fitness.py`, `search/pruning.py`, and
+  `search/evolution.py` implement separated genome fields, lexicographic
+  fitness, bounded growth/pruning, binary mutation, and seed escalation.
+- The Phase 4 baseline 0 / trained 0 outcome remains a failed learning claim;
+  Phase 5 is diagnostic outer-search machinery only.
+- Phase 6+ remains handoff-only pending #24 acceptance.

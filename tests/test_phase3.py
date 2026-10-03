@@ -104,10 +104,10 @@ class Phase3PopulationTests(unittest.TestCase):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
         self.assertTrue(status["phase3_runtime_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 5 UniverseGenome optimizer")
+        self.assertEqual(status["next_phase"], "Phase 6+ capability ladder (handoff only)")
         self.assertTrue(raw["features"]["multi_universe_runtime"])
         self.assertTrue(raw["features"]["io_learning"])
-        self.assertFalse(raw["features"]["evolution"])
+        self.assertTrue(raw["features"]["evolution"])
 
         html = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
         js = (ROOT / "ui" / "sim_view.js").read_text(encoding="utf-8")

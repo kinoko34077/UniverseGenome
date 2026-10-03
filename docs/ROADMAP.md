@@ -41,10 +41,10 @@ Deliverables:
 ## Phase 3 — 128-universe runtime and observation GUI (accepted on `main`; #20 / PR #21)
 4 categories × 32 slots, matched genome/seed comparisons, overview/detail/rewind/clone observation.
 
-## Phase 4 — I/O learning (in progress; #22)
+## Phase 4 — I/O learning (accepted on `main`; #22 / PR #23)
 8-bit bus, teacher stimulation, A → B → NULL, evaluation clone, baseline-vs-trained measurement.
 
-## Phase 5 — Universe-genome optimization
+## Phase 5 — Universe-genome optimization (in progress; #24)
 fitness/growth separation, pruning, mutation, steady-state evolution, multi-seed escalation.
 
 ## Phase 6+ — Capability ladder (handoff only after Phase 5)
