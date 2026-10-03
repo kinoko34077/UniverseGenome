@@ -171,6 +171,27 @@ class Phase1PhysicsTests(unittest.TestCase):
         self.assertIsNotNone(metrics.generations_per_second)
         self.assertGreaterEqual(metrics.active_cells, 0)
 
+    def test_p1f_generated_substrate_has_deterministic_excitation(self):
+        config = PhysicsConfig(
+            initial_density=4,
+            initial_latent=1,
+            initial_speed_code=1,
+            noise_latent=1,
+            noise_speed_code=1,
+        )
+        state = create_universe(seed=73, config=config)
+        replay = create_universe(seed=73, config=config)
+        before = {slot: (state.x[slot], state.y[slot]) for slot in state.active_slots()}
+
+        self.assertEqual(state.to_snapshot(), replay.to_snapshot())
+        self.assertTrue(any(state.latent[slot] != 0 for slot in state.active_slots()))
+        self.assertTrue(any(state.speed_code[slot] != 0 for slot in state.active_slots()))
+
+        step(state, config=config)
+        self.assertTrue(
+            any((state.x[slot], state.y[slot]) != before[slot] for slot in before)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

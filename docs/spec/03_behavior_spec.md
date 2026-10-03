@@ -621,6 +621,17 @@ The implementation makes one deterministic noise-event decision per
 generation. `noise_attempts` remains a readable legacy configuration field for
 snapshot/config compatibility, but it does not multiply event decisions.
 
+## SPEC-INIT-001 — Generated substrate excitation
+**Status: accepted-default / parameterized**
+
+Generated initial and background-noise cells use explicit configuration values
+for latent excitation and speed. The current default is `initial_latent = 1`,
+`initial_speed_code = 1`, `noise_latent = 1`, and `noise_speed_code = 1`.
+These values make the ordinary generated path capable of movement and latent
+participation while preserving `UniverseState.spawn()` defaults for tests and
+manual fixtures. Experiments may select other bounded values through
+`PhysicsConfig`.
+
 ---
 
 ## SPEC-NOISE-002 — Probability

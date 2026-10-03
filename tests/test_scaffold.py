@@ -63,6 +63,10 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertEqual(config["world"]["max_cells"], 1024)
         self.assertFalse(config["state"]["permanent_cell_id"])
         self.assertTrue(config["features"]["phase1_physics"])
+        self.assertEqual(config["physics"]["initial_latent"], 1)
+        self.assertEqual(config["physics"]["initial_speed_code"], 1)
+        self.assertEqual(config["physics"]["noise_latent"], 1)
+        self.assertEqual(config["physics"]["noise_speed_code"], 1)
 
     def test_default_config_creates_a_deterministic_initial_substrate(self):
         config = load_config(ROOT / "config" / "default.json")
