@@ -69,6 +69,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
         status = build_status(load_config(ROOT / "config" / "default.json"))
         self.assertFalse(status["phase0_scaffold"])
         self.assertTrue(status["phase1_physics_implemented"])
+        self.assertTrue(status["phase2a_bond_physics_implemented"])
 
     def test_physics_entrypoint_runs_a_universe_step(self):
         from core.physics import create_universe
@@ -107,7 +108,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
             text=True,
         )
         status = json.loads(proc.stdout)
-        self.assertEqual(status["phase"], 1)
+        self.assertEqual(status["phase"], 2)
         self.assertTrue(status["phase1_physics_implemented"])
 
 

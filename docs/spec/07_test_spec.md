@@ -39,4 +39,21 @@ At least report:
 - collision count
 - noise spawn count
 
+## Phase 2A acceptance tests
+
+### TEST-P2A-001 Local bond gain/decay
+
+Compatible low-relative-speed destination contact saturating-adds bond
+strength; non-contact and incompatible contact saturating-subtract it.
+
+### TEST-P2A-002 Bounded contact accounting
+
+Three or more arrivals continue to resolve only one deterministic pair, and
+bond contact accounting does not introduce an N² persistent graph.
+
+### TEST-P2A-003 Bond snapshot continuation
+
+Save/load restores bond parameters and arrays; resumed execution equals
+uninterrupted execution.
+
 ---

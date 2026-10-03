@@ -1,6 +1,8 @@
 # World and Physics Behavior Specification
 
-Owns geometric/local-physics behavior. Phase 1 implements only its declared subset; fusion/fragmentation/latent propagation remain deferred.
+Owns geometric/local-physics behavior. The accepted Phase 1 subset and Phase 2A
+contact/bond update are implemented; fusion/fragmentation/latent propagation
+remain deferred.
 
 # 2. World geometry
 

@@ -2,4 +2,4 @@
 
 const status = document.getElementById("status");
 status.textContent =
-  "Core/GUI separation is active. Phase 1 will provide the first authoritative simulation state.";
+  "Core/GUI separation is active. Phase 1 provides the authoritative simulation state.";

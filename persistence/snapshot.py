@@ -1,4 +1,4 @@
-"""Versioned JSON snapshots for the Phase 1 authoritative state."""
+"""Versioned JSON snapshots for the Phase 2A authoritative state."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def load_snapshot(path: str | Path) -> UniverseState:
     try:
         payload: Any = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ValueError("unable to read Phase 1 snapshot") from exc
+        raise ValueError("unable to read Phase 2A snapshot") from exc
     if not isinstance(payload, dict) or payload.get("format_version") != SNAPSHOT_FORMAT_VERSION:
         raise ValueError("unsupported snapshot format")
     raw_config = payload.get("config")

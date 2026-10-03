@@ -1,4 +1,4 @@
-"""Phase 1 deterministic single-universe physics."""
+"""Deterministic single-universe physics through Phase 2A."""
 
 from __future__ import annotations
 
@@ -40,6 +40,9 @@ class PhysicsConfig:
     latent_damage_mask: int = 1
     structure_damage_threshold: int = 16
     black_hole_grace: int = 2
+    bond_gain: int = 4
+    bond_decay: int = 1
+    bond_velocity_threshold: int = 8
 
     def __post_init__(self) -> None:
         if self.logical_size != 32 or self.fixed_point_size != 256:
@@ -51,9 +54,12 @@ class PhysicsConfig:
         for name in (
             "noise_attempts", "hp_decay", "recovery_hp", "collision_threshold",
             "collision_damage", "structure_damage_threshold", "black_hole_grace",
+            "bond_velocity_threshold",
         ):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
+        if not 0 <= self.bond_gain <= 0xFF or not 0 <= self.bond_decay <= 0xFF:
+            raise ValueError("bond gain/decay must fit uint8")
         if not 0 <= self.noise_spawn_hp <= 0xFF or not 0 <= self.recovery_hp <= 0xFF:
             raise ValueError("HP parameters must fit uint8")
         if not 0 <= self.noise_structure <= 0xFFFF:
@@ -82,6 +88,9 @@ class PhysicsConfig:
             latent_damage_mask=int(values.get("latent_damage_mask", 1)),
             structure_damage_threshold=int(values.get("structure_damage_threshold", 16)),
             black_hole_grace=int(values.get("black_hole_grace", 2)),
+            bond_gain=int(values.get("bond_gain", 4)),
+            bond_decay=int(values.get("bond_decay", 1)),
+            bond_velocity_threshold=int(values.get("bond_velocity_threshold", 8)),
         )
 
     def to_dict(self) -> dict[str, int]:
@@ -100,6 +109,9 @@ class PhysicsConfig:
             "latent_damage_mask": self.latent_damage_mask,
             "structure_damage_threshold": self.structure_damage_threshold,
             "black_hole_grace": self.black_hole_grace,
+            "bond_gain": self.bond_gain,
+            "bond_decay": self.bond_decay,
+            "bond_velocity_threshold": self.bond_velocity_threshold,
         }
 
 
@@ -109,6 +121,7 @@ class StepMetrics:
     active_cells: int
     collision_count: int
     collision_pair_evaluations: int
+    bond_contact_count: int
     noise_spawn_count: int
     generations_per_second: float
 
@@ -264,6 +277,7 @@ def step(
             pairs.add(_collision_pair(state, candidates, address, generation))
 
     collision_count = len(pairs)
+    compatible_pairs: set[tuple[int, int]] = set()
     for first, second in sorted(pairs):
         if state.lifecycle[first] != Lifecycle.ACTIVE or state.lifecycle[second] != Lifecycle.ACTIVE:
             continue
@@ -271,6 +285,8 @@ def step(
             state.direction[first], state.speed_code[first],
             state.direction[second], state.speed_code[second],
         )
+        if relative <= resolved.bond_velocity_threshold:
+            compatible_pairs.add((first, second))
         if relative >= resolved.collision_threshold:
             state.hp[first] = max(0, state.hp[first] - resolved.collision_damage)
             state.hp[second] = max(0, state.hp[second] - resolved.collision_damage)
@@ -280,9 +296,18 @@ def step(
                 state.structure[first] = degrade_structure(state.structure[first])
                 state.structure[second] = degrade_structure(state.structure[second])
 
+    bond_contact_slots = {
+        slot
+        for pair in compatible_pairs
+        for slot in pair
+    }
     for slot in active:
         if state.lifecycle[slot] != Lifecycle.ACTIVE:
             continue
+        if slot in bond_contact_slots:
+            state.bond_strength[slot] = min(0xFF, state.bond_strength[slot] + resolved.bond_gain)
+        else:
+            state.bond_strength[slot] = max(0, state.bond_strength[slot] - resolved.bond_decay)
         if slot in stimulated and slot not in recovered_slots:
             state.hp[slot] = min(0xFF, state.hp[slot] + resolved.recovery_hp)
         state.hp[slot] = max(0, state.hp[slot] - resolved.hp_decay)
@@ -297,6 +322,7 @@ def step(
         active_cells=len(state.active_slots()),
         collision_count=collision_count,
         collision_pair_evaluations=collision_count,
+        bond_contact_count=len(compatible_pairs),
         noise_spawn_count=noise_spawn_count,
         generations_per_second=1.0 / elapsed,
     )
