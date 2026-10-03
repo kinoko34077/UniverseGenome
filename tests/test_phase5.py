@@ -946,5 +946,20 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
 
 
+    def test_p5_039_snapshot_rejects_inconsistent_evidence_maturity(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=120)
+        payload = optimizer.to_snapshot()
+        first_group = [
+            record for record in payload["slots"]
+            if record["category"] == "masked_copy"
+            and record["genome"] == UniverseGenome.initial_population()[0].to_dict()
+        ]
+        self.assertEqual(len(first_group), 4)
+        first_group[0]["evidence_mature"] = False
+
+        with self.assertRaises(ValueError):
+            SteadyStateOptimizer.from_snapshot(payload)
+
+
 if __name__ == "__main__":
     unittest.main()
