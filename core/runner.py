@@ -10,7 +10,7 @@ from typing import Any
 
 from .physics import PhysicsConfig, create_universe, step
 from .population import run_population_headless
-from .experiment import compare_baseline_trained, load_experiment_config
+from .experiment import ExperimentConfig, compare_baseline_trained, load_experiment_config
 from search.evolution import run_optimizer_headless
 from .state import DEFAULT_MAX_CELLS, HP_BITS, LATENT_BITS, STRUCTURE_BITS
 
@@ -140,6 +140,18 @@ def main(argv: list[str] | None = None) -> int:
         help="effective Phase 4 experiment protocol JSON",
     )
     parser.add_argument("--optimizer", action="store_true", help="run the Phase 5 optimizer diagnostics")
+    parser.add_argument(
+        "--optimizer-iterations",
+        type=int,
+        default=1,
+        help="bounded integrated optimizer steps (use 3 to exercise 4→8→16→32 escalation)",
+    )
+    parser.add_argument(
+        "--optimizer-timeout-generations",
+        type=int,
+        default=8,
+        help="per-candidate Phase 4 timeout budget for optimizer runs (default: 8)",
+    )
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
 
@@ -185,10 +197,19 @@ def main(argv: list[str] | None = None) -> int:
         if not status["phase5_optimizer_implemented"]:
             raise ValueError("config must explicitly enable Phase 5 optimizer")
         optimizer_experiment = load_experiment_config(args.experiment_config)
+        if args.optimizer_timeout_generations < 0:
+            raise ValueError("optimizer timeout generations must be non-negative")
+        optimizer_values = optimizer_experiment.to_dict()
+        optimizer_values["evaluation_timeout_generations"] = min(
+            optimizer_values["evaluation_timeout_generations"],
+            args.optimizer_timeout_generations,
+        )
+        optimizer_experiment = ExperimentConfig(**optimizer_values)
         status["optimizer_measurement"] = run_optimizer_headless(
             seeds=(args.seed, args.seed + 1, args.seed + 2, args.seed + 3),
             base_config=config,
             experiment=optimizer_experiment,
+            iterations=args.optimizer_iterations,
         )
     if args.as_json:
         print(json.dumps(status, sort_keys=True))

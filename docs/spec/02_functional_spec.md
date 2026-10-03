@@ -394,4 +394,26 @@ Seed escalation for promising genome:
 
 `4 → 8 → 16 → 32`
 
+The implemented steady-state boundary maintains 128 candidate slots as four
+category-local groups of 32. Each optimizer step evaluates every slot through
+the real Phase 4 baseline/trained measurement, derives absolute fitness and an
+8-bit growth window, selects parents only within the same category, and
+replaces an actual category slot with a mutated child. The scheduler first
+continues queued seed escalation and otherwise uses category-local pruning or
+the weakest non-protected slot for bounded exploration. Mutation fields are
+selected from the complete genome field set rather than being hard-coded to a
+single parameter.
+
+An integrated optimizer snapshot includes the effective `PhysicsConfig`,
+`ExperimentConfig`, all 128 candidate records and universe snapshots, the
+generation, and mutation/replacement scheduler state. Restoring it and
+continuing the same protocol is deterministic.
+
+The headless runner uses one integrated step and an 8-generation per-candidate
+Phase 4 timeout by default as an explicit bounded-performance budget.
+`--optimizer-iterations 3` runs the complete 4→8→16→32 seed-escalation
+progression, while `--optimizer-timeout-generations` raises or lowers the
+per-candidate evaluation budget. The result reports evaluated-slot counts,
+replacement counts, mutation fields, seed counts, and generations per second.
+
 ---

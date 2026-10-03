@@ -201,10 +201,21 @@ absolute-fitness top 1/8 from growth-only pruning.
 
 ### TEST-P5-004 Steady-state escalation
 
-Free-slot replacement is deterministic and seed escalation is bounded to
-4→8→16→32 without evolving seed as genome data.
+Category-local replacement is deterministic and seed escalation is bounded to
+4→8→16→32 without evolving seed as genome data. The integrated loop evaluates
+all 128 slots, uses real Phase 4 fitness/growth, and exercises multiple genome
+mutation fields.
 
-### TEST-P5-005 Phase 6+ handoff boundary
+### TEST-P5-005 Integrated persistence
+
+Optimizer persistence includes the effective base/protocol configuration,
+candidate universe snapshots, and scheduler state. Restore/resume produces the
+same bounded candidate population as uninterrupted continuation.
+
+The headless performance path reports bounded optimizer iterations, evaluated
+slots, replacements, mutation fields, seed escalation, and throughput.
+
+### TEST-P5-006 Phase 6+ handoff boundary
 
 The Phase 5 boundary records the Phase 4 outcome and a durable Phase 6+
 handoff; no Phase 6+ capability is activated by the v0.1 Work Order.
