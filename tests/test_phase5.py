@@ -5,12 +5,15 @@ from pathlib import Path
 import unittest
 
 from core.experiment import ExperimentConfig
+from core.population import run_population_headless
 from core.physics import PhysicsConfig, create_universe
 from core.runner import build_status, load_config
 from search.evolution import (
     CandidateSlot,
     SteadyStateOptimizer,
     evaluate_candidate,
+    optimizer_snapshot,
+    restore_optimizer_snapshot,
     run_optimizer_headless,
     seed_escalation,
 )
@@ -170,6 +173,56 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(result["candidate_measurement"]["seed_count"], 2)
         self.assertFalse(result["phase4_learning_claim"])
         self.assertEqual(result["replacement_seed_counts"], [8, 16, 32, 32])
+
+    def test_p2g_optimizer_snapshot_roundtrip_preserves_bounded_state(self):
+        parent = CandidateSlot(
+            index=2,
+            category="masked_xor",
+            genome=UniverseGenome.default(),
+            seed=12,
+            fitness=Fitness(1, 2, 3, 4, 5, 6, 7),
+            growth_windows=(1, 3, 7, 15),
+            seed_count=16,
+            parent_index=1,
+        )
+        payload = optimizer_snapshot((parent,), generation=128)
+        generation, restored = restore_optimizer_snapshot(payload)
+        self.assertEqual(generation, 128)
+        self.assertEqual(restored, (parent,))
+        self.assertEqual(optimizer_snapshot(restored, generation=generation), payload)
+
+    def test_p2g_growth_flags_include_retention_and_noise_robustness(self):
+        before = Fitness(0, 4, 3, 8, 10, 0, 0)
+        after = Fitness(1, 3, 2, 7, 9, 1, 1)
+        self.assertEqual(growth_flags(before, after) & 0b1111111, 0b1111111)
+
+    def test_p2g_pruning_uses_growth_bit_count_not_numeric_byte_sum(self):
+        records = [
+            CandidateSlot(
+                index=index,
+                category="masked_copy",
+                genome=UniverseGenome.default(),
+                seed=index,
+                fitness=Fitness(1 if index == 0 else 0),
+                growth_windows=(0xFF, 0xFF, 0xFF, 0xFF)
+                if index == 0
+                else (0x0F, 0x0F, 0x0F, 0x0F)
+                if index < 7
+                else (0x80, 0x80, 0x80, 0x80),
+            )
+            for index in range(8)
+        ]
+        self.assertIn(7, prune_candidates(records))
+
+    def test_p2g_population_headless_reports_bounded_performance_counts(self):
+        summary = run_population_headless(
+            seed=75,
+            generations=2,
+            config=PhysicsConfig(max_cells=4, hp_decay=0, bond_gain=0, bond_decay=0),
+        )
+        self.assertEqual(summary["generation_count"], 2)
+        self.assertEqual(summary["slot_steps"], 256)
+        self.assertGreaterEqual(summary["generations_per_second"], 0.0)
 
 
 if __name__ == "__main__":

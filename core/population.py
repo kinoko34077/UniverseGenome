@@ -6,6 +6,7 @@ from collections import Counter, deque
 from dataclasses import dataclass
 import json
 from pathlib import Path
+import time
 from typing import Any, Iterable
 
 from .physics import PhysicsConfig, create_universe, step
@@ -350,7 +351,12 @@ def run_population_headless(
         config=config,
         history_length=history_length,
     )
+    started = time.perf_counter()
     population.run(generations)
+    elapsed = max(time.perf_counter() - started, 1e-12)
     summary = population.summary()
     summary["generations"] = generations
+    summary["generation_count"] = generations
+    summary["slot_steps"] = generations * len(population.slots)
+    summary["generations_per_second"] = generations / elapsed if generations else 0.0
     return summary

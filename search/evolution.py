@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from core.experiment import ExperimentConfig, LearningMeasurement, compare_baseline_trained
 from core.physics import PhysicsConfig
@@ -29,6 +29,45 @@ class CandidateSlot:
     fitness: Fitness
     growth_windows: tuple[int, ...]
     seed_count: int = 4
+    parent_index: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.index < 0:
+            raise ValueError("candidate index must be non-negative")
+        if self.seed_count not in (4, 8, 16, 32):
+            raise ValueError("candidate seed_count must be one of 4, 8, 16, 32")
+        if self.parent_index is not None and self.parent_index < 0:
+            raise ValueError("candidate parent_index must be non-negative")
+        if any(not 0 <= int(window) <= 0xFF for window in self.growth_windows):
+            raise ValueError("candidate growth windows must fit uint8")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "index": self.index,
+            "category": self.category,
+            "genome": self.genome.to_dict(),
+            "seed": self.seed,
+            "fitness": self.fitness.to_dict(),
+            "growth_windows": list(self.growth_windows),
+            "seed_count": self.seed_count,
+            "parent_index": self.parent_index,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "CandidateSlot":
+        raw_windows = payload.get("growth_windows", ())
+        if not isinstance(raw_windows, (list, tuple)):
+            raise ValueError("candidate growth_windows must be an array")
+        return cls(
+            index=int(payload["index"]),
+            category=str(payload["category"]),
+            genome=UniverseGenome.from_dict(payload["genome"]),
+            seed=int(payload["seed"]),
+            fitness=Fitness.from_dict(payload.get("fitness", {})),
+            growth_windows=tuple(int(window) for window in raw_windows),
+            seed_count=int(payload.get("seed_count", 4)),
+            parent_index=(None if payload.get("parent_index") is None else int(payload["parent_index"])),
+        )
 
 
 class SteadyStateOptimizer:
@@ -44,7 +83,34 @@ class SteadyStateOptimizer:
             fitness=Fitness(),
             growth_windows=(),
             seed_count=seed_escalation(parent.seed_count),
+            parent_index=parent.index,
         )
+
+
+def optimizer_snapshot(candidates: Iterable[CandidateSlot], *, generation: int = 0) -> dict[str, Any]:
+    records = tuple(candidates)
+    if generation < 0:
+        raise ValueError("optimizer generation must be non-negative")
+    if len({record.index for record in records}) != len(records):
+        raise ValueError("optimizer candidate indices must be unique")
+    return {
+        "format_version": 1,
+        "kind": "UniverseGenomePhase5Optimizer",
+        "generation": int(generation),
+        "candidates": [record.to_dict() for record in records],
+    }
+
+
+def restore_optimizer_snapshot(payload: Mapping[str, Any]) -> tuple[int, tuple[CandidateSlot, ...]]:
+    if payload.get("format_version") != 1 or payload.get("kind") != "UniverseGenomePhase5Optimizer":
+        raise ValueError("unsupported Phase 5 optimizer snapshot")
+    raw_candidates = payload.get("candidates")
+    if not isinstance(raw_candidates, list):
+        raise ValueError("optimizer snapshot candidates must be an array")
+    records = tuple(CandidateSlot.from_dict(record) for record in raw_candidates)
+    if len({record.index for record in records}) != len(records):
+        raise ValueError("optimizer snapshot candidate indices must be unique")
+    return int(payload["generation"]), records
 
 
 def evaluate_candidate(
