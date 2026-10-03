@@ -40,6 +40,13 @@ class Phase1PhysicsTests(unittest.TestCase):
         step(state)
         self.assertEqual((state.x[slot], state.y[slot]), (0, 0))
 
+        cases = ((0, 0, 6, 1, 255, 0), (0, 255, 4, 1, 0, 0), (0, 0, 0, 1, 0, 255))
+        for x, y, direction, speed_code, expected_x, expected_y in cases:
+            wrapped = create_universe(seed=direction)
+            cell = wrapped.spawn(x=x, y=y, direction=direction, speed_code=speed_code, hp=10)
+            step(wrapped)
+            self.assertEqual((wrapped.x[cell], wrapped.y[cell]), (expected_x, expected_y))
+
     def test_p1_003_all_supported_speeds(self):
         expected = [0, 1, 2, 4, 8, 16, 32, 64]
         for code, displacement in enumerate(expected):
@@ -104,6 +111,8 @@ class Phase1PhysicsTests(unittest.TestCase):
         step(state)
         step(state)
         self.assertEqual(state.lifecycle[doomed], Lifecycle.FREE)
+        reused = state.spawn(x=16, y=0, hp=10)
+        self.assertEqual(reused, doomed)
 
     def test_p1_008_snapshot_roundtrip_continuation(self):
         config = PhysicsConfig(noise_rate=8192, noise_attempts=2, hp_decay=1)
