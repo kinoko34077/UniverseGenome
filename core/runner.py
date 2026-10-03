@@ -180,7 +180,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.optimizer:
         if not status["phase5_optimizer_implemented"]:
             raise ValueError("config must explicitly enable Phase 5 optimizer")
-        status["optimizer_diagnostics"] = run_optimizer_headless()
+        optimizer_experiment = load_experiment_config(args.experiment_config)
+        status["optimizer_measurement"] = run_optimizer_headless(
+            seeds=(args.seed, args.seed + 1, args.seed + 2, args.seed + 3),
+            base_config=config,
+            experiment=optimizer_experiment,
+        )
     if args.as_json:
         print(json.dumps(status, sort_keys=True))
     else:

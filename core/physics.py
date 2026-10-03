@@ -26,6 +26,7 @@ EVENT_NOISE = 1
 EVENT_COLLISION_PAIR = 2
 EVENT_LATENT_MASK = 3
 EVENT_FRAGMENTATION = 4
+EVENT_INITIAL_DENSITY = 5
 LATENT_OPERATORS = {"masked_copy", "masked_xor", "rotate_copy", "masked_and"}
 
 
@@ -38,6 +39,7 @@ class PhysicsConfig:
     noise_attempts: int = 0
     noise_spawn_hp: int = 255
     noise_structure: int = SHAPE_SINGLE
+    initial_density: int = 0
     hp_decay: int = 0
     recovery_hp: int = 32
     collision_threshold: int = 8
@@ -62,6 +64,8 @@ class PhysicsConfig:
             raise ValueError("Phase 1 requires a 32x32 / 256-unit world")
         if self.max_cells < 1:
             raise ValueError("max_cells must be positive")
+        if not 0 <= self.initial_density <= self.max_cells:
+            raise ValueError("initial_density must be within max_cells")
         if not 0 <= self.noise_rate <= 0xFFFF:
             raise ValueError("noise_rate must be in 0..65535")
         for name in (
@@ -103,6 +107,7 @@ class PhysicsConfig:
             noise_attempts=int(values.get("noise_attempts", 0)),
             noise_spawn_hp=int(values.get("noise_spawn_hp", 255)),
             noise_structure=int(values.get("noise_structure", SHAPE_SINGLE)),
+            initial_density=int(values.get("initial_density", 0)),
             hp_decay=int(values.get("hp_decay", 0)),
             recovery_hp=int(values.get("recovery_hp", 32)),
             collision_threshold=int(values.get("collision_threshold", 8)),
@@ -136,6 +141,7 @@ class PhysicsConfig:
             "noise_attempts": self.noise_attempts,
             "noise_spawn_hp": self.noise_spawn_hp,
             "noise_structure": self.noise_structure,
+            "initial_density": self.initial_density,
             "hp_decay": self.hp_decay,
             "recovery_hp": self.recovery_hp,
             "collision_threshold": self.collision_threshold,
@@ -178,7 +184,19 @@ def create_universe(seed: int = 0, config: PhysicsConfig | Mapping[str, Any] | N
         resolved = config
     else:
         resolved = PhysicsConfig.from_mapping(config)
-    return UniverseState(seed=int(seed), max_cells=resolved.max_cells, config=resolved)
+    state = UniverseState(seed=int(seed), max_cells=resolved.max_cells, config=resolved)
+    for slot in range(resolved.initial_density):
+        x = event_u16(event_key(state.seed, 0, slot, EVENT_INITIAL_DENSITY, 0)) & 0xFF
+        y = event_u16(event_key(state.seed, 0, slot, EVENT_INITIAL_DENSITY, 1)) & 0xFF
+        state.spawn(
+            x=x,
+            y=y,
+            structure=resolved.noise_structure,
+            hp=resolved.noise_spawn_hp,
+            direction=event_u16(event_key(state.seed, 0, slot, EVENT_INITIAL_DENSITY, 2)) & 0x07,
+            speed_code=0,
+        )
+    return state
 
 
 def speed_code_for_magnitude(magnitude: int) -> int:

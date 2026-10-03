@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import Any
 
+from core.physics import PhysicsConfig
+
 UNIVERSE_GENOME_FIELDS = (
     "initial_density",
     "hp_decay",
@@ -49,12 +51,40 @@ class UniverseGenome:
     black_hole_grace: int = 2
     rotate_amount: int = 4
 
+    def __post_init__(self) -> None:
+        for name in UNIVERSE_GENOME_FIELDS:
+            value = getattr(self, name)
+            lower, upper = GENOME_BOUNDS[name]
+            if not isinstance(value, int) or not lower <= value <= upper:
+                raise ValueError(f"{name} must be an integer in {lower}..{upper}")
+
     @classmethod
     def default(cls) -> "UniverseGenome":
         return cls()
 
     def to_dict(self) -> dict[str, int]:
         return {field.name: int(getattr(self, field.name)) for field in fields(self)}
+
+    def to_physics_config(self, base: PhysicsConfig | None = None) -> PhysicsConfig:
+        """Return the effective physics config represented by every genome field."""
+        resolved = base or PhysicsConfig()
+        if self.initial_density > resolved.max_cells:
+            raise ValueError("initial_density cannot exceed PhysicsConfig.max_cells")
+        values = resolved.to_dict()
+        values.update({
+            "initial_density": self.initial_density,
+            "hp_decay": self.hp_decay,
+            "recovery_hp": self.hp_gain,
+            "noise_rate": self.noise_rate,
+            "bond_gain": self.bond_gain,
+            "bond_decay": self.bond_decay,
+            "collision_threshold": self.collision_threshold,
+            "fusion_velocity_threshold": self.fusion_threshold,
+            "fragmentation_rate": self.fragmentation_base_probability,
+            "black_hole_grace": self.black_hole_grace,
+            "rotate_amount": self.rotate_amount,
+        })
+        return PhysicsConfig(**values)
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "UniverseGenome":
