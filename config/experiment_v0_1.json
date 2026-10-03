@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "specified_deferred_until_phase4",
+  "status": "implemented_phase4_learning_outcome_recorded",
   "task": "A->B->NULL",
   "byte_hold_generations": 4,
   "byte_gap_generations": 4,

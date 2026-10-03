@@ -77,3 +77,11 @@ Future physical-rule changes must record affected REQ/SPEC IDs, old/new behavior
 - The static UI exposes the 16×8 overview, detail modes, and required controls;
   the authoritative simulation clock remains in the core.
 - Phase 4 I/O learning and later work remain deferred pending #20 acceptance.
+
+## 2026-10-03 — Phase 4 I/O implementation candidate (#22)
+- `core/io_bus.py` defines fixed 8-bit input/output buses, organ coordinates,
+  and rising-edge byte/NULL events.
+- `core/experiment.py` defines teacher episodes, autonomous clone evaluation,
+  and a multi-seed baseline-vs-trained measurement.
+- Current measurement is baseline 0 / trained 0; no learning claim is made.
+- Phase 5 optimization and later work remain deferred pending #22 acceptance.

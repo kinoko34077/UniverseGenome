@@ -63,7 +63,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             config = json.load(handle)
         self.assertEqual(config["task"], "A->B->NULL")
-        self.assertEqual(config["status"], "specified_deferred_until_phase4")
+        self.assertEqual(config["status"], "implemented_phase4_learning_outcome_recorded")
 
     def test_runner_reports_phase1_physics(self):
         status = build_status(load_config(ROOT / "config" / "default.json"))
@@ -108,7 +108,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
             text=True,
         )
         status = json.loads(proc.stdout)
-        self.assertEqual(status["phase"], 3)
+        self.assertEqual(status["phase"], 4)
         self.assertTrue(status["phase1_physics_implemented"])
 
 
