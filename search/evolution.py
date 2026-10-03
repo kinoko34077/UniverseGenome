@@ -52,6 +52,10 @@ class CandidateSlot:
         if self.universe_snapshot is not None and not isinstance(self.universe_snapshot, dict):
             raise ValueError("candidate universe_snapshot must be an object")
 
+    @property
+    def seeds(self) -> tuple[int, ...]:
+        return tuple(range(self.seed, self.seed + self.seed_count))
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "index": self.index,
@@ -136,10 +140,9 @@ class SteadyStateOptimizer:
         slots: list[CandidateSlot] = []
         index = 0
         for category in CATEGORY_OPERATORS:
-            for _genome_id in range(8):
-                genome = UniverseGenome.default()
+            for genome_id, genome in enumerate(UniverseGenome.initial_population()):
                 for seed_offset in range(4):
-                    seed = int(base_seed) + (_genome_id * 4) + seed_offset
+                    seed = int(base_seed) + (genome_id * 4) + seed_offset
                     slots.append(CandidateSlot(
                         index=index,
                         category=category,
@@ -190,10 +193,9 @@ class SteadyStateOptimizer:
         )
 
     def _evaluate_slot(self, slot: CandidateSlot) -> LearningMeasurement:
-        seeds = range(slot.seed, slot.seed + slot.seed_count)
         return evaluate_candidate(
             genome=slot.genome,
-            seeds=seeds,
+            seeds=slot.seeds,
             base_config=self.base_config,
             experiment=self.experiment,
             category=slot.category,
@@ -222,12 +224,20 @@ class SteadyStateOptimizer:
             index=int(free_index),
             category=parent.category,
             genome=child_genome,
-            seed=parent.seed + 1,
+            seed=parent.seed + parent.seed_count,
             fitness=Fitness(),
             growth_windows=(),
-            seed_count=seed_escalation(parent.seed_count),
+            seed_count=4,
             parent_index=parent.index,
             last_mutation_field=mutation_field,
+        )
+
+    def escalate_seed_evidence(self, *, parent: CandidateSlot, target_index: int) -> CandidateSlot:
+        return replace(
+            parent,
+            index=int(target_index),
+            seed_count=seed_escalation(parent.seed_count),
+            last_mutation_field=None,
         )
 
     def step(self) -> dict[str, Any]:
@@ -287,19 +297,23 @@ class SteadyStateOptimizer:
             else:
                 parents = [slot for slot in local if slot.index != target.index]
                 parent = min(parents, key=lambda slot: slot.fitness.sort_key())
-            mutation_field = self._mutation_field(parent)
-            child = self.replace_free_slot(
-                free_index=target.index,
-                parent=parent,
-                direction=1,
-                field=mutation_field,
-            )
-            child = replace(
-                child,
-                universe_snapshot=self._make_universe_snapshot(
-                    child.genome, child.category, child.seed, self.base_config
-                ),
-            )
+            if reason == "seed_escalation":
+                mutation_field = None
+                child = self.escalate_seed_evidence(parent=parent, target_index=target.index)
+            else:
+                mutation_field = self._mutation_field(parent)
+                child = self.replace_free_slot(
+                    free_index=target.index,
+                    parent=parent,
+                    direction=1,
+                    field=mutation_field,
+                )
+                child = replace(
+                    child,
+                    universe_snapshot=self._make_universe_snapshot(
+                        child.genome, child.category, child.seed, self.base_config
+                    ),
+                )
             self.candidates[target.index] = child
             replacements.append({
                 "index": child.index,
@@ -506,12 +520,17 @@ def run_optimizer_headless(
         fitness=Fitness(),
         growth_windows=(),
     )
-    replacements: list[CandidateSlot] = []
-    for _ in range(4):
-        replacement = optimizer.replace_free_slot(
+    replacements: list[CandidateSlot] = [
+        optimizer.replace_free_slot(
             free_index=1,
             parent=replacement,
             direction=1,
+        )
+    ]
+    for _ in range(3):
+        replacement = optimizer.escalate_seed_evidence(
+            parent=replacements[-1],
+            target_index=1,
         )
         replacements.append(replacement)
     return {

@@ -21,6 +21,16 @@ UNIVERSE_GENOME_FIELDS = (
     "rotate_amount",
 )
 
+INITIAL_GENOME_VARIATION_FIELDS = (
+    "hp_decay",
+    "hp_gain",
+    "noise_rate",
+    "bond_gain",
+    "bond_decay",
+    "collision_threshold",
+    "fusion_threshold",
+)
+
 
 GENOME_BOUNDS = {
     "initial_density": (0, 0xFFFF),
@@ -61,6 +71,16 @@ class UniverseGenome:
     @classmethod
     def default(cls) -> "UniverseGenome":
         return cls()
+
+    @classmethod
+    def initial_population(cls, count: int = 8) -> tuple["UniverseGenome", ...]:
+        if count != 8:
+            raise ValueError("Phase 5 initial population requires exactly 8 genomes")
+        base = cls.default()
+        return (base,) + tuple(
+            base.mutate(field, direction=1)
+            for field in INITIAL_GENOME_VARIATION_FIELDS
+        )
 
     def to_dict(self) -> dict[str, int]:
         return {field.name: int(getattr(self, field.name)) for field in fields(self)}

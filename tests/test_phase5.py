@@ -135,6 +135,102 @@ class Phase5OptimizerTests(unittest.TestCase):
             Fitness(success=1, retention=1, noise_robustness=1).sort_key(),
         )
 
+    def test_p5_017_initial_population_has_eight_matched_parameter_genomes(self):
+        genomes = UniverseGenome.initial_population()
+        self.assertEqual(len(genomes), 8)
+        self.assertEqual(len({tuple(genome.to_dict().items()) for genome in genomes}), 8)
+
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=101)
+        first_category = [
+            (slot.genome, slot.seed)
+            for slot in optimizer.candidates
+            if slot.category == "masked_copy"
+        ]
+        self.assertEqual(len(first_category), 32)
+        for category in ("masked_xor", "rotate_copy", "masked_and"):
+            self.assertEqual(
+                first_category,
+                [(slot.genome, slot.seed) for slot in optimizer.candidates if slot.category == category],
+            )
+
+    def test_p5_018_seed_escalation_preserves_genome_and_sample_prefix(self):
+        parent = CandidateSlot(
+            index=0,
+            category="masked_copy",
+            genome=UniverseGenome.default(),
+            seed=41,
+            seed_count=4,
+            fitness=Fitness(),
+            growth_windows=(),
+        )
+        optimizer = SteadyStateOptimizer()
+        expanded = optimizer.escalate_seed_evidence(parent=parent, target_index=12)
+
+        self.assertEqual(expanded.index, 12)
+        self.assertEqual(expanded.category, parent.category)
+        self.assertEqual(expanded.genome, parent.genome)
+        self.assertEqual(expanded.seed, parent.seed)
+        self.assertEqual(parent.seeds, (41, 42, 43, 44))
+        self.assertEqual(expanded.seeds, (41, 42, 43, 44, 45, 46, 47, 48))
+
+    def test_p5_019_mutation_child_is_separate_from_seed_escalation(self):
+        parent = CandidateSlot(
+            index=0,
+            category="masked_copy",
+            genome=UniverseGenome.default(),
+            seed=41,
+            seed_count=8,
+            fitness=Fitness(),
+            growth_windows=(),
+        )
+        optimizer = SteadyStateOptimizer()
+        child = optimizer.replace_free_slot(
+            free_index=12,
+            parent=parent,
+            direction=1,
+            field="hp_decay",
+        )
+
+        self.assertNotEqual(child.genome, parent.genome)
+        self.assertEqual(child.seed_count, 4)
+        self.assertEqual(child.seed, 49)
+        self.assertEqual(child.last_mutation_field, "hp_decay")
+        self.assertEqual(parent.seed_count, 8)
+
+    def test_p5_020_integrated_queue_escalates_same_genome_before_mutation(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=104,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        optimizer.step()
+        queued_before = {
+            slot.index: slot
+            for slot in optimizer.candidates
+            if slot.index in optimizer.scheduler["escalation_queue"]
+        }
+
+        summary = optimizer.step()
+        self.assertEqual(
+            {item["reason"] for item in summary["replacements"]},
+            {"seed_escalation"},
+        )
+        for item in summary["replacements"]:
+            previous = queued_before[item["index"]]
+            current = optimizer.candidates[item["index"]]
+            self.assertEqual(current.genome, previous.genome)
+            self.assertEqual(current.category, previous.category)
+            self.assertEqual(current.seed, previous.seed)
+            self.assertEqual(current.seed_count, 8)
+            self.assertIsNone(current.last_mutation_field)
+
     def test_p5_003_growth_flags_and_history_are_bounded(self):
         before = Fitness(0, 4, 3, 8, 10)
         after = Fitness(1, 3, 2, 7, 9)
@@ -163,7 +259,8 @@ class Phase5OptimizerTests(unittest.TestCase):
         replacement = optimizer.replace_free_slot(free_index=12, parent=parent, direction=1)
         self.assertEqual(replacement.index, 12)
         self.assertEqual(replacement.category, parent.category)
-        self.assertEqual(replacement.seed, 42)
+        self.assertEqual(replacement.seed, 45)
+        self.assertEqual(replacement.seed_count, 4)
         self.assertNotIn("seed", replacement.genome.to_dict())
 
     def test_p5_006_status_and_flags(self):
@@ -246,7 +343,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         optimizer = SteadyStateOptimizer()
         replacement = parent
         for expected_count in (8, 16, 32, 32):
-            replacement = optimizer.replace_free_slot(free_index=12, parent=replacement, direction=1)
+            replacement = optimizer.escalate_seed_evidence(parent=replacement, target_index=12)
             self.assertEqual(replacement.seed_count, expected_count)
 
     def test_p5_010_headless_output_contains_real_measurement_and_replacement_trace(self):
@@ -264,7 +361,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
         self.assertEqual(result["candidate_measurement"]["seed_count"], 2)
         self.assertFalse(result["phase4_learning_claim"])
-        self.assertEqual(result["replacement_seed_counts"], [8, 16, 32, 32])
+        self.assertEqual(result["replacement_seed_counts"], [4, 8, 16, 32])
 
     def test_p2g_optimizer_snapshot_roundtrip_preserves_bounded_state(self):
         parent = CandidateSlot(
@@ -407,10 +504,10 @@ class Phase5OptimizerTests(unittest.TestCase):
             seeds=(3, 4),
             base_config=PhysicsConfig(max_cells=8),
             experiment=protocol,
-            iterations=3,
+            iterations=4,
         )
         self.assertEqual(result["population_size"], 128)
-        self.assertEqual(result["optimizer_iterations"], 3)
+        self.assertEqual(result["optimizer_iterations"], 4)
         self.assertEqual(result["category_counts"], {
             "masked_copy": 32,
             "masked_xor": 32,
@@ -420,7 +517,10 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertGreaterEqual(result["replacement_count"], 4)
         self.assertGreaterEqual(len(result["mutation_fields"]), 2)
         self.assertEqual(result["seed_escalation"], [8, 16, 32, 32])
-        self.assertEqual(result["integrated_seed_counts"], [8] * 4 + [16] * 4 + [32] * 4)
+        self.assertEqual(
+            result["integrated_seed_counts"],
+            [4] * 4 + [8] * 4 + [16] * 4 + [32] * 4,
+        )
 
     def test_p5_014_integrated_loop_reaches_growth_pruning(self):
         protocol = ExperimentConfig(
