@@ -64,11 +64,11 @@
 - Add `measure_trained_state(state: UniverseState, *, experiment: ExperimentConfig | None = None) -> LearningMeasurement`; measure baseline from an explicit fresh baseline setup, but measure trained/counterfactual results by cloning the supplied current state.
 - Preserve `compare_baseline_trained()` behavior and the false learning claim.
 
-- [ ] **Step 1: Write RED tests** proving a training callback observes every physical generation, `measure_trained_state()` does not mutate its input state, and evaluation clone generations are not included in the authoritative state generation.
-- [ ] **Step 2: Run `python -m unittest tests.test_phase4 -v`; confirm the new API assertions fail against the current implementation.
-- [ ] **Step 3: Implement callback-driven training and current-state measurement with existing `EvaluationResult` observables.**
-- [ ] **Step 4: Run Phase 4 tests and confirm all pass.**
-- [ ] **Step 5: Commit `feat: expose persistent phase4 state measurements`.
+- [x] **Step 1: Write RED tests** proving a training callback observes every physical generation, `measure_trained_state()` does not mutate its input state, and evaluation clone generations are not included in the authoritative state generation.
+- [x] **Step 2: Run `python -m unittest tests.test_phase4 -v`; confirm the new API assertions fail against the current implementation.
+- [x] **Step 3: Implement callback-driven training and current-state measurement with existing `EvaluationResult` observables.**
+- [x] **Step 4: Run Phase 4 tests and confirm all pass.**
+- [x] **Step 5: Commit `feat: expose persistent phase4 state measurements`.**
 
 ### Task 3: Replace CandidateSlot-only records with one-state UniverseSlot records
 
@@ -143,4 +143,3 @@
 - [ ] Push a dedicated PR, verify exact-head CI, and obtain independent exact-head review before merge.
 - [ ] Merge only after checks pass; verify post-merge main CI.
 - [ ] Update UniverseGenome #58 and devflow Control #314; keep Phase 6 blocked until the subsequent readiness audit.
-

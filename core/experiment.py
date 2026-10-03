@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 from .io_bus import FixedOrgans, InputBus, OutputEdgeDetector, OutputEvent, read_output_signal
 from .physics import PhysicsConfig, create_universe, destination_footprint, step
@@ -217,27 +217,46 @@ class IOExperiment:
             raise ValueError(f"unsupported teacher output event: {event.kind}")
         return tuple(result)
 
-    def teacher_output(self, event: OutputEvent) -> None:
+    def teacher_output(
+        self,
+        event: OutputEvent,
+        *,
+        on_generation: Callable[[int], None] | None = None,
+    ) -> None:
         """Apply teacher-side stimulation without passing the event to autonomous scoring."""
         self.teacher_events.append(event)
         self._advance(self._teacher_coordinates(event))
+        if on_generation is not None:
+            on_generation(self.state.generation)
 
-    def train_a_to_b_null(self, *, input_byte: int = 65, output_byte: int = 66) -> TrainingRecord:
+    def train_a_to_b_null(
+        self,
+        *,
+        input_byte: int = 65,
+        output_byte: int = 66,
+        on_generation: Callable[[int], None] | None = None,
+    ) -> TrainingRecord:
         teacher_events: list[OutputEvent] = []
+
+        def advance(anchors: Iterable[tuple[int, int]]) -> None:
+            self._advance(anchors)
+            if on_generation is not None:
+                on_generation(self.state.generation)
+
         for _ in range(self.experiment.teacher_repetitions):
             for _ in range(self.experiment.byte_hold_generations):
                 self.drive_input(input_byte)
-                self._advance(self.input_bus.signal_coordinates())
+                advance(self.input_bus.signal_coordinates())
             for _ in range(self.experiment.byte_gap_generations):
                 self.release_input()
-                self._advance()
+                advance(())
             for _ in range(self.experiment.teacher_delay_generations):
                 self.release_input()
-                self._advance()
+                advance(())
             byte_event = OutputEvent.byte(output_byte)
             null_event = OutputEvent.null()
-            self.teacher_output(byte_event)
-            self.teacher_output(null_event)
+            self.teacher_output(byte_event, on_generation=on_generation)
+            self.teacher_output(null_event, on_generation=on_generation)
             teacher_events.extend((byte_event, null_event))
         return TrainingRecord(
             input_byte=input_byte,
@@ -300,6 +319,67 @@ class IOExperiment:
         )
 
 
+def _assemble_learning_measurement(measurements: Iterable[SeedMeasurement]) -> LearningMeasurement:
+    records = tuple(measurements)
+    if not records:
+        raise ValueError("at least one seed measurement is required")
+    baseline_successes = sum(item.baseline.success for item in records)
+    trained_successes = sum(item.trained.success for item in records)
+    baseline_no_input_clean = sum(item.baseline_no_input.success for item in records)
+    trained_no_input_clean = sum(item.trained_no_input.success for item in records)
+    baseline_alternate_input_clean = sum(item.baseline_alternate.success for item in records)
+    trained_alternate_input_clean = sum(item.trained_alternate.success for item in records)
+    required = len(records)
+    criterion = (
+        "all seeds must autonomously emit B then NULL after training, trained successes must exceed baseline, "
+        "and no-input/alternate-input counterfactuals must remain output-clean"
+    )
+    return LearningMeasurement(
+        seed_count=required,
+        baseline_successes=baseline_successes,
+        trained_successes=trained_successes,
+        baseline_no_input_clean=baseline_no_input_clean,
+        trained_no_input_clean=trained_no_input_clean,
+        baseline_alternate_input_clean=baseline_alternate_input_clean,
+        trained_alternate_input_clean=trained_alternate_input_clean,
+        criterion=criterion,
+        learning_claim=(
+            trained_successes >= required
+            and trained_successes > baseline_successes
+            and trained_no_input_clean >= required
+            and trained_alternate_input_clean >= required
+        ),
+        per_seed=records,
+    )
+
+
+def measure_trained_state(
+    state: UniverseState,
+    *,
+    experiment: ExperimentConfig | None = None,
+) -> LearningMeasurement:
+    """Measure a current authoritative training state through disposable clones."""
+    protocol = experiment or ExperimentConfig()
+    resolved = state.config or PhysicsConfig()
+    expected = (OutputEvent.byte(66), OutputEvent.null())
+    baseline = IOExperiment(create_universe(seed=state.seed, config=resolved), experiment=protocol)
+    baseline_result = baseline.evaluate_autonomous(input_byte=65, expected=expected)
+    baseline_no_input = baseline.evaluate_autonomous(input_byte=65, input_valid=False, expected=())
+    baseline_alternate = baseline.evaluate_autonomous(input_byte=66, expected=())
+    trained = IOExperiment(state, experiment=protocol)
+    trained_result = trained.evaluate_autonomous(input_byte=65, expected=expected)
+    trained_no_input = trained.evaluate_autonomous(input_byte=65, input_valid=False, expected=())
+    trained_alternate = trained.evaluate_autonomous(input_byte=66, expected=())
+    return _assemble_learning_measurement((SeedMeasurement(
+        seed=state.seed,
+        baseline=baseline_result,
+        trained=trained_result,
+        baseline_no_input=baseline_no_input,
+        trained_no_input=trained_no_input,
+        baseline_alternate=baseline_alternate,
+        trained_alternate=trained_alternate,
+    ),))
+
 def compare_baseline_trained(
     *,
     seeds: Iterable[int],
@@ -332,31 +412,4 @@ def compare_baseline_trained(
             baseline_alternate,
             trained_alternate,
         ))
-    baseline_successes = sum(item.baseline.success for item in measurements)
-    trained_successes = sum(item.trained.success for item in measurements)
-    baseline_no_input_clean = sum(item.baseline_no_input.success for item in measurements)
-    trained_no_input_clean = sum(item.trained_no_input.success for item in measurements)
-    baseline_alternate_input_clean = sum(item.baseline_alternate.success for item in measurements)
-    trained_alternate_input_clean = sum(item.trained_alternate.success for item in measurements)
-    required = len(seed_values)
-    criterion = (
-        "all seeds must autonomously emit B then NULL after training, trained successes must exceed baseline, "
-        "and no-input/alternate-input counterfactuals must remain output-clean"
-    )
-    return LearningMeasurement(
-        seed_count=len(seed_values),
-        baseline_successes=baseline_successes,
-        trained_successes=trained_successes,
-        baseline_no_input_clean=baseline_no_input_clean,
-        trained_no_input_clean=trained_no_input_clean,
-        baseline_alternate_input_clean=baseline_alternate_input_clean,
-        trained_alternate_input_clean=trained_alternate_input_clean,
-        criterion=criterion,
-        learning_claim=(
-            trained_successes >= required
-            and trained_successes > baseline_successes
-            and trained_no_input_clean >= required
-            and trained_alternate_input_clean >= required
-        ),
-        per_seed=tuple(measurements),
-    )
+    return _assemble_learning_measurement(measurements)

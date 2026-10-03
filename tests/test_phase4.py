@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 from pathlib import Path
 import tempfile
 import unittest
@@ -239,6 +240,35 @@ class Phase4IOTests(unittest.TestCase):
         self.assertEqual(result.evaluation_generations, 3)
         self.assertTrue(result.timed_out)
         self.assertEqual(result.response_latency, 3)
+
+    def test_p4_015_training_callback_observes_each_authoritative_generation(self):
+        self.assertIn("on_generation", inspect.signature(IOExperiment.train_a_to_b_null).parameters)
+        state = create_universe(seed=97, config=experiment_physics_config())
+        seen = []
+        IOExperiment(
+            state,
+            experiment=ExperimentConfig(
+                byte_hold_generations=2,
+                byte_gap_generations=1,
+                teacher_delay_generations=1,
+            ),
+        ).train_a_to_b_null(on_generation=seen.append)
+
+        self.assertEqual(seen, list(range(1, 7)))
+        self.assertEqual(state.generation, 6)
+
+    def test_p4_016_current_state_measurement_is_clone_only(self):
+        self.assertTrue(callable(getattr(experiment_module, "measure_trained_state", None)))
+        state = create_universe(seed=98, config=experiment_physics_config())
+        before = state.to_snapshot()
+        measurement = experiment_module.measure_trained_state(
+            state,
+            experiment=ExperimentConfig(evaluation_timeout_generations=3),
+        )
+
+        self.assertEqual(state.to_snapshot(), before)
+        self.assertEqual(measurement.seed_count, 1)
+        self.assertEqual(measurement.per_seed[0].trained.evaluation_generations, 11)
 
 
 if __name__ == "__main__":
