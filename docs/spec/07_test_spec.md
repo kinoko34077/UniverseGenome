@@ -162,7 +162,8 @@ non-cell coordinates are representable and deterministic.
 ### TEST-P4-002 Edge-based output events
 
 Only VALID rising edges emit bytes or NULL; continuous HIGH does not repeat an
-event, and LOW→HIGH emits a new event.
+event, LOW→HIGH emits a new event, and an already-HIGH line at evaluation start
+is primed without producing a spurious event.
 
 ### TEST-P4-003 Teacher exclusion and clone evaluation
 
@@ -172,7 +173,14 @@ evaluation on a clone leaves the authoritative training state unchanged.
 ### TEST-P4-004 Multi-seed learning measurement
 
 Baseline and trained A→B→NULL measurements run across multiple seeds with a
-predeclared criterion; a failed criterion is recorded as failure, not success.
+predeclared criterion, plus no-input and alternate-input output-clean
+counterfactuals; a failed criterion is recorded as failure, not success.
+
+### TEST-P4-005 Footprint-safe I/O boundary
+
+Initial and noise spawns avoid every fixed-organ tile across their complete
+destination footprint. Output occupancy and input proximity detect compound
+cells through the complete footprint rather than only the anchor tile.
 
 ## Phase 5 acceptance tests
 

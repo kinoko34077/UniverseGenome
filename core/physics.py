@@ -204,8 +204,14 @@ def create_universe(seed: int = 0, config: PhysicsConfig | Mapping[str, Any] | N
         resolved = PhysicsConfig.from_mapping(config)
     state = UniverseState(seed=int(seed), max_cells=resolved.max_cells, config=resolved)
     for slot in range(resolved.initial_density):
-        x = event_u16(event_key(state.seed, 0, slot, EVENT_INITIAL_DENSITY, 0)) & 0xFF
-        y = event_u16(event_key(state.seed, 0, slot, EVENT_INITIAL_DENSITY, 1)) & 0xFF
+        x, y = _safe_spawn_position(
+            seed=state.seed,
+            generation=0,
+            address=slot,
+            event_type=EVENT_INITIAL_DENSITY,
+            structure=resolved.noise_structure,
+            base_index=0,
+        )
         state.spawn(
             x=x,
             y=y,
@@ -216,6 +222,36 @@ def create_universe(seed: int = 0, config: PhysicsConfig | Mapping[str, Any] | N
             speed_code=resolved.initial_speed_code,
         )
     return state
+
+
+def _safe_spawn_position(
+    *,
+    seed: int,
+    generation: int,
+    address: int,
+    event_type: int,
+    structure: int,
+    base_index: int,
+) -> tuple[int, int]:
+    """Choose a deterministic spawn position whose footprint misses fixed organs."""
+    from .io_bus import FixedOrgans
+
+    fixed = FixedOrgans.occupied_coordinates()
+    for attempt in range(32):
+        offset = base_index + (attempt * 2)
+        x = event_u16(event_key(seed, generation, address, event_type, offset)) & 0xFF
+        y = event_u16(event_key(seed, generation, address, event_type, offset + 1)) & 0xFF
+        if destination_footprint(structure, x, y).isdisjoint(fixed):
+            return x, y
+
+    # A deterministic logical-tile fallback guarantees progress even when a
+    # particular event stream repeatedly samples a fixed-organ coordinate.
+    for tile_y in range(LOGICAL_SIZE):
+        for tile_x in range(LOGICAL_SIZE):
+            x, y = tile_x * 8, tile_y * 8
+            if destination_footprint(structure, x, y).isdisjoint(fixed):
+                return x, y
+    raise RuntimeError("no spawn position remains outside fixed I/O organs")
 
 
 def speed_code_for_magnitude(magnitude: int) -> int:
@@ -392,8 +428,14 @@ def _spawn_noise(state: UniverseState, config: PhysicsConfig, generation: int) -
     chance_key = event_key(state.seed, generation, 0, EVENT_NOISE, 0)
     if event_u16(chance_key) >= config.noise_rate:
         return 0
-    x = event_u16(event_key(state.seed, generation, 0, EVENT_NOISE, 1)) & 0xFF
-    y = event_u16(event_key(state.seed, generation, 0, EVENT_NOISE, 2)) & 0xFF
+    x, y = _safe_spawn_position(
+        seed=state.seed,
+        generation=generation,
+        address=0,
+        event_type=EVENT_NOISE,
+        structure=config.noise_structure,
+        base_index=1,
+    )
     direction = event_u16(event_key(state.seed, generation, 0, EVENT_NOISE, 3)) & 0x07
     try:
         state.spawn(

@@ -78,11 +78,12 @@ class OutputSignal:
 
 def read_output_signal(state: Any) -> OutputSignal:
     """Read a byte/NULL signal from ordinary cells adjacent to fixed output organs."""
+    from .physics import destination_footprint
+
     coordinates = FixedOrgans.coordinates()
-    occupied = {
-        ((state.x[slot] // 8) % 32, (state.y[slot] // 8) % 32)
-        for slot in state.active_slots()
-    }
+    occupied: set[tuple[int, int]] = set()
+    for slot in state.active_slots():
+        occupied.update(destination_footprint(state.structure[slot], state.x[slot], state.y[slot]))
     value = sum(
         (1 << bit)
         for bit in range(OUTPUT_DATA_LINES)
@@ -98,6 +99,14 @@ def read_output_signal(state: Any) -> OutputSignal:
 @dataclass
 class OutputEdgeDetector:
     previous_valid: bool = False
+
+    def prime(self, *, valid: bool, value: int = 0, null: bool = False) -> None:
+        """Set the initial line level without treating it as a new event."""
+        validate_byte(value)
+        self.previous_valid = bool(valid)
+
+    def prime_signal(self, signal: OutputSignal) -> None:
+        self.prime(valid=signal.valid, value=signal.value, null=signal.null)
 
     def observe(self, *, valid: bool, value: int = 0, null: bool = False) -> list[OutputEvent]:
         event: list[OutputEvent] = []
@@ -139,3 +148,8 @@ class FixedOrgans:
     @classmethod
     def all_names(cls) -> tuple[str, ...]:
         return cls.input_data + (cls.input_valid,) + cls.output_data + (cls.output_valid, cls.output_null)
+
+    @classmethod
+    def occupied_coordinates(cls) -> set[tuple[int, int]]:
+        """Return every logical tile occupied by a fixed I/O organ line."""
+        return set(cls.coordinates().values())

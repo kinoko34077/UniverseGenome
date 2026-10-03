@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from .io_bus import FixedOrgans, InputBus, OutputEdgeDetector, OutputEvent, read_output_signal
-from .physics import PhysicsConfig, create_universe, step
+from .physics import PhysicsConfig, create_universe, destination_footprint, step
 from .state import UniverseState
 
 
@@ -82,6 +82,10 @@ class SeedMeasurement:
     seed: int
     baseline: EvaluationResult
     trained: EvaluationResult
+    baseline_no_input: EvaluationResult
+    trained_no_input: EvaluationResult
+    baseline_alternate: EvaluationResult
+    trained_alternate: EvaluationResult
 
 
 @dataclass(frozen=True)
@@ -89,9 +93,21 @@ class LearningMeasurement:
     seed_count: int
     baseline_successes: int
     trained_successes: int
+    baseline_no_input_clean: int
+    trained_no_input_clean: int
+    baseline_alternate_input_clean: int
+    trained_alternate_input_clean: int
     criterion: str
     learning_claim: bool
     per_seed: tuple[SeedMeasurement, ...]
+
+    @property
+    def no_input_clean(self) -> int:
+        return self.trained_no_input_clean
+
+    @property
+    def alternate_input_clean(self) -> int:
+        return self.trained_alternate_input_clean
 
 
 def _clone_state(state: UniverseState) -> UniverseState:
@@ -119,10 +135,13 @@ class IOExperiment:
             return ()
         result = []
         for slot in self.state.active_slots():
-            x = (self.state.x[slot] // 8) % 32
-            y = (self.state.y[slot] // 8) % 32
+            footprint = destination_footprint(
+                self.state.structure[slot], self.state.x[slot], self.state.y[slot]
+            )
             if any(
-                _torus_distance(x, anchor[0]) <= 1 and _torus_distance(y, anchor[1]) <= 1
+                _torus_distance(tile_x, anchor[0]) <= 1
+                and _torus_distance(tile_y, anchor[1]) <= 1
+                for tile_x, tile_y in footprint
                 for anchor in anchor_values
             ):
                 result.append(slot)
@@ -193,13 +212,18 @@ class IOExperiment:
         self,
         *,
         input_byte: int = 65,
+        input_valid: bool = True,
         expected: Iterable[OutputEvent] = (),
     ) -> EvaluationResult:
         clone = _clone_state(self.state)
         clone_experiment = IOExperiment(clone, experiment=self.experiment)
+        clone_experiment.output_detector.prime_signal(read_output_signal(clone))
         observed: list[OutputEvent] = []
         for _ in range(self.experiment.byte_hold_generations):
-            clone_experiment.drive_input(input_byte)
+            if input_valid:
+                clone_experiment.drive_input(input_byte)
+            else:
+                clone_experiment.release_input()
             clone_experiment._advance(clone_experiment.input_bus.signal_coordinates())
             observed.extend(clone_experiment.observe_output_state())
         for _ in range(self.experiment.byte_gap_generations):
@@ -236,19 +260,47 @@ def compare_baseline_trained(
     for seed in seed_values:
         baseline = IOExperiment(create_universe(seed=seed, config=resolved), experiment=protocol)
         baseline_result = baseline.evaluate_autonomous(input_byte=65, expected=expected)
+        baseline_no_input = baseline.evaluate_autonomous(input_byte=65, input_valid=False, expected=())
+        baseline_alternate = baseline.evaluate_autonomous(input_byte=66, expected=())
         trained = IOExperiment(create_universe(seed=seed, config=resolved), experiment=protocol)
         trained.train_a_to_b_null(input_byte=65, output_byte=66)
         trained_result = trained.evaluate_autonomous(input_byte=65, expected=expected)
-        measurements.append(SeedMeasurement(seed, baseline_result, trained_result))
+        trained_no_input = trained.evaluate_autonomous(input_byte=65, input_valid=False, expected=())
+        trained_alternate = trained.evaluate_autonomous(input_byte=66, expected=())
+        measurements.append(SeedMeasurement(
+            seed,
+            baseline_result,
+            trained_result,
+            baseline_no_input,
+            trained_no_input,
+            baseline_alternate,
+            trained_alternate,
+        ))
     baseline_successes = sum(item.baseline.success for item in measurements)
     trained_successes = sum(item.trained.success for item in measurements)
+    baseline_no_input_clean = sum(item.baseline_no_input.success for item in measurements)
+    trained_no_input_clean = sum(item.trained_no_input.success for item in measurements)
+    baseline_alternate_input_clean = sum(item.baseline_alternate.success for item in measurements)
+    trained_alternate_input_clean = sum(item.trained_alternate.success for item in measurements)
     required = len(seed_values)
-    criterion = "all seeds must autonomously emit B then NULL after training and trained successes must exceed baseline"
+    criterion = (
+        "all seeds must autonomously emit B then NULL after training, trained successes must exceed baseline, "
+        "and no-input/alternate-input counterfactuals must remain output-clean"
+    )
     return LearningMeasurement(
         seed_count=len(seed_values),
         baseline_successes=baseline_successes,
         trained_successes=trained_successes,
+        baseline_no_input_clean=baseline_no_input_clean,
+        trained_no_input_clean=trained_no_input_clean,
+        baseline_alternate_input_clean=baseline_alternate_input_clean,
+        trained_alternate_input_clean=trained_alternate_input_clean,
         criterion=criterion,
-        learning_claim=trained_successes >= required and trained_successes > baseline_successes,
+        learning_claim=(
+            trained_successes >= required
+            and trained_successes > baseline_successes
+            and trained_no_input_clean >= required
+            and trained_alternate_input_clean >= required
+        ),
         per_seed=tuple(measurements),
     )
