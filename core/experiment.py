@@ -75,6 +75,37 @@ class EvaluationResult:
     autonomous_events: tuple[OutputEvent, ...]
     success: bool
     clone_generation: int
+    event_generations: tuple[int, ...] = ()
+    evaluation_generations: int = 0
+    activity_cost: int = 0
+    timed_out: bool = False
+
+    @property
+    def wrong_output_count(self) -> int:
+        expected_index = 0
+        wrong = 0
+        for event in self.autonomous_events:
+            if (
+                expected_index < len(self.expected_events)
+                and event == self.expected_events[expected_index]
+            ):
+                expected_index += 1
+            else:
+                wrong += 1
+        return wrong
+
+    @property
+    def response_latency(self) -> int:
+        if not self.expected_events:
+            return 0
+        expected_index = 0
+        for event, generation in zip(self.autonomous_events, self.event_generations):
+            if event != self.expected_events[expected_index]:
+                continue
+            if expected_index == 0:
+                return int(generation)
+            expected_index += 1
+        return int(self.evaluation_generations)
 
 
 @dataclass(frozen=True)
@@ -108,6 +139,13 @@ class LearningMeasurement:
     @property
     def alternate_input_clean(self) -> int:
         return self.trained_alternate_input_clean
+
+    @property
+    def evaluation_generations(self) -> int:
+        return max(
+            (item.trained.evaluation_generations for item in self.per_seed),
+            default=0,
+        )
 
 
 def _clone_state(state: UniverseState) -> UniverseState:
@@ -147,9 +185,9 @@ class IOExperiment:
                 result.append(slot)
         return tuple(result)
 
-    def _advance(self, anchors: Iterable[tuple[int, int]] = ()) -> None:
+    def _advance(self, anchors: Iterable[tuple[int, int]] = ()) -> Any:
         stimulus = self._nearby_slots(anchors)
-        step(self.state, stimulus_slots=stimulus)
+        return step(self.state, stimulus_slots=stimulus)
 
     def drive_input(self, value: int, *, valid: bool = True) -> None:
         self.input_bus.drive(value, valid=valid)
@@ -219,28 +257,46 @@ class IOExperiment:
         clone_experiment = IOExperiment(clone, experiment=self.experiment)
         clone_experiment.output_detector.prime_signal(read_output_signal(clone))
         observed: list[OutputEvent] = []
+        event_generations: list[int] = []
+        evaluation_generations = 0
+        activity_cost = 0
+
+        def advance_and_observe(anchors: Iterable[tuple[int, int]]) -> None:
+            nonlocal evaluation_generations, activity_cost
+            metrics = clone_experiment._advance(anchors)
+            evaluation_generations += 1
+            activity_cost += metrics.activity_cost
+            events = clone_experiment.observe_output_state()
+            observed.extend(events)
+            event_generations.extend([evaluation_generations] * len(events))
+
         for _ in range(self.experiment.byte_hold_generations):
             if input_valid:
                 clone_experiment.drive_input(input_byte)
             else:
                 clone_experiment.release_input()
-            clone_experiment._advance(clone_experiment.input_bus.signal_coordinates())
-            observed.extend(clone_experiment.observe_output_state())
+            advance_and_observe(clone_experiment.input_bus.signal_coordinates())
         for _ in range(self.experiment.byte_gap_generations):
             clone_experiment.release_input()
-            clone_experiment._advance()
-            observed.extend(clone_experiment.observe_output_state())
+            advance_and_observe(())
         for _ in range(self.experiment.evaluation_timeout_generations):
             clone_experiment.release_input()
-            clone_experiment._advance()
-            observed.extend(clone_experiment.observe_output_state())
+            advance_and_observe(())
         actual = tuple(observed)
         expected_tuple = tuple(expected)
+        expected_index = 0
+        for event in actual:
+            if expected_index < len(expected_tuple) and event == expected_tuple[expected_index]:
+                expected_index += 1
         return EvaluationResult(
             expected_events=expected_tuple,
             autonomous_events=actual,
             success=actual == expected_tuple,
             clone_generation=clone.generation,
+            event_generations=tuple(event_generations),
+            evaluation_generations=evaluation_generations,
+            activity_cost=activity_cost,
+            timed_out=expected_index < len(expected_tuple),
         )
 
 
