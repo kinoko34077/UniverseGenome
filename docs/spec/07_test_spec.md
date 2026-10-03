@@ -216,9 +216,12 @@ same-genome seed group, advances growth only at real 128-generation boundaries,
 leaves promising allocation policy selection open until explicitly approved,
 does not replace a live slot without a real free/prune-eligible target, keeps
 groups below four real seed slots out of parent/protection selection, completes
-incomplete mutation evidence through later freed slots, exercises multiple
-genome mutation fields, and directly covers the real growth sequence
-`0 → 128 → 256 → 384 → 512`.
+never-matured mutation evidence through later freed slots, keeps provisional
+sub-four mutation groups temporarily pruning-protected, preserves an
+ever-mature marker once a group first reaches four real seeds, and keeps a
+later-depleted mature group pruning-eligible without restoring parent/protection
+eligibility. It also exercises multiple genome mutation fields and directly
+covers the real growth sequence `0 → 128 → 256 → 384 → 512`.
 
 ### TEST-P5-005 Integrated persistence
 
