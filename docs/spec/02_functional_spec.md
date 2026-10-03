@@ -399,31 +399,94 @@ When a slot becomes free:
 - add another seed for a promising genome, or
 - insert a mutation child
 
-Seed escalation for promising genome:
+Seed-evidence cardinalities for a promising genome are represented by actual
+occupied slots in the same category/genome group. The notation
 
 `4 → 8 → 16 → 32`
 
-The implemented steady-state boundary maintains 128 candidate slots as four
-category-local groups of 32. Each optimizer step evaluates every slot through
-the real Phase 4 baseline/trained measurement and advances each candidate's
-physical evaluation clock. An 8-bit growth window is appended only at each
-128-generation boundary. Parents are selected only within the same category,
-and an actual category slot is replaced either by a same-genome seed-evidence
-expansion or by a separate mutated child. Mutation fields are selected from
-the complete genome field set rather than being hard-coded to a single
-parameter.
+describes those real group sizes; it is not a `seed_count` field and must not
+be implemented by packing multiple UniverseStates into one logical slot. A
+newly allocated evidence or mutation slot owns one fresh UniverseState at
+generation 0.
+
+## SPEC-EVOL-002 — Promising allocation policy
+**Status: open / policy hook only**
+
+The v0.1 specification does not yet approve a concrete promising-allocation
+threshold or selection rule. The implementation keeps an isolated policy hook
+and defaults to no automatic promising allocation until the owning issue
+explicitly accepts a rule. Any future rule must use the aggregate normalized
+fitness of the currently allocated real seed slots for one category/genome
+group, be named and persisted in the scheduler, and be added as an explicit
+specification decision. This policy hook does not add fields to the absolute
+fitness ordering.
+
+The implemented steady-state boundary maintains exactly 128 authoritative
+Universe slots as four category-local groups of 32. Each occupied slot owns
+one category, one genome, one seed, one persistent `UniverseState`, that
+Universe's physical generation, and its fitness/growth/pruning metadata.
+Repeated optimizer steps continue the same authoritative Universe through
+teacher/input/noise evolution. Evaluation clones are created from the current
+authoritative Universe, scored, and discarded; their generations do not advance
+the slot or its growth clock.
+
+For selection and allocation evidence, fitness is aggregated across all
+currently occupied real seed slots in one category/genome group. An individual
+seed result must not make its Genome promising by itself. The aggregate uses
+the normalized absolute-fitness fields while retaining growth-only fields for
+growth and pruning decisions.
+
+## SPEC-EVOL-003 — Minimum evidence eligibility
+**Status: accepted invariant**
+
+A category/genome group must have at least four currently allocated real seed
+Universes before any of its slots may participate in parent selection or
+absolute-fitness protection. This is the minimum evidence tier from the
+canonical `4 → 8 → 16 → 32` real-slot ladder, not a new promising threshold
+and not a change to the five-field absolute fitness ordering.
+
+A newly inserted mutation child therefore remains selection-ineligible while
+its group has fewer than four real seed slots. When a later pruning decision
+frees another slot, the optimizer may allocate that slot as additional seed
+evidence for an incomplete mutation-child group until the four-seed minimum
+is reached. Only after that gate is satisfied can the still-open promising
+allocation policy govern any later evidence expansion.
+
+Minimum-evidence **selection eligibility** is distinct from pruning lifecycle.
+A never-matured mutation group with fewer than four real seeds is provisional
+and is temporarily excluded from growth pruning while its initial evidence is
+being completed. Once a category/genome group has reached four real seed
+Universes at least once, that maturity is persistent search metadata. If later
+pruning reduces the group below four seeds, its remaining slots are no longer
+eligible for parent selection or absolute-fitness protection, but they remain
+eligible for growth pruning/retirement. A depleted mature group must not become
+a permanently occupied, non-selectable and non-prunable population fragment.
+This maturity state is included in optimizer persistence.
+
+At generation 0, 128, 256, 384, and 512, the slot has an observed fitness
+measurement. Each 128-generation interval derives one growth flag set from the
+two real boundary measurements. No unobserved interval is represented by a
+synthetic zero window. Parents are selected only within the same category.
+When a slot becomes free, the outer optimizer either allocates another actual
+seed Universe to a promising genome or creates a separate mutation-child
+Universe in that free slot. A logical CandidateSlot must not contain multiple
+authoritative seed Universes. Mutation fields are selected from the complete
+genome field set rather than being hard-coded to a single parameter.
 
 An integrated optimizer snapshot includes the effective `PhysicsConfig`,
-`ExperimentConfig`, all 128 authoritative candidate records, physical growth
-clocks/references, the generation, and mutation/replacement scheduler state.
-It does not serialize reconstructed universe snapshots. Restoring it and
-continuing the same protocol is deterministic.
+`ExperimentConfig`, all 128 authoritative slot records and their complete
+`UniverseState` arrays, physical generations, observed fitness references,
+growth/pruning state, lineage, and category-local scheduler/policy state. It
+does not serialize disposable evaluation clones. Restoring it and continuing
+the same protocol is deterministic.
 
 The headless runner uses one integrated step and an 8-generation per-candidate
-Phase 4 timeout by default as an explicit bounded-performance budget.
-`--optimizer-iterations 4` runs the complete 4→8→16→32 seed-evidence
-progression, while `--optimizer-timeout-generations` raises or lowers the
-per-candidate evaluation budget. The result reports evaluated-slot counts,
-replacement counts, mutation fields, seed counts, and generations per second.
+evaluation timeout by default as an explicit bounded-performance budget.
+`--optimizer-iterations 4` is a bounded diagnostic run; seed evidence counts
+are derived from actual same-genome Universe-slot allocation, not from a
+CandidateSlot containing multiple hidden seed states. The result reports
+authoritative slot counts, replacement/allocation counts, mutation fields,
+seed-group counts, and generations per second. No unapproved promising
+threshold is implied by this diagnostic output.
 
 ---

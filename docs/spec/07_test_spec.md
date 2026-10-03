@@ -207,22 +207,35 @@ absolute-fitness top 1/8 from growth-only pruning.
 
 ### TEST-P5-004 Steady-state escalation
 
-Category-local replacement is deterministic. Same-genome seed evidence expands
-4→8→16→32 without changing the genome/category/base seed, while mutation
-children are separate 4-seed candidates. The integrated loop evaluates all 128
-slots, uses normalized real Phase 4 fitness/growth, advances growth only at the
-128-generation physical cadence, and exercises multiple genome mutation fields.
+Category-local replacement is deterministic. Same-genome evidence expands by
+allocating additional real Universe slots for the same genome/category, while
+mutation children are separate real slots with fresh state. The integrated loop
+maintains all 128 authoritative Universe states, measures normalized fitness
+from evaluation clones of those states, aggregates evidence across each real
+same-genome seed group, advances growth only at real 128-generation boundaries,
+leaves promising allocation policy selection open until explicitly approved,
+does not replace a live slot without a real free/prune-eligible target, keeps
+groups below four real seed slots out of parent/protection selection, completes
+never-matured mutation evidence through later freed slots, keeps provisional
+sub-four mutation groups temporarily pruning-protected, preserves an
+ever-mature marker once a group first reaches four real seeds, and keeps a
+later-depleted mature group pruning-eligible without restoring parent/protection
+eligibility. It also exercises multiple genome mutation fields and directly
+covers the real growth sequence `0 → 128 → 256 → 384 → 512`.
 
 ### TEST-P5-005 Integrated persistence
 
 Optimizer persistence includes the effective base/protocol configuration,
-authoritative candidate parameters, normalized fitness/growth references,
-physical cadence state, and scheduler state. It does not retain reconstructed
-universe snapshots. Restore/resume produces the same bounded candidate
-population as uninterrupted continuation.
+all 128 authoritative Universe states and their parameters, normalized
+fitness/growth references, physical cadence state, lineage, and scheduler
+policy state. It does not retain disposable evaluation clones. Restore/resume
+produces the same bounded slot population as uninterrupted continuation.
 
 The headless performance path reports bounded optimizer iterations, evaluated
-slots, replacements, mutation fields, seed escalation, and throughput.
+slots, replacements, mutation fields, actual same-genome slot-group counts,
+and throughput. It does not report a promising-allocation threshold or
+seed-escalation level without an explicit approved policy and corresponding
+real authoritative slots.
 
 ### TEST-P5-006 Phase 6+ handoff boundary
 
