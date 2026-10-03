@@ -111,7 +111,18 @@ class Phase2BLatentTests(unittest.TestCase):
             step(resumed)
         self.assertEqual(resumed.to_snapshot(), uninterrupted.to_snapshot())
 
-    def test_p2b_005_status_and_headless_counter(self):
+    def test_p2b_005_three_arrivals_keep_transmission_bounded(self):
+        config = PhysicsConfig(hp_decay=0, bond_gain=1, bond_decay=0)
+        state = create_universe(seed=34, config=config)
+        for x in (0, 1, 2):
+            state.spawn(x=x, y=0, direction=0, speed_code=0, hp=255, latent=x + 1)
+
+        metrics = step(state)
+
+        self.assertEqual(metrics.collision_pair_evaluations, 1)
+        self.assertEqual(metrics.latent_transmission_count, 1)
+
+    def test_p2b_006_status_and_headless_counter(self):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
         status = build_status(raw)
         self.assertTrue(status["phase2b_latent_operators_implemented"])
