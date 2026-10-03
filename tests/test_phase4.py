@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from core import experiment as experiment_module
 from core.experiment import (
     ExperimentConfig,
     FixedOrgans,
@@ -106,6 +107,42 @@ class Phase4IOTests(unittest.TestCase):
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             experiment = json.load(handle)
         self.assertEqual(experiment["status"], "implemented_phase4_learning_outcome_recorded")
+
+    def test_p4_007_autonomous_evaluation_collects_real_output_edges(self):
+        state = create_universe(
+            seed=91,
+            config=experiment_physics_config(
+                fusion_enabled=False,
+                fragmentation_enabled=False,
+            ),
+        )
+        coordinates = FixedOrgans.coordinates()
+        for bit in (1, 6):  # byte 66 (B)
+            x, y = coordinates[f"OUT{bit}"]
+            state.spawn(x=x * 8, y=y * 8, hp=255, speed_code=0)
+        x, y = coordinates[FixedOrgans.output_valid]
+        state.spawn(x=x * 8, y=y * 8, hp=255, speed_code=0)
+
+        result = IOExperiment(
+            state,
+            experiment=ExperimentConfig(evaluation_timeout_generations=3),
+        ).evaluate_autonomous(input_byte=65, expected=(OutputEvent.byte(66),))
+
+        self.assertEqual(result.autonomous_events, (OutputEvent.byte(66),))
+        self.assertTrue(result.success)
+
+    def test_p4_008_experiment_config_is_explicit_and_loadable(self):
+        loader = getattr(experiment_module, "load_experiment_config", None)
+        self.assertIsNotNone(loader)
+        config = loader(ROOT / "config" / "experiment_v0_1.json")
+
+        self.assertEqual(config, ExperimentConfig(
+            byte_hold_generations=4,
+            byte_gap_generations=4,
+            teacher_delay_generations=4,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1024,
+        ))
 
 
 if __name__ == "__main__":
