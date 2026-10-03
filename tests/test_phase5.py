@@ -904,5 +904,47 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(restored.to_snapshot(), payload)
 
 
+    def test_p5_038_depleted_mature_mutation_group_is_not_treated_as_provisional(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=119)
+        local = [slot for slot in optimizer.slots if slot.category == "masked_copy"]
+        parent = local[0]
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=-1,
+            field="hp_decay",
+        )
+        optimizer.slots[31] = child
+        mutation_group = [child]
+        for free_index in (30, 29, 28):
+            evidence = optimizer.allocate_seed_slot(
+                free_index=free_index,
+                parent=child,
+            )
+            optimizer.slots[free_index] = evidence
+            mutation_group.append(evidence)
+            optimizer._refresh_evidence_maturity(child.evidence_group)
+
+        self.assertTrue(all(slot.evidence_mature for slot in mutation_group))
+
+        optimizer.slots[28] = optimizer.allocate_seed_slot(
+            free_index=28,
+            parent=next(
+                slot for slot in local
+                if slot.genome != parent.genome
+            ),
+        )
+        local = [slot for slot in optimizer.slots if slot.category == "masked_copy"]
+        remaining = [slot for slot in local if slot.evidence_group == child.evidence_group]
+        self.assertEqual(len(remaining), 3)
+        self.assertTrue(all(slot.evidence_mature for slot in remaining))
+        self.assertIsNone(
+            optimizer._incomplete_mutation_parent(
+                local,
+                excluded_index=0,
+            )
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
