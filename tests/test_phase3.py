@@ -106,6 +106,24 @@ class Phase3PopulationTests(unittest.TestCase):
         self.assertGreaterEqual(summary["generations_per_second"], 0.0)
         self.assertEqual(summary["category_counts"], {name: 32 for name in CATEGORY_OPERATORS})
 
+    def test_p2g_rewind_history_reports_bounded_memory_evidence(self):
+        summaries = []
+        for history_length in (128, 256, 512):
+            population = Population.from_defaults(
+                base_seed=76,
+                config=population_config(),
+                history_length=history_length,
+            )
+            population.run(4)
+            summary = population.summary()
+            self.assertLessEqual(summary["history_size"], history_length + 1)
+            self.assertEqual(summary["history_entry_count"], summary["history_size"])
+            self.assertGreater(summary["history_memory_bytes"], 0)
+            self.assertLessEqual(summary["history_memory_bytes"], summary["history_memory_budget_bytes"])
+            self.assertTrue(summary["history_memory_within_budget"])
+            summaries.append(summary)
+        self.assertLessEqual(summaries[-1]["history_memory_bytes"], summaries[0]["history_memory_budget_bytes"])
+
     def test_p3_006_status_config_and_ui_surface(self):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
