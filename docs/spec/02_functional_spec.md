@@ -452,6 +452,17 @@ evidence for an incomplete mutation-child group until the four-seed minimum
 is reached. Only after that gate is satisfied can the still-open promising
 allocation policy govern any later evidence expansion.
 
+Minimum-evidence **selection eligibility** is distinct from pruning lifecycle.
+A never-matured mutation group with fewer than four real seeds is provisional
+and is temporarily excluded from growth pruning while its initial evidence is
+being completed. Once a category/genome group has reached four real seed
+Universes at least once, that maturity is persistent search metadata. If later
+pruning reduces the group below four seeds, its remaining slots are no longer
+eligible for parent selection or absolute-fitness protection, but they remain
+eligible for growth pruning/retirement. A depleted mature group must not become
+a permanently occupied, non-selectable and non-prunable population fragment.
+This maturity state is included in optimizer persistence.
+
 At generation 0, 128, 256, 384, and 512, the slot has an observed fitness
 measurement. Each 128-generation interval derives one growth flag set from the
 two real boundary measurements. No unobserved interval is represented by a
