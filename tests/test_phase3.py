@@ -115,6 +115,12 @@ class Phase3PopulationTests(unittest.TestCase):
             self.assertIn(control, html)
         self.assertIn("16×8", html)
         self.assertIn("authoritative simulation clock is external", js)
+        controls = (ROOT / "ui" / "controls.js").read_text(encoding="utf-8")
+        self.assertIn("/api/state", js)
+        self.assertIn("/api/control", js)
+        self.assertIn("fetch(", js)
+        self.assertIn("universeGenomeControl", controls)
+        self.assertIn("--surface", html)
 
 
 if __name__ == "__main__":
