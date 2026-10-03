@@ -1,5 +1,16 @@
 # Specification Changelog
 
+## 2026-10-03 — Issue #58 Phase 5 authoritative Universe-slot corrections
+
+- restored the original 128-authoritative-Universe architecture: one persistent
+  `UniverseState` per category/genome/seed slot, with seed evidence represented
+  by actual slot allocation rather than hidden CandidateSlot state;
+- separated persistent training generations from disposable evaluation-clone
+  generations and made growth observations real 128-generation boundaries;
+- established observed generation-0 references, removed synthetic growth
+  windows, persisted authoritative slot arrays, and documented the explicit
+  `strict_fitness` promising-allocation policy.
+
 ## 2026-10-03 — Issue #56 Phase 5 semantic corrections
 
 - corrected Phase 5 seed evidence to expand the same genome over a deterministic

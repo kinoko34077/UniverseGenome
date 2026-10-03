@@ -403,27 +403,49 @@ Seed escalation for promising genome:
 
 `4 → 8 → 16 → 32`
 
-The implemented steady-state boundary maintains 128 candidate slots as four
-category-local groups of 32. Each optimizer step evaluates every slot through
-the real Phase 4 baseline/trained measurement and advances each candidate's
-physical evaluation clock. An 8-bit growth window is appended only at each
-128-generation boundary. Parents are selected only within the same category,
-and an actual category slot is replaced either by a same-genome seed-evidence
-expansion or by a separate mutated child. Mutation fields are selected from
-the complete genome field set rather than being hard-coded to a single
-parameter.
+## SPEC-EVOL-002 — Promising allocation policy
+**Status: accepted-default**
+
+The v0.1 category-local policy is named `strict_fitness`. A genome is
+promising for an additional seed allocation when at least one occupied slot for
+that genome has a canonical fitness `sort_key()` strictly better than the
+category median `sort_key()` among currently occupied slots. Equality is not
+promising. The policy is scheduler state, is persisted in optimizer snapshots,
+and may be replaced only by an explicit specification change. This rule is an
+allocation policy; it does not add fields to the absolute fitness ordering.
+
+The implemented steady-state boundary maintains exactly 128 authoritative
+Universe slots as four category-local groups of 32. Each occupied slot owns
+one category, one genome, one seed, one persistent `UniverseState`, that
+Universe's physical generation, and its fitness/growth/pruning metadata.
+Repeated optimizer steps continue the same authoritative Universe through
+teacher/input/noise evolution. Evaluation clones are created from the current
+authoritative Universe, scored, and discarded; their generations do not advance
+the slot or its growth clock.
+
+At generation 0, 128, 256, 384, and 512, the slot has an observed fitness
+measurement. Each 128-generation interval derives one growth flag set from the
+two real boundary measurements. No unobserved interval is represented by a
+synthetic zero window. Parents are selected only within the same category.
+When a slot becomes free, the outer optimizer either allocates another actual
+seed Universe to a promising genome or creates a separate mutation-child
+Universe in that free slot. A logical CandidateSlot must not contain multiple
+authoritative seed Universes. Mutation fields are selected from the complete
+genome field set rather than being hard-coded to a single parameter.
 
 An integrated optimizer snapshot includes the effective `PhysicsConfig`,
-`ExperimentConfig`, all 128 authoritative candidate records, physical growth
-clocks/references, the generation, and mutation/replacement scheduler state.
-It does not serialize reconstructed universe snapshots. Restoring it and
-continuing the same protocol is deterministic.
+`ExperimentConfig`, all 128 authoritative slot records and their complete
+`UniverseState` arrays, physical generations, observed fitness references,
+growth/pruning state, lineage, and category-local scheduler/policy state. It
+does not serialize disposable evaluation clones. Restoring it and continuing
+the same protocol is deterministic.
 
 The headless runner uses one integrated step and an 8-generation per-candidate
-Phase 4 timeout by default as an explicit bounded-performance budget.
-`--optimizer-iterations 4` runs the complete 4→8→16→32 seed-evidence
-progression, while `--optimizer-timeout-generations` raises or lowers the
-per-candidate evaluation budget. The result reports evaluated-slot counts,
-replacement counts, mutation fields, seed counts, and generations per second.
+evaluation timeout by default as an explicit bounded-performance budget.
+`--optimizer-iterations 4` is a bounded diagnostic run; seed evidence counts
+are derived from actual same-genome Universe-slot allocation, not from a
+CandidateSlot containing multiple hidden seed states. The result reports
+authoritative slot counts, replacement/allocation counts, mutation fields,
+seed-group counts, and generations per second.
 
 ---
