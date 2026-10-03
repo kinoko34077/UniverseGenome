@@ -410,15 +410,16 @@ newly allocated evidence or mutation slot owns one fresh UniverseState at
 generation 0.
 
 ## SPEC-EVOL-002 — Promising allocation policy
-**Status: accepted-default**
+**Status: open / policy hook only**
 
-The v0.1 category-local policy is named `strict_fitness`. A genome is
-promising for an additional seed allocation when at least one occupied slot for
-that genome has a canonical fitness `sort_key()` strictly better than the
-category median `sort_key()` among currently occupied slots. Equality is not
-promising. The policy is scheduler state, is persisted in optimizer snapshots,
-and may be replaced only by an explicit specification change. This rule is an
-allocation policy; it does not add fields to the absolute fitness ordering.
+The v0.1 specification does not yet approve a concrete promising-allocation
+threshold or selection rule. The implementation keeps an isolated policy hook
+and defaults to no automatic promising allocation until the owning issue
+explicitly accepts a rule. Any future rule must use the aggregate normalized
+fitness of the currently allocated real seed slots for one category/genome
+group, be named and persisted in the scheduler, and be added as an explicit
+specification decision. This policy hook does not add fields to the absolute
+fitness ordering.
 
 The implemented steady-state boundary maintains exactly 128 authoritative
 Universe slots as four category-local groups of 32. Each occupied slot owns
@@ -428,6 +429,12 @@ Repeated optimizer steps continue the same authoritative Universe through
 teacher/input/noise evolution. Evaluation clones are created from the current
 authoritative Universe, scored, and discarded; their generations do not advance
 the slot or its growth clock.
+
+For selection and allocation evidence, fitness is aggregated across all
+currently occupied real seed slots in one category/genome group. An individual
+seed result must not make its Genome promising by itself. The aggregate uses
+the normalized absolute-fitness fields while retaining growth-only fields for
+growth and pruning decisions.
 
 At generation 0, 128, 256, 384, and 512, the slot has an observed fitness
 measurement. Each 128-generation interval derives one growth flag set from the
@@ -452,6 +459,7 @@ evaluation timeout by default as an explicit bounded-performance budget.
 are derived from actual same-genome Universe-slot allocation, not from a
 CandidateSlot containing multiple hidden seed states. The result reports
 authoritative slot counts, replacement/allocation counts, mutation fields,
-seed-group counts, and generations per second.
+seed-group counts, and generations per second. No unapproved promising
+threshold is implied by this diagnostic output.
 
 ---

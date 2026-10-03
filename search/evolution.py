@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
-import statistics
 import time
 from typing import Any, Iterable, Mapping
 
@@ -19,14 +18,13 @@ from core.physics import PhysicsConfig, create_universe
 from core.state import UniverseState
 from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
-from .pruning import growth_flags, prune_candidates, protected_indices
+from .pruning import growth_flags, prune_candidates
 
 IMPLEMENTATION_PHASE = 5
 CATEGORY_OPERATORS = ("masked_copy", "masked_xor", "rotate_copy", "masked_and")
 SLOTS_PER_CATEGORY = 32
 OPTIMIZER_POPULATION_SIZE = 128
 GROWTH_WINDOW_GENERATIONS = 128
-PROMISING_POLICIES = ("strict_fitness",)
 
 
 def seed_escalation(seed_count: int) -> int:
@@ -120,14 +118,21 @@ class UniverseSlot:
             if isinstance(raw_config, Mapping)
             else base_config
         )
+        category = str(payload["category"])
+        genome = UniverseGenome.from_dict(dict(payload["genome"]))
+        expected_values = genome.to_physics_config(base_config).to_dict()
+        expected_values["latent_operator"] = category
+        expected_config = PhysicsConfig(**expected_values)
+        if state_config.to_dict() != expected_config.to_dict():
+            raise ValueError("slot metadata does not match authoritative state config")
         state = UniverseState.from_snapshot(dict(raw_state), config=state_config)
         raw_windows = payload.get("growth_windows", ())
         if not isinstance(raw_windows, (list, tuple)):
             raise ValueError("slot growth_windows must be an array")
         return cls(
             index=int(payload["index"]),
-            category=str(payload["category"]),
-            genome=UniverseGenome.from_dict(dict(payload["genome"])),
+            category=category,
+            genome=genome,
             seed=int(payload["seed"]),
             state=state,
             fitness=Fitness.from_dict(dict(payload.get("fitness", {}))),
@@ -162,12 +167,12 @@ class SteadyStateOptimizer:
         experiment: ExperimentConfig | None = None,
         generation: int = 0,
         scheduler: Mapping[str, Any] | None = None,
-        promising_policy: str = "strict_fitness",
+        promising_policy: str | None = None,
     ) -> None:
         if generation < 0:
             raise ValueError("optimizer generation must be non-negative")
-        if promising_policy not in PROMISING_POLICIES:
-            raise ValueError("unsupported promising policy")
+        if promising_policy is not None:
+            raise ValueError("no promising allocation policy is approved")
         self.slots = list(slots)
         self.base_config = base_config or PhysicsConfig()
         self.experiment = experiment or ExperimentConfig()
@@ -182,9 +187,9 @@ class SteadyStateOptimizer:
         if scheduler is not None:
             for key, value in scheduler.items():
                 if key == "promising_policy":
-                    if value not in PROMISING_POLICIES:
-                        raise ValueError("unsupported promising policy in scheduler")
-                    self.scheduler[key] = str(value)
+                    if value is not None:
+                        raise ValueError("no promising allocation policy is approved")
+                    self.scheduler[key] = None
                 else:
                     self.scheduler[key] = int(value)
 
@@ -194,8 +199,8 @@ class SteadyStateOptimizer:
         return self.slots
 
     @property
-    def promising_policy(self) -> str:
-        return str(self.scheduler["promising_policy"])
+    def promising_policy(self) -> str | None:
+        return self.scheduler["promising_policy"]
 
     @classmethod
     def from_defaults(
@@ -204,35 +209,34 @@ class SteadyStateOptimizer:
         base_seed: int = 0,
         base_config: PhysicsConfig | None = None,
         experiment: ExperimentConfig | None = None,
-        promising_policy: str = "strict_fitness",
+        promising_policy: str | None = None,
     ) -> "SteadyStateOptimizer":
         base = base_config or PhysicsConfig()
         protocol = experiment or ExperimentConfig()
         slots: list[UniverseSlot] = []
         index = 0
-        next_seed = int(base_seed)
         for category in CATEGORY_OPERATORS:
-            for genome in UniverseGenome.initial_population():
-                for _ in range(4):
+            for genome_id, genome in enumerate(UniverseGenome.initial_population()):
+                for seed_offset in range(4):
+                    seed = int(base_seed) + (genome_id * 4) + seed_offset
                     config = cls._effective_config(genome, category, base)
-                    state = create_universe(seed=next_seed, config=config)
+                    state = create_universe(seed=seed, config=config)
                     slots.append(
                         UniverseSlot(
                             index=index,
                             category=category,
                             genome=genome,
-                            seed=next_seed,
+                            seed=seed,
                             state=state,
                         )
                     )
                     index += 1
-                    next_seed += 1
         return cls(
             slots,
             base_config=base,
             experiment=protocol,
             promising_policy=promising_policy,
-            scheduler={"allocation_cursor": next_seed},
+            scheduler={"allocation_cursor": int(base_seed) + 32},
         )
 
     @staticmethod
@@ -275,6 +279,7 @@ class SteadyStateOptimizer:
     def _evaluate_slot(self, slot: UniverseSlot) -> LearningMeasurement:
         if slot.growth_reference is None:
             _, slot.fitness = self._measure_slot(slot)
+            slot.growth_reference = slot.fitness
 
         def on_generation(generation: int) -> None:
             if generation > 0 and generation % GROWTH_WINDOW_GENERATIONS == 0:
@@ -294,8 +299,8 @@ class SteadyStateOptimizer:
         self.scheduler["mutation_cursor"] = cursor + 1
         return field
 
-    def _next_seed(self) -> int:
-        occupied = {slot.seed for slot in self.slots}
+    def _next_seed(self, category: str) -> int:
+        occupied = {slot.seed for slot in self.slots if slot.category == category}
         candidate = int(self.scheduler["allocation_cursor"])
         while candidate in occupied:
             candidate += 1
@@ -312,7 +317,7 @@ class SteadyStateOptimizer:
             raise ValueError("free_index must be within the fixed population")
         if parent.index == free_index:
             raise ValueError("seed evidence must use a free slot distinct from parent")
-        seed = self._next_seed()
+        seed = self._next_seed(parent.category)
         config = self._effective_config(parent.genome, parent.category, self.base_config)
         state = create_universe(seed=seed, config=config)
         return UniverseSlot(
@@ -339,7 +344,7 @@ class SteadyStateOptimizer:
             raise ValueError("mutation child must use a free slot distinct from parent")
         mutation_field = field or self._mutation_field(parent)
         child_genome = parent.genome.mutate(mutation_field, direction=direction)
-        seed = self._next_seed()
+        seed = self._next_seed(parent.category)
         config = self._effective_config(child_genome, parent.category, self.base_config)
         state = create_universe(seed=seed, config=config)
         return UniverseSlot(
@@ -353,13 +358,65 @@ class SteadyStateOptimizer:
             allocation_reason="mutation_child",
         )
 
-    def _is_promising(self, slot: UniverseSlot, local: list[UniverseSlot]) -> bool:
-        if self.promising_policy != "strict_fitness":
-            raise ValueError("unsupported promising policy")
-        median_key = statistics.median_low(
-            [candidate.fitness.sort_key() for candidate in local]
+    @staticmethod
+    def _aggregate_fitness(records: Iterable[UniverseSlot]) -> Fitness:
+        values = tuple(records)
+        if not values:
+            raise ValueError("cannot aggregate an empty evidence group")
+        denominator = float(len(values))
+        return Fitness(
+            success=sum(slot.fitness.success for slot in values) / denominator,
+            wrong_outputs=sum(slot.fitness.wrong_outputs for slot in values) / denominator,
+            timeouts=sum(slot.fitness.timeouts for slot in values) / denominator,
+            response_latency=sum(slot.fitness.response_latency for slot in values) / denominator,
+            activity_cost=sum(slot.fitness.activity_cost for slot in values) / denominator,
+            retention=sum(slot.fitness.retention for slot in values) / denominator,
+            noise_robustness=sum(slot.fitness.noise_robustness for slot in values) / denominator,
         )
-        return slot.fitness.sort_key() < median_key
+
+    def group_fitnesses(
+        self,
+        records: Iterable[UniverseSlot] | None = None,
+    ) -> dict[tuple[str, str], Fitness]:
+        groups: dict[tuple[str, str], list[UniverseSlot]] = {}
+        for slot in self.slots if records is None else records:
+            groups.setdefault(slot.evidence_group, []).append(slot)
+        return {
+            key: self._aggregate_fitness(group)
+            for key, group in groups.items()
+        }
+
+    def _selection_key(
+        self,
+        slot: UniverseSlot,
+        aggregates: Mapping[tuple[str, str], Fitness],
+    ) -> tuple[tuple[float, float, float, float, float], tuple[str, str], int]:
+        return aggregates[slot.evidence_group].sort_key(), slot.evidence_group, slot.index
+
+    def _select_parent(
+        self,
+        local: list[UniverseSlot],
+        *,
+        excluded_index: int,
+    ) -> UniverseSlot:
+        sources = [slot for slot in local if slot.index != excluded_index]
+        if not sources:
+            raise ValueError("a category must retain a parent source")
+        aggregates = self.group_fitnesses(local)
+        return min(sources, key=lambda slot: self._selection_key(slot, aggregates))
+
+    def _is_promising(self, slot: UniverseSlot, local: list[UniverseSlot]) -> bool:
+        """Policy hook; no concrete promising rule is approved for v0.1."""
+        del slot, local
+        if self.promising_policy is None:
+            return False
+        raise ValueError("no promising allocation policy is approved")
+
+    def _protected_indices(self, local: list[UniverseSlot]) -> set[int]:
+        aggregates = self.group_fitnesses(local)
+        count = max(1, len(local) // 8)
+        ordered = sorted(local, key=lambda slot: self._selection_key(slot, aggregates))
+        return {slot.index for slot in ordered[:count]}
 
     def group_counts(self) -> dict[str, int]:
         counts: dict[tuple[str, str], int] = {}
@@ -390,21 +447,23 @@ class SteadyStateOptimizer:
         pruned_count = 0
         for category in CATEGORY_OPERATORS:
             local = [slot for slot in self.slots if slot.category == category]
-            protected = protected_indices(local)
-            pruned = prune_candidates(local)
+            protected = self._protected_indices(local)
+            pruned = prune_candidates(local, protected=protected)
             pruned_count += len(pruned)
+            aggregates = self.group_fitnesses(local)
             if pruned:
                 target_index = max(
                     pruned,
-                    key=lambda index: next(
-                        item for item in local if item.index == index
-                    ).fitness.sort_key(),
+                    key=lambda index: self._selection_key(
+                        next(item for item in local if item.index == index),
+                        aggregates,
+                    ),
                 )
                 reason = "growth_pruned"
             else:
                 target = max(
                     (slot for slot in local if slot.index not in protected),
-                    key=lambda slot: slot.fitness.sort_key(),
+                    key=lambda slot: self._selection_key(slot, aggregates),
                 )
                 target_index = target.index
                 reason = "steady_state_exploration"
@@ -413,11 +472,11 @@ class SteadyStateOptimizer:
             sources = [slot for slot in local if slot.index != target_index]
             promising = [slot for slot in sources if self._is_promising(slot, local)]
             if promising:
-                parent = min(promising, key=lambda slot: slot.fitness.sort_key())
+                parent = min(promising, key=lambda slot: self._selection_key(slot, aggregates))
                 child = self.allocate_seed_slot(free_index=target.index, parent=parent)
                 reason = "seed_evidence"
             else:
-                parent = min(sources, key=lambda slot: slot.fitness.sort_key())
+                parent = self._select_parent(local, excluded_index=target_index)
                 child = self.replace_free_slot(
                     free_index=target.index,
                     parent=parent,
@@ -524,9 +583,9 @@ class SteadyStateOptimizer:
             raise ValueError("authoritative categories must contain 32 slots each")
         scheduler = payload.get("scheduler", {})
         promising_policy = (
-            str(scheduler.get("promising_policy", "strict_fitness"))
+            scheduler.get("promising_policy")
             if isinstance(scheduler, Mapping)
-            else "strict_fitness"
+            else None
         )
         return cls(
             slots,
@@ -636,6 +695,7 @@ def run_optimizer_headless(
         "genome_fields": list(UNIVERSE_GENOME_FIELDS),
         "cross_category_selection": False,
         "group_counts": integrated_summary["group_counts"],
+        "promising_policy": optimizer.promising_policy,
         "phase4_learning_claim": measurement.learning_claim,
         "candidate_genome": candidate.to_dict(),
         "candidate_measurement": _measurement_summary(measurement),

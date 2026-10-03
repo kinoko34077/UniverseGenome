@@ -22,7 +22,7 @@
 - Same-genome evidence allocation consumes actual free slots; mutation allocation creates a distinct slot.
 - Keep the canonical five-field fitness order and false Phase 4 learning result.
 - Keep cross-category elimination and Phase 6 disabled.
-- The default promising policy is explicitly named and documented; no undocumented median rule is introduced.
+- Keep the promising-policy hook isolated; no concrete default or undocumented median rule is introduced.
 
 ## Review Focus
 
@@ -46,11 +46,11 @@
 **Interfaces:**
 - Documents `UniverseSlot` as one authoritative state and seed evidence as multiple actual slots.
 - Defines the exact generation-boundary growth lifecycle and excludes evaluation-clone generations.
-- Records the explicit promising allocation policy as an accepted-default, isolated from fitness implementation.
+- Records promising allocation as an open policy hook, isolated from fitness implementation.
 
 - [x] **Step 1: Rewrite SPEC-EVOL-001** to describe 128 authoritative Universe slots, persistent inner state, disposable evaluation clones, real 0/128/256/384/512 observations, and slot-based seed/mutation allocation.
 - [x] **Step 2: Reconcile SPEC-SNAP-001** with complete Phase 5 UniverseState arrays and metadata while excluding disposable clones.
-- [x] **Step 3: Add the accepted-default promising policy**: a genome qualifies for another seed allocation only when the selected category-local policy marks it promising; the default v0.1 policy is strict improvement over the category median canonical fitness tuple, and the policy name is persisted.
+- [x] **Step 3:** Keep promising allocation as an isolated, persisted policy hook without introducing an unapproved v0.1 threshold or median rule.
 - [x] **Step 4: Update Phase 5 test/changelog prose** to remove CandidateSlot-hidden-seed and evaluation-clock claims.
 
 ### Task 2: Add state-boundary training and current-state measurement APIs
@@ -123,12 +123,12 @@
 
 **Interfaces:**
 - Scheduler persists `promising_policy`, allocation/mutation cursors, evaluation/replacement counts, and lineage; category-local selection remains derived from the authoritative slots.
-- Default policy is explicit and tested; it is not hidden in `seed_count` logic.
+- No concrete promising policy is enabled by default; the hook is explicit and is not hidden in seed-count logic.
 - Seed evidence summaries report actual per-genome slot counts; no `4→8→16→32` claim is emitted unless actual slots reach those counts.
 - Integrated snapshots use a new format version and serialize each occupied `UniverseSlot.state.to_snapshot()`; disposable clones are absent.
 - `SteadyStateOptimizer.from_snapshot()` restores all 128 authoritative states and deterministic continuation.
 
-- [x] **Step 1: Write RED tests** for explicit promising policy, category-local actual slot allocation, mutation-child distinction, snapshot fields, no disposable clone serialization, and restore equivalence.
+- [x] **Step 1: Write RED tests** for the open promising-policy hook, category-local actual slot allocation, mutation-child distinction, snapshot fields, no disposable clone serialization, and restore equivalence.
 - [x] **Step 2: Run focused tests and confirm old scheduler/snapshot/headless evidence fails.**
 - [x] **Step 3:** Implement the policy hook, actual free-slot allocation, format migration, and headless evidence from slot groups.
 - [x] **Step 4:** Run focused Phase 5 tests and an optimizer smoke with a bounded training budget.
@@ -136,7 +136,7 @@
 
 ### Task 6: Final verification and review handoff
 
-- [x] Run `python -m unittest discover -s tests -v` and record the exact count: 118 passed.
+- [x] Run `python -m unittest discover -s tests -v` and record the exact count: 120 passed.
 - [x] Run `python -m compileall core search persistence server tests`.
 - [x] Run the bounded optimizer smoke and verify authoritative slot count/group counts and false learning claim.
 - [x] Run `git diff --check` and inspect for hidden multi-seed state, synthetic zero windows, evaluation-clock growth, and stale CandidateSlot prose.
@@ -145,4 +145,4 @@
 - [ ] Merge only after checks pass; verify post-merge main CI.
 - [x] Update UniverseGenome #58 and devflow Control #314; keep Phase 6 blocked until the subsequent readiness audit.
 
-Current handoff: PR #59 is review-ready; #58 remains open, and Phase 6 remains blocked pending independent review, merge, and post-merge verification.
+Current handoff: PR #59 has a review-remediation revision in progress; #58 remains open, and Phase 6 remains blocked pending re-review, merge, and post-merge verification.

@@ -61,7 +61,11 @@ def protected_indices(records: list[object]) -> set[int]:
     return protected
 
 
-def prune_candidates(records: list[object]) -> set[int]:
+def prune_candidates(
+    records: list[object],
+    *,
+    protected: set[int] | None = None,
+) -> set[int]:
     result: set[int] = set()
     by_category: dict[str, list[object]] = {}
     for record in records:
@@ -69,7 +73,11 @@ def prune_candidates(records: list[object]) -> set[int]:
     for category_records in by_category.values():
         if not category_records:
             continue
-        protected = protected_indices(category_records)
+        category_protected = (
+            protected & {record.index for record in category_records}
+            if protected is not None
+            else protected_indices(category_records)
+        )
         recent_by_record = {
             record.index: tuple(int(window).bit_count() for window in record.growth_windows[-4:])
             for record in category_records
@@ -86,7 +94,7 @@ def prune_candidates(records: list[object]) -> set[int]:
         thresholds = tuple(int(value) >> 1 for value in medians)
         for record in complete_records:
             recent_windows = recent_by_record[record.index]
-            if record.index in protected:
+            if record.index in category_protected:
                 continue
             if all(window < threshold for window, threshold in zip(recent_windows, thresholds)):
                 result.add(record.index)

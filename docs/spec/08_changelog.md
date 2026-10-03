@@ -8,8 +8,9 @@
 - separated persistent training generations from disposable evaluation-clone
   generations and made growth observations real 128-generation boundaries;
 - established observed generation-0 references, removed synthetic growth
-  windows, persisted authoritative slot arrays, and documented the explicit
-  `strict_fitness` promising-allocation policy.
+  windows, persisted authoritative slot arrays, and retained the promising
+  allocation policy as an explicitly unapproved hook pending a specification
+  decision.
 
 ## 2026-10-03 — Issue #56 Phase 5 semantic corrections
 

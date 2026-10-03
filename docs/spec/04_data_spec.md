@@ -197,10 +197,12 @@ At minimum, when relevant to implemented phase:
 Phase 1 can omit fields for features not yet implemented, but format versioning is required.
 
 For the Phase 5 search population, each occupied slot is one authoritative
-UniverseState. Seed evidence is represented by multiple real slots assigned to
-the same genome/category; a CandidateSlot or optimizer summary must not embed
-multiple hidden seed Universes. Disposable evaluation clones are never part of
-the authoritative snapshot.
+UniverseState. The initial matched layout uses the same four seed values for
+the corresponding genome position in each latent-rule category. Later seed
+evidence is represented by multiple real slots assigned to the same
+genome/category; a CandidateSlot or optimizer summary must not embed multiple
+hidden seed Universes. Disposable evaluation clones are never part of the
+authoritative snapshot.
 
 ---
 

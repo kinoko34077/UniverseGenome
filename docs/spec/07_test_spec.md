@@ -211,8 +211,9 @@ Category-local replacement is deterministic. Same-genome evidence expands by
 allocating additional real Universe slots for the same genome/category, while
 mutation children are separate real slots with fresh state. The integrated loop
 maintains all 128 authoritative Universe states, measures normalized fitness
-from evaluation clones of those states, advances growth only at real 128-
-generation boundaries, applies the named `strict_fitness` promising policy,
+from evaluation clones of those states, aggregates evidence across each real
+same-genome seed group, advances growth only at real 128-generation boundaries,
+leaves promising allocation policy selection open until explicitly approved,
 and exercises multiple genome mutation fields.
 
 ### TEST-P5-005 Integrated persistence
@@ -225,8 +226,9 @@ produces the same bounded slot population as uninterrupted continuation.
 
 The headless performance path reports bounded optimizer iterations, evaluated
 slots, replacements, mutation fields, actual same-genome slot-group counts,
-and throughput. It does not report a seed-escalation level unless the
-corresponding number of real authoritative slots exists.
+and throughput. It does not report a promising-allocation threshold or
+seed-escalation level without an explicit approved policy and corresponding
+real authoritative slots.
 
 ### TEST-P5-006 Phase 6+ handoff boundary
 
