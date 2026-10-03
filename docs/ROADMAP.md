@@ -47,14 +47,20 @@ API, overview/detail/rewind/clone observation, and bounded controls.
 baseline-vs-trained autonomous measurement. Current result remains 0 / 0 with
 no learning claim.
 
-## Phase 5 — Universe-genome optimization (accepted on `main`; #24 / PR #25, remediation #30 / PR #34)
-validated genome-to-physics mapping, real Phase 4 candidate evaluation,
-fitness/growth separation, category-local pruning, mutation, steady-state
-replacement, and bounded multi-seed escalation.
+## Phase 5 — Universe-genome optimization (accepted on `main`; latest architecture remediation #58 / PR #59)
+The accepted Phase 5 boundary uses exactly 128 persistent authoritative
+Universe slots as four category-local groups of 32. One slot owns one category,
+one genome, one seed and one continuing UniverseState. Fitness aggregates real
+same-genome seed slots; growth is observed on real 128-generation boundaries;
+steady-state replacement occurs only after a real prune/free target exists;
+minimum evidence and depleted-mature-group lifecycle are explicit; optimizer
+snapshot/restore preserves deterministic continuation.
 
-Audit residuals #36 / PR #39 and #37 / PR #40 reconcile physical event
-semantics and optimizer persistence/performance. Residual #38 / PR #41
-reconciles implementation metadata and the fixed I/O/default-value contract.
+Earlier implementation/remediation history: #24 / PR #25, #30 / PR #34,
+#36 / PR #39, #37 / PR #40, #38 / PR #41, #44 / PR #50, #56 / PR #57.
 
-## Phase 6+ — Capability ladder (handoff only after Phase 5)
-multiple mappings, sequence discrimination, multi-event output, forgetting/relearning, robustness, generalization, multi-byte/raw UTF-8 experiments.
+## Phase 6+ — Capability ladder (ready for a new bounded child Issue after readiness audit #60)
+No Phase 6 capability is implemented yet. Candidate work includes multiple
+mappings, sequence discrimination, multi-event output, forgetting/relearning,
+robustness, generalization, multi-byte sequences and raw UTF-8 experiments.
+Non-blocking Phase 0–5 follow-ups are tracked independently in #61.

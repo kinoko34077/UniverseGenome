@@ -6,14 +6,18 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current accepted state
 
-**Phase 1 through Phase 5 are accepted on `main`; Phase 6+ is handoff-only.**
-The repository contains the canonical v0.1 requirements/specification,
-architecture decisions, deterministic local physics, a server-owned
-population runtime/API, the browser observer/control surface, real headless
-I/O measurement, and the executable bounded optimizer boundary.
-The current Phase 4 measurement is baseline 0 / trained 0 with no learning
-claim. See the [Phase 6+ handoff](docs/PHASE6_HANDOFF.md) before starting a
-new bounded work unit.
+**Phase 1 through Phase 5 are accepted on `main`; Phase 6+ remains a separate
+handoff boundary with no Phase 6 capability implemented yet.** The repository
+contains the canonical v0.1 requirements/specification, deterministic local
+physics, the server-owned 128-universe runtime/API, browser observer/control
+surface, physical I/O measurement, and the persistent authoritative Phase 5
+optimizer.
+
+The Phase 6 readiness audit (#60) found no unresolved P0/P1 in the accepted
+Phase 0–5 runtime path after PR #59. The current Phase 4 measurement remains
+baseline 0 / trained 0 with no learning claim. Non-blocking follow-up work is
+tracked separately in #61. See the [Phase 6+ handoff](docs/PHASE6_HANDOFF.md)
+before opening a new bounded Phase 6 work unit.
 
 ## Canonical entry points
 
@@ -44,6 +48,15 @@ new bounded work unit.
   fitness/pruning fields, and bounded population performance reporting.
 - Audit remediation #38 / PR #41 reconciles package metadata, fixed I/O
   coordinates, and documented implemented defaults.
+- Post-remediation audit #42 drives the later Phase 3–5 repair series.
+- Review #54 and remediation #56 / PR #57 correct Phase 5 evaluation/search
+  semantics.
+- Remediation #58 / PR #59 restores the original Phase 5 architecture:
+  128 persistent authoritative Universe slots, real seed evidence groups,
+  real 128/512-generation growth windows, free-slot-only replacement, and
+  deterministic optimizer persistence.
+- Readiness audit #60 establishes the Phase 6 handoff boundary; non-blocking
+  residuals are tracked in #61.
 
 ## Headless verification commands
 
