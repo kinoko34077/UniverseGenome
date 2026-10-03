@@ -10,12 +10,33 @@ from core import geometry
 from core.physics import PhysicsNotImplemented, step
 from core.runner import build_status, load_config
 from core.state import DEFAULT_MAX_CELLS, HP_BITS, LATENT_BITS, STRUCTURE_BITS
+from server.app import build_server
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class Phase0ScaffoldTests(unittest.TestCase):
+    def test_required_phase0_repository_structure(self):
+        required = [
+            "docs/SPECIFICATION.md",
+            "docs/ROADMAP.md",
+            "docs/spec/01_requirements.md",
+            "docs/spec/03_behavior_spec.md",
+            "docs/spec/06_implementation_spec.md",
+            "docs/spec/07_test_spec.md",
+            "core/runner.py",
+            "search/genome.py",
+            "persistence/snapshot.py",
+            "server/app.py",
+            "ui/index.html",
+            "config/default.json",
+        ]
+        for rel in required:
+            self.assertTrue((ROOT / rel).is_file(), rel)
+        adrs = list((ROOT / "docs" / "adr").glob("ADR-*.md"))
+        self.assertEqual(len(adrs), 8)
+
     def test_geometry_contract(self):
         self.assertEqual(geometry.LOGICAL_SIZE, 32)
         self.assertEqual(geometry.SUBDIVISIONS_PER_TILE, 8)
@@ -59,6 +80,13 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("Phase 0", html)
         self.assertIn("authoritative simulation clock is external", js)
         self.assertNotIn("updateGrid(", js)
+
+    def test_static_server_can_bind_without_owning_simulation_clock(self):
+        server = build_server(port=0)
+        try:
+            self.assertGreater(server.server_address[1], 0)
+        finally:
+            server.server_close()
 
     def test_headless_module_entrypoint(self):
         proc = subprocess.run(
