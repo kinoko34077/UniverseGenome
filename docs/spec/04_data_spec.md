@@ -201,8 +201,12 @@ UniverseState. The initial matched layout uses the same four seed values for
 the corresponding genome position in each latent-rule category. Later seed
 evidence is represented by multiple real slots assigned to the same
 genome/category; a CandidateSlot or optimizer summary must not embed multiple
-hidden seed Universes. Disposable evaluation clones are never part of the
-authoritative snapshot.
+hidden seed Universes. Each slot also persists whether its category/genome
+evidence group has ever reached the canonical four-real-seed minimum. That
+maturity marker is distinct from current group cardinality: a later-depleted
+mature group remains pruning/retirement-eligible while staying ineligible for
+parent selection/protection below four current seeds. Disposable evaluation
+clones are never part of the authoritative snapshot.
 
 ---
 
