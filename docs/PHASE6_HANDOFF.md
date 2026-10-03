@@ -4,7 +4,9 @@ Status: handoff only. No Phase 6+ capability has been implemented.
 
 ## Accepted v0.1 boundary
 
-The sequential Work Order #7 is complete through Phase 5 on `main`:
+The sequential Work Order #7 is complete through Phase 5 on `main`; audit
+remediation #27 found and closed the Phase 3–5 acceptance gaps before this
+handoff:
 
 - Phase 1 — PR #9, main `243ec24100cd96c051267ef53a74ca58652cb4b2`
 - Phase 2A — PR #11, main `1e0a1fa0bae9a599d4f4f17564a4683d9f292992`
@@ -12,12 +14,15 @@ The sequential Work Order #7 is complete through Phase 5 on `main`:
 - Phase 2C — PR #15, main `9d860c5e7cc61df647bc7c36c7f465854af565fa`
 - Phase 2D — PR #17, main `41e7c52dd576210270a06d4dcd1ee7af076176e6`
 - Phase 2E — PR #19, main `ff4135ae806994ee5f1f18077d241bdfc5f72212`
-- Phase 3 — PR #21, main `248fa86b6529044f336d24c6d46315959eea2d2a`
-- Phase 4 — PR #23, main `83ce864d71b81d39cf339c1c701ebecaefcc425a`
-- Phase 5 — PR #25, main `7304782ca66f883605a9466643172b864dfd5e0d`
+- Phase 3 — original PR #21, then remediation PR #33, main `2ff7f429f332b4cbbe1fca4c886b0b5ec9e63b93`
+- Phase 4 — original PR #23, then remediation PR #32, main `4eccfddf4a2f14dfa423613499f22f67559aec24`
+- Phase 5 — original PR #25, then remediation PR #34, main `02b07bb8dae7f649d543f8386d421064c6977a55`
 
-Final verification: full suite 65/65, Python compile checks successful, main CI
-`37109400712` successful, and optimizer diagnostics report Phase 6+ handoff only.
+Final implementation verification at main `02b07bb8dae7f649d543f8386d421064c6977a55`:
+full suite 73/73, Python compile checks successful, main CI `37114754431`
+successful, and the optimizer reports the real Phase 4 measurement plus a
+Phase 6+ handoff only. Remediation #31 adds consistency checks for the
+configuration, documentation, and CI projections.
 
 ## Phase 4 outcome
 

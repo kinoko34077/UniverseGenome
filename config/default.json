@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "UniverseGenome",
-  "phase": 2,
+  "phase": 5,
   "world": {
     "logical_size": 32,
     "subdivisions_per_tile": 8,

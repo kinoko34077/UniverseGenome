@@ -1,6 +1,6 @@
 # UniverseGenome v0.1 Canonical Specification Index
 
-Status: accepted specification basis for Phase 0/1  
+Status: accepted v0.1 specification basis; implementation frontier is Phase 0 through Phase 5
 Requirements source: #3  
 Detailed specification source/review history: #4  
 Historical rationale: #2  
@@ -37,8 +37,8 @@ An implementation default does not promote `accepted-default` or `parameterized`
 
 ## Current implementation frontier
 
-Phase 0: repository/specification scaffold.  
-Phase 1 through Phase 5 are accepted; Phase 6+ is handoff-only. Phase 4
-recorded no learning claim. See `docs/PHASE6_HANDOFF.md`.
+Phase 0 through Phase 5 are accepted on `main`; Phase 6+ is handoff-only.
+Phase 4 recorded no learning claim, and Phase 5 consumes that explicit
+measurement rather than asserting success. See `docs/PHASE6_HANDOFF.md`.
 
 See `docs/ROADMAP.md`.

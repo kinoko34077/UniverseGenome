@@ -1,5 +1,18 @@
 # Specification Changelog
 
+## 2026-10-03 — Audit #27 remediation completed
+- Phase 4 remediation #28 / PR #32 (`4eccfddf4a2f14dfa423613499f22f67559aec24`)
+  connects autonomous scoring to real output-edge collection while retaining
+  the baseline 0 / trained 0 / no-learning-claim result.
+- Phase 3 remediation #29 / PR #33 (`2ff7f429f332b4cbbe1fca4c886b0b5ec9e63b93`)
+  connects the browser observer/control surface to the bounded,
+  server-owned runtime API.
+- Phase 5 remediation #30 / PR #34 (`02b07bb8dae7f649d543f8386d421064c6977a55`)
+  maps all genome fields to effective physics, evaluates candidates through
+  the real Phase 4 collector, and exposes bounded replacement escalation.
+- Configuration, CI labels, specification status, README routing, roadmap,
+  and Phase 6+ handoff wording were reconciled under remediation #31.
+
 ## 2026-10-03 — v0.1 specification basis established
 - Issue #2 preserves historical rationale.
 - Issue #3 requirements are canonicalized to `docs/spec/01_requirements.md`.

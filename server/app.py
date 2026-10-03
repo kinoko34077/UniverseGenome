@@ -1,6 +1,7 @@
-"""Serve the static Phase 3 observation/control surface.
+"""Serve the Phase 3 observer surface through the bounded runtime API.
 
-This server is not a simulation clock and owns no authoritative universe state.
+The server-owned PopulationRuntime is authoritative; browser rendering only
+observes state and submits explicit controls.
 """
 
 from __future__ import annotations

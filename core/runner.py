@@ -1,4 +1,4 @@
-"""Headless runner and bounded performance reporting through Phase 3."""
+"""Headless runner and bounded performance reporting through Phase 5."""
 
 from __future__ import annotations
 
@@ -128,7 +128,7 @@ def run_headless(seed: int, generations: int, config: PhysicsConfig) -> dict[str
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="UniverseGenome headless Phase 3 runner")
+    parser = argparse.ArgumentParser(description="UniverseGenome headless Phase 5 runner")
     parser.add_argument("--config", default="config/default.json")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--generations", type=int, default=0)

@@ -20,7 +20,7 @@ jobs:
         run: python -m compileall core search persistence server tests
       - name: Unit smoke tests
         run: python -m unittest discover -s tests -v
-      - name: Headless Phase 0 smoke
+      - name: Headless Phase 5 smoke
         run: python -m core.runner --config config/default.json --json
       - name: Static server entrypoint smoke
         run: python -m server.app --help
