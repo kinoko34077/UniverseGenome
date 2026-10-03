@@ -38,7 +38,7 @@ An implementation default does not promote `accepted-default` or `parameterized`
 ## Current implementation frontier
 
 Phase 0: repository/specification scaffold.  
-Phase 1 through Phase 2D are accepted; Phase 2E is the active bounded local
-aging implementation.
+Phase 1 through Phase 2E are accepted; Phase 3 is the active bounded
+multi-universe runtime/observation implementation.
 
 See `docs/ROADMAP.md`.

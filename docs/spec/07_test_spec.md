@@ -130,4 +130,26 @@ and an older structure receives a higher pressure window than a younger one.
 Save/load restores aging configuration and state; resumed execution equals
 uninterrupted execution.
 
+## Phase 3 acceptance tests
+
+### TEST-P3-001 Population layout and matched metadata
+
+The runtime creates exactly 128 independent slots as four categories × 32,
+with corresponding genome/seed pairs aligned across categories.
+
+### TEST-P3-002 Independent deterministic stepping
+
+Fixed population seed/configuration produces the same per-slot trajectory on
+replay, and stepping one slot cannot mutate another slot.
+
+### TEST-P3-003 Bounded rewind and clone isolation
+
+Only 128/256/512 generation histories are accepted; rewind stays bounded and
+observation clones cannot mutate authoritative slots.
+
+### TEST-P3-004 Headless and observer/control surface
+
+Population status/summary runs without the GUI, while the 16×8 overview,
+detail modes, required controls, and external-clock declaration are exposed.
+
 ---

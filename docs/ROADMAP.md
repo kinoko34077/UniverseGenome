@@ -38,7 +38,7 @@ Deliverables:
 2D fragmentation (accepted on `main`; #16 / PR #17)
 2E aging (accepted on `main`; #18)
 
-## Phase 3 — 128-universe runtime and observation GUI
+## Phase 3 — 128-universe runtime and observation GUI (in progress; #20)
 4 categories × 32 slots, matched genome/seed comparisons, overview/detail/rewind/clone observation.
 
 ## Phase 4 — I/O learning

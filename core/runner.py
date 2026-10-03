@@ -1,4 +1,4 @@
-"""Headless runner and bounded performance reporting through Phase 2E."""
+"""Headless runner and bounded performance reporting through Phase 3."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from .physics import PhysicsConfig, create_universe, step
+from .population import run_population_headless
 from .state import DEFAULT_MAX_CELLS, HP_BITS, LATENT_BITS, STRUCTURE_BITS
 
 
@@ -27,9 +28,18 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
     phase2c = bool(config.get("features", {}).get("fusion", False))
     phase2d = bool(config.get("features", {}).get("fragmentation", False))
     phase2e = bool(config.get("features", {}).get("aging", False))
+    phase3 = bool(config.get("features", {}).get("multi_universe_runtime", False))
     return {
         "project": "UniverseGenome",
-        "phase": 2 if phase2a and phase1 else (1 if phase1 else 0),
+        "phase": (
+            3
+            if phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
+            else 2
+            if phase2a and phase1
+            else 1
+            if phase1
+            else 0
+        ),
         "phase0_scaffold": not phase1,
         "phase1_physics_implemented": phase1,
         "phase2a_bond_physics_implemented": phase2a and phase1,
@@ -37,6 +47,7 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
         "phase2c_fusion_implemented": phase2c and phase2b and phase2a and phase1,
         "phase2d_fragmentation_implemented": phase2d and phase2c and phase2b and phase2a and phase1,
         "phase2e_aging_implemented": phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
+        "phase3_runtime_implemented": phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "logical_size": config["world"]["logical_size"],
         "subdivisions_per_tile": config["world"]["subdivisions_per_tile"],
         "fixed_point_size": config["world"]["fixed_point_size"],
@@ -47,7 +58,9 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
             "hp": HP_BITS,
         },
         "next_phase": (
-            "Phase 3 128-universe runtime and observation GUI"
+            "Phase 4 I/O learning"
+            if phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
+            else "Phase 3 128-universe runtime and observation GUI"
             if phase2e and phase2d and phase2c and phase2b and phase2a and phase1
             else "Phase 2E aging"
             if phase2d and phase2c and phase2b and phase2a and phase1
@@ -101,10 +114,11 @@ def run_headless(seed: int, generations: int, config: PhysicsConfig) -> dict[str
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="UniverseGenome headless Phase 2E runner")
+    parser = argparse.ArgumentParser(description="UniverseGenome headless Phase 3 runner")
     parser.add_argument("--config", default="config/default.json")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--generations", type=int, default=0)
+    parser.add_argument("--population", action="store_true", help="run the Phase 3 128-slot population")
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
 
@@ -118,6 +132,14 @@ def main(argv: list[str] | None = None) -> int:
     status["seed"] = args.seed
     status["generations"] = args.generations
     status["performance"] = run_headless(args.seed, args.generations, config)
+    if args.population:
+        if not status["phase3_runtime_implemented"]:
+            raise ValueError("config must explicitly enable Phase 3 runtime")
+        status["population_performance"] = run_population_headless(
+            seed=args.seed,
+            generations=args.generations,
+            config=config,
+        )
     if args.as_json:
         print(json.dumps(status, sort_keys=True))
     else:
