@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>UniverseGenome — Phase 0</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    canvas { border: 1px solid #888; image-rendering: pixelated; }
+    .controls { display: flex; gap: .5rem; margin-top: 1rem; }
+    .status { margin-top: 1rem; max-width: 48rem; }
+  </style>
+</head>
+<body>
+  <h1>UniverseGenome</h1>
+  <p>Phase 0 observation scaffold. No authoritative simulation is running.</p>
+  <canvas id="universe" width="512" height="512" aria-label="Universe scaffold canvas"></canvas>
+  <div class="controls">
+    <button data-action="run" disabled>Run</button>
+    <button data-action="pause" disabled>Pause</button>
+    <button data-action="step" disabled>1 Step</button>
+    <button data-action="reset" disabled>Reset</button>
+  </div>
+  <p id="status" class="status"></p>
+  <script type="module" src="./sim_view.js"></script>
+  <script type="module" src="./controls.js"></script>
+</body>
+</html>

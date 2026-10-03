@@ -1,7 +1,46 @@
 # UniverseGenome
 
-UniverseGenome is a local-physics artificial-universe research project, developed as the successor lineage to SCA v2.
+UniverseGenome is a local-physics artificial-universe research project descended from the SCA v2 design lineage.
 
-The inner system learns through deterministic time evolution of anonymous local cells. An outer search layer evolves universe-level physical parameters (the universe genome).
+The inner system is intended to learn through deterministic time evolution of anonymous local cells. A separate outer layer will later search universe-level physical parameters (the universe genome).
 
-Key principles include no permanent Cell ID, fixed-point/local discrete physics, emergent structure and memory, deterministic replay, and strict separation between the simulation core and observation GUI.
+## Current accepted state
+
+**Phase 0 scaffold.** The repository contains the canonical v0.1 requirements/specification, architecture decisions, configuration boundaries, headless/UI scaffolds, and smoke verification.
+
+Phase 1 deterministic single-universe physics is **not implemented yet**.
+
+## Canonical entry points
+
+- [Specification index](docs/SPECIFICATION.md)
+- [Implementation roadmap](docs/ROADMAP.md)
+- [Requirements](docs/spec/01_requirements.md)
+- [Physics behavior](docs/spec/03_behavior_spec.md)
+- [Implementation/phase specification](docs/spec/06_implementation_spec.md)
+- [Tests](docs/spec/07_test_spec.md)
+- [Architecture decisions](docs/adr/README.md)
+- Repository Issues #2, #3, #4 preserve design/review history.
+- Issue #5 owns Phase 0 implementation history.
+
+## Phase 0 smoke commands
+
+```bash
+python -m core.runner --config config/default.json --json
+python -m unittest discover -s tests -v
+python -m server.app --help
+```
+
+The GUI scaffold is static and does not drive the authoritative simulation clock.
+
+## Reuse lineage
+
+- `Structured-Cell-Automaton`: historical SCA v1; selected optimizer/save/visualization ideas may be adapted outside the inner universe.
+- `2bit-cell-automaton`: approved visualization/inspection lineage. Old physics rules are not reused as UniverseGenome physics.
+
+## Key constraints
+
+- no permanent Cell ID
+- no v1 Syntax/meaning-tag semantics in the core
+- fixed-point/discrete world design
+- deterministic replay requirement
+- Core/GUI clock separation

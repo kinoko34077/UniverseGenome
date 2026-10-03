@@ -1,0 +1,1 @@
+"""Local observation-server scaffold."""
