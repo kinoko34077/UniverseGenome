@@ -39,7 +39,7 @@ class Fitness:
             self.activity_cost,
         )
 
-    def to_dict(self) -> dict[str, int]:
+    def to_dict(self) -> dict[str, float]:
         return {
             "success": self.success,
             "wrong_outputs": self.wrong_outputs,
