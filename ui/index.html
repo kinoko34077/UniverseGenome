@@ -5,14 +5,28 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>UniverseGenome — Phase 3</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 1.5rem; background: #111827; color: #e5e7eb; }
+    :root {
+      --surface: #111827;
+      --surface-raised: #1f2937;
+      --text: #e5e7eb;
+      --text-muted: #d1d5db;
+      --border: #4b5563;
+      --grid: #374151;
+      --accent-xor: #60a5fa;
+      --accent-rotate: #34d399;
+      --accent-and: #fbbf24;
+      --cell-high: #60a5fa;
+      --cell-mid: #34d399;
+      --cell-low: #f87171;
+    }
+    body { font-family: system-ui, sans-serif; margin: 1.5rem; background: var(--surface); color: var(--text); }
     button, select { padding: .35rem .55rem; }
     .overview { display: grid; grid-template-columns: repeat(16, minmax(2.2rem, 1fr)); gap: .2rem; max-width: 72rem; }
-    .thumbnail { aspect-ratio: 1; border: 1px solid #4b5563; background: #1f2937; color: #d1d5db; font-size: .7rem; cursor: pointer; }
-    .thumbnail[data-category="masked_xor"] { border-color: #60a5fa; }
-    .thumbnail[data-category="rotate_copy"] { border-color: #34d399; }
-    .thumbnail[data-category="masked_and"] { border-color: #fbbf24; }
-    canvas { border: 1px solid #6b7280; image-rendering: pixelated; width: min(512px, 90vw); height: auto; }
+    .thumbnail { aspect-ratio: 1; border: 1px solid var(--border); background: var(--surface-raised); color: var(--text-muted); font-size: .7rem; cursor: pointer; white-space: pre-line; }
+    .thumbnail[data-category="masked_xor"] { border-color: var(--accent-xor); }
+    .thumbnail[data-category="rotate_copy"] { border-color: var(--accent-rotate); }
+    .thumbnail[data-category="masked_and"] { border-color: var(--accent-and); }
+    canvas { border: 1px solid var(--border); image-rendering: pixelated; width: min(512px, 90vw); height: auto; }
     .controls { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
     .status { max-width: 60rem; }
   </style>
@@ -47,7 +61,8 @@
     <button data-action="save">Save Snapshot</button>
     <button data-action="load">Load Snapshot</button>
   </div>
-  <p id="status" class="status"></p>
+  <p id="status" class="status" aria-live="polite"></p>
+  <input id="snapshot-file" type="file" accept="application/json" hidden>
   <script type="module" src="./sim_view.js"></script>
   <script type="module" src="./controls.js"></script>
 </body>
