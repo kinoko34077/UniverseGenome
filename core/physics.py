@@ -1,4 +1,4 @@
-"""Deterministic single-universe physics through Phase 2C."""
+"""Deterministic single-universe physics through Phase 2D."""
 
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ SPEED_MAGNITUDES = (0, 1, 2, 4, 8, 16, 32, 64)
 EVENT_NOISE = 1
 EVENT_COLLISION_PAIR = 2
 EVENT_LATENT_MASK = 3
+EVENT_FRAGMENTATION = 4
 LATENT_OPERATORS = {"masked_copy", "masked_xor", "rotate_copy", "masked_and"}
 
 
@@ -52,6 +53,8 @@ class PhysicsConfig:
     fusion_enabled: bool = False
     fusion_velocity_threshold: int = 8
     fusion_bond_threshold: int = 32
+    fragmentation_enabled: bool = False
+    fragmentation_rate: int = 0
 
     def __post_init__(self) -> None:
         if self.logical_size != 32 or self.fixed_point_size != 256:
@@ -76,6 +79,8 @@ class PhysicsConfig:
             raise ValueError("rotate_amount must be in 0..15")
         if not 0 <= self.fusion_bond_threshold <= 0xFF:
             raise ValueError("fusion_bond_threshold must fit uint8")
+        if not 0 <= self.fragmentation_rate <= 0xFFFF:
+            raise ValueError("fragmentation_rate must fit uint16")
         if not 0 <= self.noise_spawn_hp <= 0xFF or not 0 <= self.recovery_hp <= 0xFF:
             raise ValueError("HP parameters must fit uint8")
         if not 0 <= self.noise_structure <= 0xFFFF:
@@ -112,6 +117,8 @@ class PhysicsConfig:
             fusion_enabled=bool(values.get("fusion_enabled", False)),
             fusion_velocity_threshold=int(values.get("fusion_velocity_threshold", 8)),
             fusion_bond_threshold=int(values.get("fusion_bond_threshold", 32)),
+            fragmentation_enabled=bool(values.get("fragmentation_enabled", False)),
+            fragmentation_rate=int(values.get("fragmentation_rate", 0)),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -138,6 +145,8 @@ class PhysicsConfig:
             "fusion_enabled": self.fusion_enabled,
             "fusion_velocity_threshold": self.fusion_velocity_threshold,
             "fusion_bond_threshold": self.fusion_bond_threshold,
+            "fragmentation_enabled": self.fragmentation_enabled,
+            "fragmentation_rate": self.fragmentation_rate,
         }
 
 
@@ -150,6 +159,7 @@ class StepMetrics:
     bond_contact_count: int
     latent_transmission_count: int
     fusion_count: int
+    fragmentation_count: int
     noise_spawn_count: int
     generations_per_second: float
 
@@ -248,6 +258,10 @@ def mix_fusion_latent(latents: Iterable[int]) -> int:
     for index, latent in enumerate(latents):
         accumulator ^= rotate_left16(int(latent), (index % 4) * 4)
     return accumulator & 0xFFFF
+
+
+def fragmentation_split_mask(seed: int, generation: int, slot: int) -> int:
+    return event_u16(event_key(seed, generation, 0, EVENT_FRAGMENTATION, int(slot)))
 
 
 def destination_footprint(structure: int, x: int, y: int) -> set[tuple[int, int]]:
@@ -460,6 +474,65 @@ def _fuse_groups(
     return fusion_count, fused_slots
 
 
+def _fragment_active_cells(
+    state: UniverseState,
+    config: PhysicsConfig,
+    active: list[int],
+    generation: int,
+    fused_slots: set[int],
+) -> tuple[int, set[int]]:
+    fragmentation_count = 0
+    fragmented_core_slots: set[int] = set()
+    for slot in active:
+        if slot in fused_slots or state.lifecycle[slot] != Lifecycle.ACTIVE:
+            continue
+        if event_u16(event_key(state.seed, generation, 0, EVENT_FRAGMENTATION, slot)) >= config.fragmentation_rate:
+            continue
+        structure = state.structure[slot]
+        level = structure_level(structure)
+        shape = structure_shape(structure)
+        if level == 0:
+            if shape in (SHAPE_HORIZONTAL, SHAPE_VERTICAL):
+                state.structure[slot] = SHAPE_SINGLE
+                state.bond_strength[slot] = 0
+                fragmentation_count += 1
+            elif shape == SHAPE_SINGLE:
+                state.free(slot)
+                fragmentation_count += 1
+            continue
+
+        old_x = state.x[slot]
+        old_y = state.y[slot]
+        old_latent = state.latent[slot]
+        old_hp = state.hp[slot]
+        old_age = state.age[slot]
+        old_direction = state.direction[slot]
+        old_speed = state.speed_code[slot]
+        split_mask = fragmentation_split_mask(state.seed, generation, slot)
+        dx, dy = velocity_vector(old_direction, speed_code_for_magnitude(1))
+        try:
+            fragment = state.spawn(
+                x=wrap_fixed(old_x - (dx * 8)),
+                y=wrap_fixed(old_y - (dy * 8)),
+                structure=SHAPE_SINGLE << ((level - 1) * 2),
+                latent=old_latent & split_mask,
+                hp=old_hp >> 1,
+                direction=(old_direction + 4) % 8,
+                speed_code=old_speed,
+            )
+        except RuntimeError:
+            continue
+        state.age[fragment] = 0
+        state.bond_strength[fragment] = 0
+        state.latent[slot] = old_latent & (~split_mask & 0xFFFF)
+        state.hp[slot] = old_hp - (old_hp >> 1)
+        state.age[slot] = old_age >> 1
+        state.bond_strength[slot] = 0
+        fragmented_core_slots.add(slot)
+        fragmentation_count += 1
+    return fragmentation_count, fragmented_core_slots
+
+
 def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) -> None:
     state.lifecycle[slot] = int(Lifecycle.BLACK_HOLE)
     state.black_hole_timer[slot] = config.black_hole_grace
@@ -568,6 +641,16 @@ def step(
         fusion_count, fused_slots = _fuse_groups(state, resolved, occupancy)
     else:
         fusion_count, fused_slots = 0, set()
+    if resolved.fragmentation_enabled:
+        fragmentation_count, fragmented_core_slots = _fragment_active_cells(
+            state,
+            resolved,
+            active,
+            generation,
+            fused_slots,
+        )
+    else:
+        fragmentation_count, fragmented_core_slots = 0, set()
     for slot in active:
         if state.lifecycle[slot] != Lifecycle.ACTIVE or slot in fused_slots:
             continue
@@ -576,7 +659,8 @@ def step(
         elif slot in latent_activity_slots:
             state.hp[slot] = min(0xFF, state.hp[slot] + resolved.recovery_hp)
         state.hp[slot] = max(0, state.hp[slot] - resolved.hp_decay)
-        state.age[slot] = min(0xFFFFFFFF, state.age[slot] + 1)
+        if slot not in fragmented_core_slots:
+            state.age[slot] = min(0xFFFFFFFF, state.age[slot] + 1)
         if state.hp[slot] == 0:
             _enter_black_hole(state, slot, resolved)
 
@@ -590,6 +674,7 @@ def step(
         bond_contact_count=len(compatible_pairs),
         latent_transmission_count=latent_transmission_count,
         fusion_count=fusion_count,
+        fragmentation_count=fragmentation_count,
         noise_spawn_count=noise_spawn_count,
         generations_per_second=1.0 / elapsed,
     )

@@ -6,12 +6,12 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current accepted state
 
-**Phase 1, Phase 2A and Phase 2B are accepted on `main`; Phase 2C fusion is in progress.**
+**Phase 1 through Phase 2C are accepted on `main`; Phase 2D fragmentation is in progress.**
 The repository contains the canonical v0.1 requirements/specification,
 architecture decisions, a deterministic single-universe core, headless
 snapshot/performance verification, and the unchanged observer/UI scaffold.
-Phase 2C is tracked by Issue #14 under the parent Work Order #7; fragmentation
-and later phases remain deferred.
+Phase 2D is tracked by Issue #16 under the parent Work Order #7; aging and
+later phases remain deferred.
 
 ## Canonical entry points
 
@@ -28,6 +28,7 @@ and later phases remain deferred.
 - Issue #10 owns the bounded Phase 2A contact/bond implementation.
 - Issue #12 owns the bounded Phase 2B latent-operator implementation.
 - Issue #14 owns the bounded Phase 2C fusion implementation.
+- Issue #16 owns the bounded Phase 2D fragmentation implementation.
 
 ## Headless verification commands
 
