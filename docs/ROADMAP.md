@@ -44,7 +44,7 @@ Deliverables:
 ## Phase 4 — I/O learning (accepted on `main`; #22 / PR #23)
 8-bit bus, teacher stimulation, A → B → NULL, evaluation clone, baseline-vs-trained measurement.
 
-## Phase 5 — Universe-genome optimization (in progress; #24)
+## Phase 5 — Universe-genome optimization (accepted on `main`; #24 / PR #25)
 fitness/growth separation, pruning, mutation, steady-state evolution, multi-seed escalation.
 
 ## Phase 6+ — Capability ladder (handoff only after Phase 5)

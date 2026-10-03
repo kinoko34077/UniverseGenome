@@ -74,6 +74,8 @@ class Phase5OptimizerTests(unittest.TestCase):
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             experiment = json.load(handle)
         self.assertEqual(experiment["learning_claim"], False)
+        handoff = (ROOT / "docs" / "PHASE6_HANDOFF.md").read_text(encoding="utf-8")
+        self.assertIn("No Phase 6+ capability has been implemented", handoff)
 
 
 if __name__ == "__main__":

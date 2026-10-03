@@ -6,13 +6,13 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current accepted state
 
-**Phase 1 through Phase 4 are accepted on `main`; Phase 5 optimizer is implemented on the active branch.**
+**Phase 1 through Phase 5 are accepted on `main`; Phase 6+ is handoff-only.**
 The repository contains the canonical v0.1 requirements/specification,
 architecture decisions, a deterministic single-universe core, headless
 snapshot/performance verification, and the unchanged observer/UI scaffold.
 Phase 4 Issue #22 recorded baseline 0 / trained 0 with no learning claim.
-Phase 5 Issue #24 implements diagnostic optimizer mechanics; Phase 6+ remains
-handoff-only.
+Phase 5 Issue #24 implements diagnostic optimizer mechanics. See the [Phase 6+
+handoff](docs/PHASE6_HANDOFF.md) before starting a new bounded work unit.
 
 ## Canonical entry points
 

@@ -93,3 +93,24 @@ Future physical-rule changes must record affected REQ/SPEC IDs, old/new behavior
 - The Phase 4 baseline 0 / trained 0 outcome remains a failed learning claim;
   Phase 5 is diagnostic outer-search machinery only.
 - Phase 6+ remains handoff-only pending #24 acceptance.
+
+## 2026-10-03 — Phase 2E accepted (#18 / PR #19)
+- Deterministic age-class pressure passed exact-head review, merge, and
+  post-main CI on `ff4135ae806994ee5f1f18077d241bdfc5f72212`.
+
+## 2026-10-03 — Phase 3 accepted (#20 / PR #21)
+- The 128-slot runtime, bounded observation history, clone isolation, and UI
+  surface passed exact-head review, merge, and post-main CI on
+  `248fa86b6529044f336d24c6d46315959eea2d2a`.
+
+## 2026-10-03 — Phase 4 accepted (#22 / PR #23)
+- Fixed I/O, edge events, teacher exclusion, clone evaluation, and the
+  multi-seed measurement passed exact-head review, merge, and post-main CI on
+  `83ce864d71b81d39cf339c1c701ebecaefcc425a`.
+- Baseline 0 / trained 0 produced no learning claim.
+
+## 2026-10-03 — Phase 5 accepted (#24 / PR #25)
+- Genome separation, lexicographic fitness, bounded growth/pruning, mutation,
+  seed escalation and optimizer diagnostics passed exact-head review, merge,
+  and post-main CI on `7304782ca66f883605a9466643172b864dfd5e0d`.
+- Phase 6+ remains a durable handoff, not an automatic continuation.
