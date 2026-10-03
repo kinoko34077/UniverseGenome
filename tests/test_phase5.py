@@ -961,5 +961,56 @@ class Phase5OptimizerTests(unittest.TestCase):
             SteadyStateOptimizer.from_snapshot(payload)
 
 
+    def test_p5_040_depleted_mature_group_can_continue_retirement(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=121,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        genome = UniverseGenome.initial_population()[0]
+        target_group = [
+            slot for slot in optimizer.slots
+            if slot.category == "masked_copy" and slot.genome == genome
+        ]
+        victim = target_group[-1]
+        parent = next(
+            slot for slot in optimizer.slots
+            if slot.category == "masked_copy" and slot.genome != genome
+        )
+        optimizer.slots[victim.index] = optimizer.replace_free_slot(
+            free_index=victim.index,
+            parent=parent,
+            direction=1,
+            field="hp_decay",
+        )
+
+        local = [slot for slot in optimizer.slots if slot.category == "masked_copy"]
+        remaining = [slot for slot in local if slot.genome == genome]
+        self.assertEqual(len(remaining), 3)
+        self.assertTrue(all(slot.evidence_mature for slot in remaining))
+
+        for slot in local:
+            if slot.evidence_mature:
+                slot.growth_windows = (0x0F, 0x0F, 0x0F, 0x0F)
+        for slot in remaining:
+            slot.growth_windows = (0, 0, 0, 0)
+
+        summary = optimizer.step()
+        replaced_indices = {item["index"] for item in summary["replacements"]}
+        self.assertTrue(replaced_indices & {slot.index for slot in remaining})
+        surviving = [
+            slot for slot in optimizer.slots
+            if slot.category == "masked_copy" and slot.genome == genome
+        ]
+        self.assertLess(len(surviving), 3)
+
+
 if __name__ == "__main__":
     unittest.main()
