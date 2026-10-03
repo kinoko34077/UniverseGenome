@@ -53,17 +53,46 @@ class Phase0ScaffoldTests(unittest.TestCase):
 
     def test_default_config_is_parseable_and_preserves_no_cell_id(self):
         config = load_config(ROOT / "config" / "default.json")
+        self.assertEqual(config["phase"], 5)
         self.assertEqual(config["world"]["logical_size"], 32)
         self.assertEqual(config["world"]["fixed_point_size"], 256)
         self.assertEqual(config["world"]["max_cells"], 1024)
         self.assertFalse(config["state"]["permanent_cell_id"])
         self.assertTrue(config["features"]["phase1_physics"])
 
-    def test_experiment_config_is_explicitly_deferred(self):
+    def test_experiment_config_records_effective_protocol_and_outcome(self):
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             config = json.load(handle)
         self.assertEqual(config["task"], "A->B->NULL")
         self.assertEqual(config["status"], "implemented_phase4_learning_outcome_recorded")
+        self.assertEqual(config["teacher_delay_generations"], 4)
+        self.assertEqual(config["teacher_repetitions"], 1)
+        self.assertFalse(config["learning_claim"])
+
+    def test_phase5_markers_and_audit_projections_are_current(self):
+        ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        runner = (ROOT / "core" / "runner.py").read_text(encoding="utf-8")
+        server = (ROOT / "server" / "app.py").read_text(encoding="utf-8")
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        specification = (ROOT / "docs" / "SPECIFICATION.md").read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
+        changelog = (ROOT / "docs" / "spec" / "08_changelog.md").read_text(encoding="utf-8")
+        handoff = (ROOT / "docs" / "PHASE6_HANDOFF.md").read_text(encoding="utf-8")
+
+        self.assertIn("Headless Phase 5 smoke", ci)
+        self.assertNotIn("Headless Phase 0 smoke", ci)
+        self.assertIn("headless Phase 5 runner", runner)
+        self.assertIn("runtime API", server)
+        self.assertIn("server-owned runtime", readme)
+        self.assertNotIn("unchanged observer/UI scaffold", readme)
+        self.assertIn("Phase 0 through Phase 5", specification)
+        self.assertIn("PR #32", changelog)
+        self.assertIn("PR #33", changelog)
+        self.assertIn("PR #34", changelog)
+        self.assertIn("02b07bb8dae7f649d543f8386d421064c6977a55", changelog)
+        self.assertIn("02b07bb8dae7f649d543f8386d421064c6977a55", handoff)
+        self.assertIn("73/73", handoff)
+        self.assertIn("Phase 5", roadmap)
 
     def test_runner_reports_phase1_physics(self):
         status = build_status(load_config(ROOT / "config" / "default.json"))
