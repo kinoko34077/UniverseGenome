@@ -4,8 +4,16 @@ import json
 from pathlib import Path
 import unittest
 
+from core.experiment import ExperimentConfig
+from core.physics import PhysicsConfig, create_universe
 from core.runner import build_status, load_config
-from search.evolution import CandidateSlot, SteadyStateOptimizer, seed_escalation
+from search.evolution import (
+    CandidateSlot,
+    SteadyStateOptimizer,
+    evaluate_candidate,
+    run_optimizer_headless,
+    seed_escalation,
+)
 from search.fitness import Fitness, compare_fitness
 from search.genome import UniverseGenome
 from search.pruning import GrowthHistory, growth_flags, prune_candidates, protected_indices
@@ -76,6 +84,92 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(experiment["learning_claim"], False)
         handoff = (ROOT / "docs" / "PHASE6_HANDOFF.md").read_text(encoding="utf-8")
         self.assertIn("No Phase 6+ capability has been implemented", handoff)
+
+    def test_p5_007_genome_maps_every_field_to_effective_physics(self):
+        genome = UniverseGenome(
+            initial_density=2,
+            hp_decay=3,
+            hp_gain=5,
+            noise_rate=7,
+            bond_gain=11,
+            bond_decay=13,
+            collision_threshold=17,
+            fusion_threshold=19,
+            fragmentation_base_probability=23,
+            black_hole_grace=29,
+            rotate_amount=15,
+        )
+        base = PhysicsConfig(max_cells=8)
+        effective = genome.to_physics_config(base)
+
+        self.assertEqual(effective.initial_density, 2)
+        self.assertEqual(effective.hp_decay, 3)
+        self.assertEqual(effective.recovery_hp, 5)
+        self.assertEqual(effective.noise_rate, 7)
+        self.assertEqual(effective.bond_gain, 11)
+        self.assertEqual(effective.bond_decay, 13)
+        self.assertEqual(effective.collision_threshold, 17)
+        self.assertEqual(effective.fusion_velocity_threshold, 19)
+        self.assertEqual(effective.fragmentation_rate, 23)
+        self.assertEqual(effective.black_hole_grace, 29)
+        self.assertEqual(effective.rotate_amount, 15)
+        self.assertEqual(len(create_universe(seed=3, config=effective).active_slots()), 2)
+
+        with self.assertRaises(ValueError):
+            UniverseGenome(initial_density=9).to_physics_config(base)
+
+    def test_p5_008_candidate_evaluation_uses_phase4_measurement(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        measurement = evaluate_candidate(
+            genome=UniverseGenome.default(),
+            seeds=(3, 4),
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        self.assertEqual(measurement.seed_count, 2)
+        self.assertEqual(measurement.baseline_successes, 0)
+        self.assertEqual(measurement.trained_successes, 0)
+        self.assertFalse(measurement.learning_claim)
+        self.assertEqual(len(measurement.per_seed), 2)
+
+    def test_p5_009_replacement_escalates_evaluation_seed_count(self):
+        parent = CandidateSlot(
+            index=0,
+            category="masked_copy",
+            genome=UniverseGenome.default(),
+            seed=41,
+            seed_count=4,
+            fitness=Fitness(0, 0, 0, 0, 0),
+            growth_windows=(1,),
+        )
+        optimizer = SteadyStateOptimizer()
+        replacement = parent
+        for expected_count in (8, 16, 32, 32):
+            replacement = optimizer.replace_free_slot(free_index=12, parent=replacement, direction=1)
+            self.assertEqual(replacement.seed_count, expected_count)
+
+    def test_p5_010_headless_output_contains_real_measurement_and_replacement_trace(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        result = run_optimizer_headless(
+            seeds=(3, 4),
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        self.assertEqual(result["candidate_measurement"]["seed_count"], 2)
+        self.assertFalse(result["phase4_learning_claim"])
+        self.assertEqual(result["replacement_seed_counts"], [8, 16, 32, 32])
 
 
 if __name__ == "__main__":
