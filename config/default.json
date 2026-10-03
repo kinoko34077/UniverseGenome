@@ -35,14 +35,17 @@
     "black_hole_grace": 2,
     "bond_gain": 4,
     "bond_decay": 1,
-    "bond_velocity_threshold": 8
+    "bond_velocity_threshold": 8,
+    "latent_operator": "masked_copy",
+    "rotate_amount": 4
   },
   "features": {
     "phase1_physics": true,
     "phase2a_bond_physics": true,
+    "phase2b_latent_operators": true,
     "fusion": false,
     "fragmentation": false,
-    "latent_runtime": false,
+    "latent_runtime": true,
     "multi_universe_search": false,
     "io_learning": false,
     "evolution": false

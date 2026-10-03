@@ -56,4 +56,21 @@ bond contact accounting does not introduce an N² persistent graph.
 Save/load restores bond parameters and arrays; resumed execution equals
 uninterrupted execution.
 
+## Phase 2B acceptance tests
+
+### TEST-P2B-001 Operator formulas
+
+Masked Copy, Masked XOR, Rotate + Masked Copy, and Masked AND preserve the
+canonical 16-bit formulas and rotate wraparound.
+
+### TEST-P2B-002 Mask determinism and width
+
+The same accepted event produces the same mask; bond strength selects a width
+from 1 through 16 without duplicate bit positions.
+
+### TEST-P2B-003 Synchronous local transmission
+
+Compatible contact applies bounded latent updates from the pre-transmission
+state and counts successful transmission as meaningful activity for HP gain.
+
 ---

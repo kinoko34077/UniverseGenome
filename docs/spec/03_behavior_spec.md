@@ -1,8 +1,8 @@
 # World and Physics Behavior Specification
 
-Owns geometric/local-physics behavior. The accepted Phase 1 subset and Phase 2A
-contact/bond update are implemented; fusion/fragmentation/latent propagation
-remain deferred.
+Owns geometric/local-physics behavior. The accepted Phase 1 subset, Phase 2A
+contact/bond update, and Phase 2B latent propagation are implemented;
+fusion/fragmentation remain deferred.
 
 # 2. World geometry
 
@@ -343,7 +343,8 @@ The exact selected bit positions are determined by deterministic event randomnes
 
 # 14. Four latent rule categories
 
-These are specified for later implementation, not Phase 1.
+These are the Phase 2B local transmission rules; fusion and later processing
+remain deferred.
 
 Let:
 

@@ -1,4 +1,4 @@
-"""Headless runner and bounded performance reporting through Phase 2A."""
+"""Headless runner and bounded performance reporting through Phase 2B."""
 
 from __future__ import annotations
 
@@ -23,12 +23,14 @@ def load_config(path: str | Path) -> dict[str, Any]:
 def build_status(config: dict[str, Any]) -> dict[str, Any]:
     phase1 = bool(config.get("features", {}).get("phase1_physics", False))
     phase2a = bool(config.get("features", {}).get("phase2a_bond_physics", False))
+    phase2b = bool(config.get("features", {}).get("phase2b_latent_operators", False))
     return {
         "project": "UniverseGenome",
         "phase": 2 if phase2a and phase1 else (1 if phase1 else 0),
         "phase0_scaffold": not phase1,
         "phase1_physics_implemented": phase1,
         "phase2a_bond_physics_implemented": phase2a and phase1,
+        "phase2b_latent_operators_implemented": phase2b and phase2a and phase1,
         "logical_size": config["world"]["logical_size"],
         "subdivisions_per_tile": config["world"]["subdivisions_per_tile"],
         "fixed_point_size": config["world"]["fixed_point_size"],
@@ -39,7 +41,9 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
             "hp": HP_BITS,
         },
         "next_phase": (
-            "Phase 2B latent operators"
+            "Phase 2C fusion"
+            if phase2b and phase2a and phase1
+            else "Phase 2B latent operators"
             if phase2a and phase1
             else "Phase 2A bond/contact physics"
             if phase1
@@ -55,12 +59,14 @@ def run_headless(seed: int, generations: int, config: PhysicsConfig) -> dict[str
     started = time.perf_counter()
     collision_count = 0
     bond_contact_count = 0
+    latent_transmission_count = 0
     noise_spawn_count = 0
     last_metrics = None
     for _ in range(generations):
         last_metrics = step(state)
         collision_count += last_metrics.collision_count
         bond_contact_count += last_metrics.bond_contact_count
+        latent_transmission_count += last_metrics.latent_transmission_count
         noise_spawn_count += last_metrics.noise_spawn_count
     elapsed = max(time.perf_counter() - started, 1e-12)
     return {
@@ -69,6 +75,7 @@ def run_headless(seed: int, generations: int, config: PhysicsConfig) -> dict[str
         "active_cells": len(state.active_slots()),
         "collision_count": collision_count,
         "bond_contact_count": bond_contact_count,
+        "latent_transmission_count": latent_transmission_count,
         "noise_spawn_count": noise_spawn_count,
         "generations_per_second": generations / elapsed if generations else 0.0,
         "last_step_generations_per_second": last_metrics.generations_per_second if last_metrics else 0.0,
@@ -76,7 +83,7 @@ def run_headless(seed: int, generations: int, config: PhysicsConfig) -> dict[str
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="UniverseGenome headless Phase 2A runner")
+    parser = argparse.ArgumentParser(description="UniverseGenome headless Phase 2B runner")
     parser.add_argument("--config", default="config/default.json")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--generations", type=int, default=0)

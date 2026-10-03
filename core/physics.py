@@ -1,4 +1,4 @@
-"""Deterministic single-universe physics through Phase 2A."""
+"""Deterministic single-universe physics through Phase 2B."""
 
 from __future__ import annotations
 
@@ -22,6 +22,8 @@ from .state import (
 SPEED_MAGNITUDES = (0, 1, 2, 4, 8, 16, 32, 64)
 EVENT_NOISE = 1
 EVENT_COLLISION_PAIR = 2
+EVENT_LATENT_MASK = 3
+LATENT_OPERATORS = {"masked_copy", "masked_xor", "rotate_copy", "masked_and"}
 
 
 @dataclass(frozen=True)
@@ -43,6 +45,8 @@ class PhysicsConfig:
     bond_gain: int = 4
     bond_decay: int = 1
     bond_velocity_threshold: int = 8
+    latent_operator: str = "masked_copy"
+    rotate_amount: int = 4
 
     def __post_init__(self) -> None:
         if self.logical_size != 32 or self.fixed_point_size != 256:
@@ -60,6 +64,10 @@ class PhysicsConfig:
                 raise ValueError(f"{name} must be non-negative")
         if not 0 <= self.bond_gain <= 0xFF or not 0 <= self.bond_decay <= 0xFF:
             raise ValueError("bond gain/decay must fit uint8")
+        if self.latent_operator not in LATENT_OPERATORS:
+            raise ValueError(f"unsupported latent operator: {self.latent_operator}")
+        if not 0 <= self.rotate_amount < 16:
+            raise ValueError("rotate_amount must be in 0..15")
         if not 0 <= self.noise_spawn_hp <= 0xFF or not 0 <= self.recovery_hp <= 0xFF:
             raise ValueError("HP parameters must fit uint8")
         if not 0 <= self.noise_structure <= 0xFFFF:
@@ -91,9 +99,11 @@ class PhysicsConfig:
             bond_gain=int(values.get("bond_gain", 4)),
             bond_decay=int(values.get("bond_decay", 1)),
             bond_velocity_threshold=int(values.get("bond_velocity_threshold", 8)),
+            latent_operator=str(values.get("latent_operator", "masked_copy")),
+            rotate_amount=int(values.get("rotate_amount", 4)),
         )
 
-    def to_dict(self) -> dict[str, int]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "logical_size": self.logical_size,
             "fixed_point_size": self.fixed_point_size,
@@ -112,6 +122,8 @@ class PhysicsConfig:
             "bond_gain": self.bond_gain,
             "bond_decay": self.bond_decay,
             "bond_velocity_threshold": self.bond_velocity_threshold,
+            "latent_operator": self.latent_operator,
+            "rotate_amount": self.rotate_amount,
         }
 
 
@@ -122,6 +134,7 @@ class StepMetrics:
     collision_count: int
     collision_pair_evaluations: int
     bond_contact_count: int
+    latent_transmission_count: int
     noise_spawn_count: int
     generations_per_second: float
 
@@ -156,6 +169,57 @@ def relative_velocity(direction_a: int, speed_a: int, direction_b: int, speed_b:
     ax, ay = velocity_vector(direction_a, speed_a)
     bx, by = velocity_vector(direction_b, speed_b)
     return max(abs(ax - bx), abs(ay - by))
+
+
+def transmission_mask(
+    seed: int,
+    generation: int,
+    address: int,
+    pair: tuple[int, int],
+    bond_strength: int,
+) -> int:
+    """Select a deterministic anonymous subset of the sixteen latent bits."""
+    if not 0 <= bond_strength <= 0xFF:
+        raise ValueError("bond_strength must fit uint8")
+    if len(pair) != 2:
+        raise ValueError("pair must contain two slots")
+    width = 1 + (bond_strength >> 4)
+    available = list(range(16))
+    mask = 0
+    pair_index = ((int(pair[0]) & 0xFFFF) << 16) | (int(pair[1]) & 0xFFFF)
+    for choice in range(width):
+        key = event_key(seed, generation, address, EVENT_LATENT_MASK, pair_index + choice)
+        selected = available.pop(event_index(key, len(available)))
+        mask |= 1 << selected
+    return mask
+
+
+def apply_latent_operator(
+    operator: str,
+    source: int,
+    destination: int,
+    mask: int,
+    *,
+    rotate_amount: int = 4,
+) -> int:
+    """Apply one 16-bit local operator without widening latent state."""
+    if operator not in LATENT_OPERATORS:
+        raise ValueError(f"unsupported latent operator: {operator}")
+    if not 0 <= rotate_amount < 16:
+        raise ValueError("rotate_amount must be in 0..15")
+    source = int(source) & 0xFFFF
+    destination = int(destination) & 0xFFFF
+    mask = int(mask) & 0xFFFF
+    if operator == "masked_copy":
+        result = (destination & ~mask) | (source & mask)
+    elif operator == "masked_xor":
+        result = destination ^ (source & mask)
+    elif operator == "rotate_copy":
+        rotated = ((source << rotate_amount) | (source >> ((16 - rotate_amount) % 16))) & 0xFFFF
+        result = (destination & ~mask) | (rotated & mask)
+    else:
+        result = destination & (source | (~mask & 0xFFFF))
+    return result & 0xFFFF
 
 
 def destination_footprint(structure: int, x: int, y: int) -> set[tuple[int, int]]:
@@ -215,6 +279,62 @@ def _spawn_noise(state: UniverseState, config: PhysicsConfig, generation: int) -
     return spawned
 
 
+def _transmit_latent(
+    state: UniverseState,
+    config: PhysicsConfig,
+    pairs: set[tuple[int, int]],
+    pair_addresses: dict[tuple[int, int], int],
+    generation: int,
+) -> tuple[int, set[int]]:
+    """Resolve one deterministic, non-overlapping transmission per active slot."""
+    selected_pairs: list[tuple[int, int]] = []
+    selected_slots: set[int] = set()
+    for pair in sorted(pairs):
+        if pair[0] in selected_slots or pair[1] in selected_slots:
+            continue
+        selected_pairs.append(pair)
+        selected_slots.update(pair)
+
+    before = list(state.latent)
+    updates: dict[int, int] = {}
+    activity_slots: set[int] = set()
+    for first, second in selected_pairs:
+        address = pair_addresses[(first, second)]
+        first_mask = transmission_mask(
+            state.seed,
+            generation,
+            address,
+            (first, second),
+            state.bond_strength[first],
+        )
+        second_mask = transmission_mask(
+            state.seed,
+            generation,
+            address,
+            (second, first),
+            state.bond_strength[second],
+        )
+        updates[second] = apply_latent_operator(
+            config.latent_operator,
+            before[first],
+            before[second],
+            first_mask,
+            rotate_amount=config.rotate_amount,
+        )
+        updates[first] = apply_latent_operator(
+            config.latent_operator,
+            before[second],
+            before[first],
+            second_mask,
+            rotate_amount=config.rotate_amount,
+        )
+        activity_slots.update((first, second))
+
+    for slot, value in updates.items():
+        state.latent[slot] = value
+    return len(selected_pairs), activity_slots
+
+
 def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) -> None:
     state.lifecycle[slot] = int(Lifecycle.BLACK_HOLE)
     state.black_hole_timer[slot] = config.black_hole_grace
@@ -270,11 +390,14 @@ def step(
             occupancy.setdefault(tile, []).append(slot)
 
     pairs: set[tuple[int, int]] = set()
+    pair_addresses: dict[tuple[int, int], int] = {}
     for tile_x, tile_y in sorted(occupancy):
         candidates = occupancy[(tile_x, tile_y)]
         if len(set(candidates)) >= 2:
             address = (tile_y << 5) | tile_x
-            pairs.add(_collision_pair(state, candidates, address, generation))
+            pair = _collision_pair(state, candidates, address, generation)
+            pairs.add(pair)
+            pair_addresses.setdefault(pair, address)
 
     collision_count = len(pairs)
     compatible_pairs: set[tuple[int, int]] = set()
@@ -308,7 +431,20 @@ def step(
             state.bond_strength[slot] = min(0xFF, state.bond_strength[slot] + resolved.bond_gain)
         else:
             state.bond_strength[slot] = max(0, state.bond_strength[slot] - resolved.bond_decay)
+
+    latent_transmission_count, latent_activity_slots = _transmit_latent(
+        state,
+        resolved,
+        compatible_pairs,
+        {pair: pair_addresses[pair] for pair in compatible_pairs},
+        generation,
+    )
+    for slot in active:
+        if state.lifecycle[slot] != Lifecycle.ACTIVE:
+            continue
         if slot in stimulated and slot not in recovered_slots:
+            state.hp[slot] = min(0xFF, state.hp[slot] + resolved.recovery_hp)
+        elif slot in latent_activity_slots:
             state.hp[slot] = min(0xFF, state.hp[slot] + resolved.recovery_hp)
         state.hp[slot] = max(0, state.hp[slot] - resolved.hp_decay)
         state.age[slot] = min(0xFFFFFFFF, state.age[slot] + 1)
@@ -323,6 +459,7 @@ def step(
         collision_count=collision_count,
         collision_pair_evaluations=collision_count,
         bond_contact_count=len(compatible_pairs),
+        latent_transmission_count=latent_transmission_count,
         noise_spawn_count=noise_spawn_count,
         generations_per_second=1.0 / elapsed,
     )

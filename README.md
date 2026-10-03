@@ -6,12 +6,12 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current accepted state
 
-**Phase 1 is accepted on `main`; Phase 2A bond/contact physics is in progress.**
+**Phase 1 and Phase 2A are accepted on `main`; Phase 2B latent transmission is in progress.**
 The repository contains the canonical v0.1 requirements/specification,
 architecture decisions, a deterministic single-universe core, headless
 snapshot/performance verification, and the unchanged observer/UI scaffold.
-Phase 2A is tracked by Issue #10 under the parent Work Order #7; latent
-operators and later phases remain deferred.
+Phase 2B is tracked by Issue #12 under the parent Work Order #7; fusion and
+later phases remain deferred.
 
 ## Canonical entry points
 
@@ -26,6 +26,7 @@ operators and later phases remain deferred.
 - Issue #5 owns Phase 0 implementation history.
 - Issue #8 / PR #9 record Phase 1 acceptance.
 - Issue #10 owns the bounded Phase 2A contact/bond implementation.
+- Issue #12 owns the bounded Phase 2B latent-operator implementation.
 
 ## Headless verification commands
 
