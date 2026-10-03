@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Python
+        run: python -m compileall core search persistence server tests
+      - name: Unit smoke tests
+        run: python -m unittest discover -s tests -v
+      - name: Headless Phase 0 smoke
+        run: python -m core.runner --config config/default.json --json
+      - name: Static server entrypoint smoke
+        run: python -m server.app --help

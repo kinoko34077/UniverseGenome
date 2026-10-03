@@ -1,0 +1,780 @@
+# UniverseGenome v0.1 Requirements
+
+Canonicalized from repository Issue #3. Issue #3 remains the review/history surface; this checked-in file owns the durable requirement text after Phase 0 acceptance.
+
+# Purpose
+
+This Issue is the **repository-local v0.1 requirements document** for UniverseGenome.
+
+It states **what must be achieved and what must be verifiably true**, while deliberately avoiding unnecessary implementation details.
+
+Parent work: #1  
+Design record: #2  
+Control: kinoko34077/devflow#314
+
+Specification details are maintained separately from this requirements layer.
+
+---
+
+# 0. Status vocabulary
+
+- `accepted`: explicitly adopted requirement
+- `accepted-default`: v0.1 default, revisable after experiment
+- `parameterized`: value must remain configurable/searchable
+- `candidate`: not yet accepted
+- `implemented`: code exists
+- `tested`: observable verification exists
+
+Do not promote `accepted-default` or `parameterized` items to immutable requirements merely because an implementation uses one concrete value.
+
+---
+
+# 1. Product / research objective
+
+## REQ-001 — Local-physics learning universe
+**Status: accepted**
+
+UniverseGenome shall provide an artificial universe in which learning can be investigated as **deterministic local state evolution through time**.
+
+The inner universe shall not require:
+
+- backpropagation
+- a separate conventional training phase
+- a separate conventional inference phase
+- semantic token classes
+- explicit syntax classes
+- explicit concept labels
+
+Acceptance:
+
+- one universe can be stepped forward solely through its configured local physics plus external stimuli/noise
+- replay from the same accepted initial conditions produces the same state trajectory
+
+---
+
+## REQ-002 — Separation of inner learning and outer search
+**Status: accepted**
+
+The system shall distinguish:
+
+1. **inner universe learning**  
+   state change caused by experience and local dynamics
+
+2. **outer universe-genome search**  
+   search/evolution over universe-level physical parameters or rule families
+
+Outer search shall not be treated as the learned memory of the inner universe.
+
+---
+
+# 2. Scope requirements
+
+## REQ-010 — v0.1 development boundary
+**Status: accepted**
+
+The first implementation milestone shall stop at:
+
+- canonical specification establishment
+- repository scaffold
+- one deterministic universe
+- minimal local physics
+- deterministic replay
+- snapshot save/load equivalence
+- headless execution
+- measurable performance counters
+
+The first implementation milestone shall **not require**:
+
+- 128-universe search
+- fusion
+- fragmentation
+- four latent transmission categories
+- A→B→NULL learning success
+- steady-state evolution
+- full GUI dashboard
+
+Those remain specified for later phases.
+
+---
+
+## REQ-011 — Future v0.1 learning target
+**Status: accepted**
+
+The first learning task after the physics foundation is ready shall be:
+
+> input `A` → autonomous output `B` → `NULL`
+
+The success definition must compare learned behavior against a baseline/untrained state and must be evaluated on unseen evaluation runs or held-out seeds where applicable.
+
+---
+
+# 3. World requirements
+
+## REQ-020 — Discrete toroidal world
+**Status: accepted**
+
+Each universe shall provide a finite discrete 2D world with:
+
+- logical size: 32×32
+- toroidal wrapping
+- discrete generation steps
+
+Boundary crossing shall wrap rather than stop or reflect.
+
+---
+
+## REQ-021 — Fixed-point motion
+**Status: accepted**
+
+The universe shall support sub-cell motion without floating-point position state.
+
+Required velocity set:
+
+- 0
+- 1/8
+- 1/4
+- 1/2
+- 1
+- 2
+- 4
+- 8 logical cells per generation
+
+The implementation shall be capable of exact deterministic movement for these values.
+
+---
+
+## REQ-022 — Intentional tunneling
+**Status: accepted**
+
+High-speed cells are allowed to pass over intermediate positions without collision.
+
+Collision shall be based on the destination footprint, not swept-path intersection.
+
+This is intentional behavior, not a defect.
+
+---
+
+# 4. Cell-state requirements
+
+## REQ-030 — No permanent Cell ID
+**Status: accepted**
+
+The model shall not require a persistent semantic identity/UUID for each cell.
+
+The implementation may use transient/reusable storage slots.
+
+Acceptance:
+
+- deletion and reuse of storage does not require maintaining lineage identity
+- replay correctness does not depend on persistent cell IDs
+- snapshot correctness does not require UUID mapping
+
+---
+
+## REQ-031 — Compact state
+**Status: accepted**
+
+The model shall support at least:
+
+- `structure` state
+- `latent` state
+- HP
+- position
+- direction
+- speed
+- age/lifecycle state
+
+The primary structure and latent fields shall each fit in 16 bits in v0.1.
+
+---
+
+## REQ-032 — Bounded cell population
+**Status: accepted-default**
+
+A universe shall use a bounded active-cell capacity suitable for fixed-array execution.
+
+Initial capacity:
+
+> 1024 active cell slots per universe
+
+If a spawn cannot be represented because capacity is full, behavior must be defined rather than allowing unbounded allocation.
+
+---
+
+# 5. Structure / hierarchy requirements
+
+## REQ-040 — Eight hierarchy levels
+**Status: accepted**
+
+The structure representation shall support 8 hierarchy levels using 2 bits per level inside a 16-bit field.
+
+---
+
+## REQ-041 — Minimal shape vocabulary
+**Status: accepted-default**
+
+The v0.1 structure vocabulary shall be sufficient to represent:
+
+- empty
+- 1×1
+- 1×2
+- 2×1
+
+A 2×2 arrangement shall be interpreted as a candidate structural transition/fusion condition rather than requiring a fifth stored shape code.
+
+---
+
+## REQ-042 — Hierarchy movement semantics
+**Status: accepted**
+
+Moving one hierarchy level upward/downward must be distinguishable from ordinary geometric movement.
+
+Hierarchy is an abstraction/structure axis, not physical z-position.
+
+---
+
+# 6. Latent-state requirements
+
+## REQ-050 — Anonymous latent state
+**Status: accepted**
+
+Each active cell shall support a 16-bit latent state.
+
+No semantic labels may be attached to individual latent bits in the core model.
+
+---
+
+## REQ-051 — Gradual local propagation
+**Status: accepted**
+
+Latent influence between cells shall be local and capable of partial-bit propagation.
+
+The model shall not require dense all-to-all mixing of all 16 latent dimensions each step.
+
+---
+
+## REQ-052 — Comparable operator families
+**Status: accepted**
+
+Later multi-universe experiments shall support four distinct latent propagation rule categories while keeping unrelated experimental conditions aligned as much as possible.
+
+Initial accepted-default families:
+
+- Masked Copy
+- Masked XOR
+- Rotate + Masked Copy
+- Masked AND
+
+Categories must be comparable without cross-category direct elimination during the initial comparison stage.
+
+---
+
+# 7. Collision / contact requirements
+
+## REQ-060 — Local collision detection
+**Status: accepted**
+
+Collision processing shall use spatial locality.
+
+The implementation must not rely on all-cell × all-cell pair search.
+
+Target complexity should remain near O(N) with respect to active cells under ordinary operation.
+
+---
+
+## REQ-061 — Direction-aware relative velocity
+**Status: accepted**
+
+Contact/collision intensity shall consider velocity direction, not only scalar speed magnitude.
+
+Two equal-speed cells moving in opposite directions must not be treated as low-relative-speed contact merely because their scalar speeds match.
+
+---
+
+## REQ-062 — Bounded multi-cell collision work
+**Status: accepted**
+
+When 3 or more cells occupy/collide at one destination, the system shall avoid exhaustive pairwise processing in a single generation.
+
+Initial behavior:
+
+> process one deterministically selected/pseudorandom pair per generation.
+
+---
+
+# 8. Bond/contact requirements
+
+## REQ-070 — No arbitrary persistent N² bond matrix
+**Status: accepted**
+
+The model shall not require arbitrary persistent pairwise bonds between every possible pair of cells.
+
+---
+
+## REQ-071 — Local contact strength
+**Status: accepted-default**
+
+The system shall support a compact local contact/bond-strength quantity that can:
+
+- increase under compatible low-relative-speed contact
+- decrease outside compatible contact
+- affect local signal transmission/fusion tendency
+
+Long-term memory must not depend solely on a graph edge table.
+
+---
+
+# 9. HP / lifecycle requirements
+
+## REQ-080 — HP as bounded survival state
+**Status: accepted**
+
+HP shall be represented as an 8-bit bounded quantity.
+
+Required range:
+
+> 0..255
+
+---
+
+## REQ-081 — Activity-based recovery
+**Status: accepted**
+
+HP recovery shall be caused by meaningful interaction such as:
+
+- external stimulation
+- actual latent signal transmission
+
+Ordinary movement alone shall not be sufficient for HP recovery.
+
+---
+
+## REQ-082 — Black-hole grace state
+**Status: accepted**
+
+HP reaching zero shall not require immediate deletion.
+
+A temporary deletion-wait/black-hole lifecycle shall exist.
+
+During that state:
+
+- ordinary movement stops
+- fusion/fragmentation stops
+- external/local stimulation may permit revival
+- expiration releases the storage slot
+
+Grace duration shall be configurable.
+
+---
+
+# 10. Noise requirements
+
+## REQ-090 — Background exploration noise
+**Status: accepted**
+
+The universe shall support low-density background noise that creates new ordinary cells.
+
+Noise shall not be implemented as a special damage-only process in the first design.
+
+---
+
+## REQ-091 — Noise is bounded and parameterized
+**Status: parameterized**
+
+Noise frequency shall be externally configurable/searchable.
+
+Initial candidate family:
+
+- 1/1024
+- 1/512
+- 1/256
+- 1/128
+- 1/64
+
+Noise handling must remain deterministic for a fixed seed/configuration.
+
+---
+
+# 11. I/O requirements
+
+## REQ-100 — Raw byte capability
+**Status: accepted**
+
+The architecture shall ultimately support raw 8-bit byte values `0..255` without requiring a learned vocabulary/tokenizer.
+
+---
+
+## REQ-101 — Compact fixed I/O organs
+**Status: accepted-default**
+
+The v0.1 I/O design shall use an 8-bit bus rather than 256 one-hot byte organs.
+
+Input:
+
+- 8 data signals
+- VALID
+
+Output:
+
+- 8 data signals
+- VALID
+- NULL
+
+---
+
+## REQ-102 — Distinguish silence from NULL
+**Status: accepted**
+
+No output event and explicit NULL are different states.
+
+- no event = universe has emitted nothing
+- NULL event = explicit end of utterance
+
+---
+
+## REQ-103 — Event-edge output
+**Status: accepted**
+
+Output events shall be edge-based.
+
+Continuous assertion of the same VALID state shall not be counted as repeated bytes without deassertion/reassertion.
+
+---
+
+# 12. Training / evaluation requirements
+
+## REQ-110 — Teacher stimulation without hidden backprop
+**Status: accepted**
+
+Training shall be expressible as external stimulation of the same universe, including teacher stimulation at the output side.
+
+The teacher process shall not secretly modify internal weights using a separate optimization rule.
+
+---
+
+## REQ-111 — Teacher output excluded from autonomous score
+**Status: accepted**
+
+Teacher-forced output activity shall not count as autonomous correct output.
+
+---
+
+## REQ-112 — Evaluation isolation
+**Status: accepted-default**
+
+Evaluation shall be capable of running on a clone/snapshot-derived copy so that testing does not alter the training universe.
+
+---
+
+# 13. Outer-search requirements
+
+## REQ-120 — 128 simultaneous universe slots
+**Status: accepted**
+
+The full search mode shall support:
+
+> 128 simultaneous universe slots
+
+---
+
+## REQ-121 — Four category isolation
+**Status: accepted**
+
+The 128 slots shall be divisible into four 32-slot latent-rule categories.
+
+Direct cross-category elimination/selection shall not be used during the initial rule-family comparison.
+
+---
+
+## REQ-122 — Matched genome/seed comparison
+**Status: accepted-default**
+
+Where practical, the same universe-genome + seed combination shall be represented across the four categories so that the latent operator is the main differing variable.
+
+---
+
+## REQ-123 — Seed must not be genome
+**Status: accepted**
+
+Random seed shall not be an evolvable universe-genome parameter.
+
+The optimizer must not win merely by selecting lucky initial randomness.
+
+---
+
+## REQ-124 — Universe parameters separate from experiment parameters
+**Status: accepted**
+
+Universe-genome parameters and experiment-protocol parameters shall be represented separately.
+
+Examples of universe parameters:
+
+- initial density
+- HP gain/decay
+- noise rate
+- contact gain/decay
+- collision/fusion thresholds
+- fragmentation rate
+- black-hole grace
+- rotate amount
+
+Examples of experiment parameters:
+
+- byte hold
+- byte gap
+- teacher delay
+- teacher repetitions
+- evaluation timeout
+- test noise strength
+
+---
+
+# 14. Evaluation requirements
+
+## REQ-130 — Absolute fitness and growth are separate
+**Status: accepted**
+
+The system shall distinguish:
+
+- current performance
+- recent improvement/growth
+
+A mature high-performing universe must not be discarded solely because recent growth is near zero.
+
+---
+
+## REQ-131 — Lexicographic performance comparison
+**Status: accepted-default**
+
+Initial absolute comparison should prioritize, in order:
+
+1. success
+2. fewer wrong outputs
+3. fewer timeouts
+4. lower latency
+5. lower activity cost
+
+Avoid collapsing these into an arbitrary weighted scalar unless later evidence justifies it.
+
+---
+
+## REQ-132 — Do not reward internal complexity directly
+**Status: accepted**
+
+Fitness shall not directly reward:
+
+- more cells
+- more bonds
+- greater hierarchy depth
+
+unless a future experiment explicitly tests such a hypothesis.
+
+These may be recorded as diagnostics.
+
+---
+
+## REQ-133 — Binary-aligned observation windows
+**Status: accepted**
+
+The system shall support evaluation/pruning windows centered on:
+
+- 16 generations
+- 128 generations
+- 512 generations
+
+---
+
+# 15. Determinism / reproducibility requirements
+
+## REQ-140 — Deterministic replay
+**Status: accepted**
+
+For a fixed:
+
+- initial state
+- seed
+- physical parameters
+- experiment inputs
+- generation count
+
+the resulting universe state must be reproducible.
+
+---
+
+## REQ-141 — Randomness must not depend unnecessarily on branch execution count
+**Status: accepted-default**
+
+Random-event generation should be stable enough that comparisons across rule categories are not invalidated merely because one category consumed an extra sequential RNG call.
+
+A counter/hash-derived event RNG is an acceptable preferred design.
+
+---
+
+# 16. Persistence requirements
+
+## REQ-150 — Snapshot continuation equivalence
+**Status: accepted**
+
+Saving a universe snapshot and resuming it must reproduce the same continuation as uninterrupted execution, for all state required by the implemented phase.
+
+This is a Phase 1 acceptance condition.
+
+---
+
+## REQ-151 — Bounded rewind history
+**Status: accepted**
+
+GUI/history mode shall support bounded history lengths:
+
+- 128
+- 256
+- 512 generations
+
+The system shall not require permanent storage of every generation of every universe.
+
+---
+
+# 17. GUI / observation requirements
+
+## REQ-160 — Core must run without GUI
+**Status: accepted**
+
+The simulation core shall be independently executable/headless.
+
+GUI rendering must not drive the authoritative simulation clock.
+
+---
+
+## REQ-161 — Multi-universe overview
+**Status: accepted**
+
+Later GUI mode shall present:
+
+- 128 universes
+- 16×8 layout
+- 8×8 summary per universe
+- approximately 2 fps
+
+Universe thumbnails shall be visually separated.
+
+Initial mapping:
+
+- activity → brightness
+- highest hierarchy → hue
+
+---
+
+## REQ-162 — Detailed observation
+**Status: accepted**
+
+A selected universe shall support detailed 32×32 observation at approximately 8 fps with switchable modes including:
+
+- HP
+- hierarchy
+- latent bit
+- activity
+- bond/contact strength
+
+---
+
+## REQ-163 — Observation must not perturb search
+**Status: accepted**
+
+Manual inspection during automated search shall use a clone or otherwise avoid pausing/modifying the authoritative search universe.
+
+---
+
+# 18. Performance requirements
+
+## REQ-170 — Avoid quadratic collision architecture
+**Status: accepted**
+
+Normal collision handling shall not scale as arbitrary O(N²) all-pairs comparison.
+
+---
+
+## REQ-171 — Phase 1 performance instrumentation
+**Status: accepted**
+
+Headless Phase 1 execution shall expose at least:
+
+- generations/sec
+- active cell count
+- collision count
+- noise spawn count
+
+No unsupported absolute speed target is imposed before measurement.
+
+---
+
+# 19. Phase 1 acceptance requirements
+
+Phase 1 shall not be considered complete merely because the program launches.
+
+The following observable checks are required.
+
+## REQ-A01
+Same config/seed/initial state/generation count → identical final state.
+
+## REQ-A02
+Torus wrapping is correct on all boundaries.
+
+## REQ-A03
+All supported velocity magnitudes move to the expected positions.
+
+## REQ-A04
+Tunneling ignores intermediate occupied tiles and reacts at destination only.
+
+## REQ-A05
+Noise events are deterministic for the same accepted conditions.
+
+## REQ-A06
+Destination collision works and multi-cell collision work remains bounded.
+
+## REQ-A07
+HP→BLACK_HOLE→revival/deletion behavior matches specification.
+
+## REQ-A08
+Snapshot save→load→continue equals uninterrupted continuation.
+
+## REQ-A09
+Headless execution path does not depend on GUI.
+
+## REQ-A10
+Measured performance counters are reported.
+
+---
+
+# 20. Non-goals for the initial foundation
+
+The following are explicitly **not required to prove Phase 1 complete**:
+
+- human-like language behavior
+- UTF-8 sentence generation
+- generalized reasoning
+- successful outer evolution
+- final GUI polish
+- persistent graph neural connections
+- classical-CA purity
+- learned semantic labels
+- production deployment
+
+---
+
+# 21. Completion criterion for the first learning milestone
+
+After later phases implement I/O and learning, the initial research success criterion is:
+
+> Across multiple seeds, without internal backpropagation, repeated teacher experience produces a statistically/observably higher autonomous `A → B → NULL` reproduction performance than the corresponding untrained/baseline condition.
+
+Exact success threshold/sample count is intentionally not frozen in this requirements Issue yet; it shall be defined before that experiment is accepted.
+
+---
+
+# 22. Traceability
+
+Historical rationale: #2  
+Parent implementation/bootstrap task: #1
+
+This Issue owns **requirements**.  
+Exact equations, field layouts, generation ordering, and implementation defaults belong in the detailed specification Issue.

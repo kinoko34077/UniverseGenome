@@ -1,0 +1,8 @@
+"""Phase 4 I/O contract metadata; no I/O learning runtime in Phase 0."""
+
+INPUT_DATA_LINES = 8
+INPUT_VALID_LINES = 1
+OUTPUT_DATA_LINES = 8
+OUTPUT_VALID_LINES = 1
+OUTPUT_NULL_LINES = 1
+IMPLEMENTATION_PHASE = 4

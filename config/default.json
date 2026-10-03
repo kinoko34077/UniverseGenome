@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "project": "UniverseGenome",
+  "phase": 0,
+  "world": {
+    "logical_size": 32,
+    "subdivisions_per_tile": 8,
+    "fixed_point_size": 256,
+    "max_cells": 1024,
+    "toroidal": true
+  },
+  "state": {
+    "structure_bits": 16,
+    "latent_bits": 16,
+    "hp_bits": 8,
+    "permanent_cell_id": false
+  },
+  "movement": {
+    "logical_speeds": ["0", "1/8", "1/4", "1/2", "1", "2", "4", "8"],
+    "internal_step_magnitudes": [0, 1, 2, 4, 8, 16, 32, 64],
+    "directions": 8,
+    "destination_only_collision": true
+  },
+  "features": {
+    "phase1_physics": false,
+    "fusion": false,
+    "fragmentation": false,
+    "latent_runtime": false,
+    "multi_universe_search": false,
+    "io_learning": false,
+    "evolution": false
+  }
+}

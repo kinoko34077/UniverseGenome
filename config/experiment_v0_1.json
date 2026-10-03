@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "status": "specified_deferred_until_phase4",
+  "task": "A->B->NULL",
+  "byte_hold_generations": 4,
+  "byte_gap_generations": 4,
+  "teacher_delay_generations": null,
+  "teacher_repetitions": null,
+  "evaluation_timeout_generations": 1024
+}
