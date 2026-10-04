@@ -13,7 +13,7 @@ from core.experiment import (
 from core.io_bus import OutputEvent
 from core.population import run_population_headless
 from core.physics import PhysicsConfig, StepMetrics, create_universe
-from core.runner import build_status, load_config
+from core.runner import build_status, load_config, main as runner_main
 from core.state import UniverseState
 from search import evolution as evolution_module
 from search.evolution import (
@@ -1324,6 +1324,66 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(
             restored._next_allocation_mode("masked_xor", promising_available=True),
             "mutation_child",
+        )
+
+
+    def test_p5_051_optimizer_cli_preserves_canonical_protocol_unless_override_is_explicit(self):
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--json",
+                    ]),
+                    0,
+                )
+        default_payload = json.loads(stdout.getvalue())
+        self.assertEqual(captured[-1].evaluation_timeout_generations, 1024)
+        self.assertEqual(
+            default_payload["optimizer_protocol"]["mode"],
+            "canonical",
+        )
+        self.assertEqual(
+            default_payload["optimizer_protocol"]["evaluation_timeout_generations"],
+            1024,
+        )
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "8",
+                        "--json",
+                    ]),
+                    0,
+                )
+        smoke_payload = json.loads(stdout.getvalue())
+        self.assertEqual(captured[-1].evaluation_timeout_generations, 8)
+        self.assertEqual(
+            smoke_payload["optimizer_protocol"]["mode"],
+            "explicit_timeout_override",
+        )
+        self.assertEqual(
+            smoke_payload["optimizer_protocol"]["evaluation_timeout_generations"],
+            8,
         )
 
 
