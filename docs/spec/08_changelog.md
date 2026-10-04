@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-04 — Phase 6.1 multiple independent byte mappings candidate (#79 / PR #80)
+## 2026-10-04 — Phase 6.1 multiple independent byte mappings accepted (#79 / PR #80)
 
 - establishes roadmap #78 and bounded child #79 as the first post-readiness
   Phase 6 capability unit;
@@ -16,9 +16,15 @@
   evaluation case without changing search/pruning/category semantics;
 - adds `config/experiment_phase6_multi_mapping.json` and headless reporting of
   mapping count, evaluation cases, counterfactual input and per-mapping results;
-- exact implementation checkpoint `8509b67b...` passed CI #159
-  (`37189692525`) with 155 tests / OK and browser E2E SUCCESS before final
-  documentation/review reconciliation.
+- self-review found and repaired the Phase 5 authoritative trainer's remaining
+  single-mapping call; focused RED CI #163 proved 3 generations instead of the
+  required 6 before the repair;
+- exact reviewed head `6182fa3b615da446260b7e0ef698d7761d946e49`
+  passed CI #165 (`37190230270`) with 158 tests / OK, real P6.1 headless
+  smoke and browser E2E SUCCESS, then squash-merged as
+  `237845bb8b4512048508d8174ef328b3f36fbf52`;
+- accepted P6.1 smoke result remains A→B 0/0 and C→D 0/0 with
+  `learning_claim=false`.
 
 ## 2026-10-04 — Phase 6 readiness rerun accepted (#60)
 
