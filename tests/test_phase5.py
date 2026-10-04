@@ -2473,5 +2473,178 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(fitness.noise_robustness_evidence_count, 4)
 
 
+    def test_p65_005_noise_measurement_uses_matched_t0_clones_and_additive_physical_rate(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+            noise_robustness_rate_delta=256,
+        )
+        measurement = compare_baseline_trained(
+            seeds=(801,),
+            config=PhysicsConfig(max_cells=8, noise_rate=64),
+            experiment=protocol,
+        )
+        seed_record = measurement.per_seed[0]
+
+        self.assertEqual(seed_record.clean_noise_rate, 64)
+        self.assertEqual(seed_record.noisy_noise_rate, 320)
+        self.assertEqual(len(seed_record.mapping_results), 2)
+        for mapping_record in seed_record.mapping_results:
+            self.assertIsNotNone(mapping_record.noisy)
+        self.assertIsNotNone(seed_record.noisy_no_input)
+        self.assertIsNotNone(seed_record.noisy_prefix)
+        self.assertIsNotNone(seed_record.noisy_sequence_counterfactual)
+
+    def test_p65_006_noise_classification_requires_clean_success_and_noisy_controls(self):
+        expected = (OutputEvent.byte(66), OutputEvent.null())
+
+        def result(success: bool) -> EvaluationResult:
+            return EvaluationResult(
+                expected_events=expected,
+                autonomous_events=expected if success else (),
+                success=success,
+                clone_generation=4,
+                evaluation_generations=4,
+                timed_out=not success,
+            )
+
+        mappings = (
+            ByteMapping(65, 66),
+            ByteMapping(67, 68),
+            ByteMapping(69, 70),
+        )
+        mapping_results = (
+            MappingSeedMeasurement(
+                mapping=mappings[0],
+                baseline=result(False),
+                trained=result(True),
+                noisy=result(True),
+            ),
+            MappingSeedMeasurement(
+                mapping=mappings[1],
+                baseline=result(False),
+                trained=result(True),
+                noisy=result(False),
+            ),
+            MappingSeedMeasurement(
+                mapping=mappings[2],
+                baseline=result(False),
+                trained=result(False),
+                noisy=result(True),
+            ),
+        )
+        clean_control = EvaluationResult(
+            expected_events=(),
+            autonomous_events=(),
+            success=True,
+            clone_generation=4,
+            evaluation_generations=4,
+            timed_out=False,
+        )
+        seed_record = SeedMeasurement(
+            seed=1,
+            baseline=mapping_results[0].baseline,
+            trained=mapping_results[0].trained,
+            baseline_no_input=clean_control,
+            trained_no_input=clean_control,
+            baseline_alternate=clean_control,
+            trained_alternate=clean_control,
+            mapping_results=mapping_results,
+            noisy_no_input=clean_control,
+            noisy_alternate=clean_control,
+            clean_noise_rate=0,
+            noisy_noise_rate=256,
+        )
+        measurement = experiment_module._assemble_learning_measurement(
+            (seed_record,),
+            mappings=mappings,
+        )
+
+        self.assertEqual(measurement.noise_robustness_eligible_count, 2)
+        self.assertEqual(measurement.noise_robust_count, 1)
+        self.assertEqual(measurement.noise_failed_count, 1)
+        self.assertEqual(measurement.noise_robustness_rate, 0.5)
+
+        dirty_control = EvaluationResult(
+            expected_events=(),
+            autonomous_events=(OutputEvent.byte(66),),
+            success=False,
+            clone_generation=4,
+            evaluation_generations=4,
+            timed_out=False,
+        )
+        dirty_seed = SeedMeasurement(
+            seed=2,
+            baseline=mapping_results[0].baseline,
+            trained=mapping_results[0].trained,
+            baseline_no_input=clean_control,
+            trained_no_input=clean_control,
+            baseline_alternate=clean_control,
+            trained_alternate=clean_control,
+            mapping_results=(mapping_results[0],),
+            noisy_no_input=dirty_control,
+            noisy_alternate=clean_control,
+            clean_noise_rate=0,
+            noisy_noise_rate=256,
+        )
+        dirty = experiment_module._assemble_learning_measurement(
+            (dirty_seed,),
+            mappings=(mappings[0],),
+        )
+        self.assertEqual(dirty.noise_robustness_eligible_count, 1)
+        self.assertEqual(dirty.noise_robust_count, 0)
+        self.assertEqual(dirty.noise_failed_count, 1)
+        self.assertEqual(dirty.noise_robustness_rate, 0.0)
+
+    def test_p65_007_phase5_noise_probe_does_not_mutate_authoritative_state(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+            noise_robustness_rate_delta=256,
+        )
+        state = create_universe(
+            seed=802,
+            config=PhysicsConfig(max_cells=8, noise_rate=64),
+        )
+        IOExperiment(state, experiment=protocol).train_mappings()
+        before = state.to_snapshot()
+
+        measurement = measure_trained_state(state, experiment=protocol)
+
+        self.assertEqual(state.to_snapshot(), before)
+        seed_record = measurement.per_seed[0]
+        self.assertEqual(seed_record.clean_noise_rate, 64)
+        self.assertEqual(seed_record.noisy_noise_rate, 320)
+        self.assertTrue(all(item.noisy is not None for item in seed_record.mapping_results))
+
+
 if __name__ == "__main__":
     unittest.main()
