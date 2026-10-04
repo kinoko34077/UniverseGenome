@@ -161,9 +161,13 @@ without rebuilding a parallel population.
 
 ### TEST-P3-005 Bounded rewind memory evidence
 
-The 128, 256, and 512 observation-clone history policies retain at most the
-selected bounded entry count and never become an authoritative search clock or
-rollback mechanism.
+The original Phase 3 128/256/512 whole-population history policies continue to
+retain at most the selected bounded entry count, report a reproducible compact
+history memory estimate, and remain within the explicit runtime budget.
+
+For the integrated Phase 5 observer, the 128/256/512 observation-clone history
+is separately bounded to the selected isolated clone and never becomes an
+authoritative search clock or rollback mechanism.
 
 ## Phase 4 acceptance tests
 
