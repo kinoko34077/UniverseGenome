@@ -17,6 +17,7 @@ const metadata = document.getElementById("optimizer-meta");
 const pendingLabel = document.getElementById("pending-parameters");
 const collisionDamage = document.getElementById("collision-damage");
 const noiseAttempts = document.getElementById("noise-attempts");
+const resetParameterForm = document.getElementById("reset-parameters");
 let currentState = null;
 let detailFrame = 0;
 
@@ -105,10 +106,9 @@ function updateMetadata() {
 function updateResetControls() {
   const pending = currentState?.pending_reset_parameters || {};
   const config = currentState?.reset_config || {};
-  if (document.activeElement !== collisionDamage) {
+  const editingResetParameters = resetParameterForm?.contains(document.activeElement);
+  if (!editingResetParameters) {
     collisionDamage.value = pending.collision_damage ?? config.collision_damage ?? 0;
-  }
-  if (document.activeElement !== noiseAttempts) {
     noiseAttempts.value = pending.noise_attempts ?? config.noise_attempts ?? 0;
   }
   const keys = Object.keys(pending);
