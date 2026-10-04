@@ -559,7 +559,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIn("experiment", payload)
         self.assertIn("scheduler", payload)
         self.assertEqual(len(payload["slots"]), 128)
-        self.assertEqual(payload["format_version"], 4)
+        self.assertEqual(payload["format_version"], 5)
         self.assertTrue(all("state" in slot for slot in payload["slots"]))
         self.assertTrue(all("training_states" not in slot for slot in payload["slots"]))
 
@@ -692,7 +692,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=108)
         payload = optimizer.to_snapshot()
 
-        self.assertEqual(payload["format_version"], 4)
+        self.assertEqual(payload["format_version"], 5)
         self.assertEqual(len(payload["slots"]), 128)
         self.assertTrue(all("state" in record for record in payload["slots"]))
         self.assertTrue(all("training_states" not in record for record in payload["slots"]))
