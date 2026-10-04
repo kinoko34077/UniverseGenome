@@ -162,8 +162,10 @@ without rebuilding a parallel population.
 ### TEST-P3-005 Bounded rewind memory evidence
 
 The original Phase 3 128/256/512 whole-population history policies continue to
-retain at most the selected bounded entry count, report a reproducible compact
-history memory estimate, and remain within the explicit runtime budget.
+retain at most the selected bounded entry count and report a reproducible
+compact-history memory estimate against the documented 256 MiB reference
+budget. That budget is measured guidance rather than a hard rejection
+threshold; bounded entry count remains the normative REQ-151 constraint.
 
 For the integrated Phase 5 observer, the 128/256/512 observation-clone history
 is separately bounded to the selected isolated clone and never becomes an
