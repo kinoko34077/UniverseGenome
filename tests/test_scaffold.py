@@ -180,6 +180,18 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertEqual(core.PHASE, 5)
         self.assertEqual(persistence.PHASE, 5)
         self.assertEqual(server.PHASE, 5)
+
+        core_init = (ROOT / "core" / "__init__.py").read_text(encoding="utf-8")
+        server_init = (ROOT / "server" / "__init__.py").read_text(encoding="utf-8")
+        persistence_init = (ROOT / "persistence" / "__init__.py").read_text(encoding="utf-8")
+        snapshot_module = (ROOT / "persistence" / "snapshot.py").read_text(encoding="utf-8")
+        for package_metadata in (core_init, server_init, persistence_init):
+            self.assertIn("implementation-level marker", package_metadata)
+            self.assertNotIn("accepted Phase 5", package_metadata)
+        self.assertIn("current UniverseState persistence contract", snapshot_module)
+        self.assertNotIn("Phase 2D authoritative state", snapshot_module)
+        self.assertNotIn("unable to read Phase 2D snapshot", snapshot_module)
+
         self.assertEqual(
             latent_ops.LATENT_OPERATOR_CATEGORIES,
             ("masked_copy", "masked_xor", "rotate_copy", "masked_and"),
