@@ -6,12 +6,13 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current state
 
-**Phase 0 through Phase 5 are accepted on `main`; readiness rerun #60 passed,
-and the repository is ready for one new bounded Phase 6 child Issue. No Phase 6+
-capability has been implemented yet.** The repository
-contains the canonical v0.1 requirements/specification, deterministic local
-physics, the server-owned runtime/API, browser observer/control surface,
-physical I/O measurement, and the persistent authoritative Phase 5 optimizer.
+**Phase 0 through Phase 5 are readiness-accepted on `main`, and Phase 6.1
+multiple independent byte mappings are implemented/accepted through #79 / PR
+#80.** The repository contains the canonical v0.1 foundation plus the first
+bounded Phase 6 experimental capability. The current P6.1 public smoke still
+reports A→B baseline 0 / trained 0 and C→D baseline 0 / trained 0 with
+`learning_claim=false`; capability acceptance does not relabel that result as
+learning success.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
@@ -40,6 +41,8 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
 - Issue #20 owns the bounded Phase 3 runtime/observation implementation.
 - Issue #22 owns the original Phase 4 I/O and A→B→NULL experiment; audit
   remediation #28 / PR #32 wires real autonomous output collection.
+- Phase 6 roadmap #78 owns the bounded capability ladder; P6.1 #79 / PR #80
+  implements multiple independent byte mappings.
 - Issue #24 owns the original Phase 5 optimizer mechanics; audit remediation
   #30 / PR #34 integrates genome mapping and real Phase 4 candidate evaluation.
 - Audit remediation #29 / PR #33 connects the Phase 3 GUI to the runtime API.
@@ -63,8 +66,10 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   now observes and controls the authoritative Phase 5 optimizer rather than a
   parallel Phase 3 population.
 - Post-v0.1 residual reconciliation #61 is complete via PR #74.
-- Readiness audit #60 has passed on repaired current `main`; a new bounded
-  Phase 6 child Issue may now be created before any Phase 6 capability mutation.
+- Readiness audit #60 passed on the repaired Phase 0–5 boundary.
+- Phase 6 roadmap #78 is active; P6.1 #79 / PR #80 is accepted on main.
+- The next permitted capability is one bounded P6.2 temporal-sequence child
+  Issue. P6.2+ is not implemented yet.
 
 ## Headless verification commands
 
