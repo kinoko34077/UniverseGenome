@@ -360,7 +360,7 @@ class Phase5OptimizerTests(unittest.TestCase):
             experiment = json.load(handle)
         self.assertEqual(experiment["learning_claim"], False)
         handoff = (ROOT / "docs" / "PHASE6_HANDOFF.md").read_text(encoding="utf-8")
-        self.assertIn("No P6.5+ capability has been implemented", handoff)
+        self.assertIn("No P6.6+ capability has been implemented", handoff)
 
     def test_p5_007_genome_maps_every_field_to_effective_physics(self):
         genome = UniverseGenome(
