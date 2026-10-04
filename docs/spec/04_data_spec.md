@@ -234,6 +234,13 @@ serialization is sufficient to restore the same evaluation/training protocol;
 no evaluation-clone state is persisted and no new snapshot format version is
 required solely for these protocol fields.
 
+For Phase 6.2, the same persisted `ExperimentConfig` may contain two-byte
+`input_bytes` mappings, `inter_input_generations`,
+`counterfactual_prefix`, and `counterfactual_input_sequence`. These fields
+round-trip through optimizer snapshots and explicit timeout reconstruction.
+They remain protocol data; disposable sequence-evaluation clones are not
+persisted and P6.2 alone does not require a snapshot-format increment.
+
 ---
 
 ---

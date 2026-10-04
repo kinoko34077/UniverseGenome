@@ -340,3 +340,51 @@ protocol with the canonical evaluation timeout. Existing Phase 0–5 tests,
 headless/optimizer CLI smoke and browser E2E remain GREEN.
 
 ---
+
+
+## Phase 6.2 acceptance tests
+
+### TEST-P62-001 Ordered two-byte protocol and serialization
+
+AA→B and AC→D serialize as distinct ordered two-byte inputs. Inter-input timing,
+prefix control and unmapped CA control round-trip. Invalid input length,
+duplicate input sequence, and mapped counterfactual sequence are rejected.
+
+### TEST-P62-002 Shared temporal training order
+
+Both bytes of each mapping are delivered in order to one continuing
+authoritative training Universe. Teacher output begins only after full sequence
+delivery and no reset occurs between mappings.
+
+### TEST-P62-003 Early-output rejection
+
+An autonomous event produced after only the shared prefix A cannot count as
+successful AA→B or AC→D output, even when later events otherwise match the
+expected byte→NULL tuple.
+
+### TEST-P62-004 Temporal counterfactual measurement
+
+No-input, prefix-only A, and unmapped CA are measured independently on clones.
+The aggregate criterion includes prefix/unmapped-sequence cleanliness and keeps
+failed learning as `learning_claim=false`.
+
+### TEST-P62-005 Phase 5 snapshot reconstruction
+
+An optimizer configured with P6.2 mappings round-trips mappings,
+`inter_input_generations`, prefix control and unmapped-sequence control through
+its authoritative snapshot.
+
+### TEST-P62-006 Explicit timeout reconstruction
+
+The optimizer CLI explicit timeout override changes only the effective timeout
+and preserves all P6.2 sequence/timing/control fields. Protocol reporting
+exposes those fields.
+
+### TEST-P62-007 Public temporal-sequence reporting and smoke
+
+The public experiment entry point reports per-sequence `input_bytes`,
+mapping-level baseline/trained counts, prefix/unmapped-sequence controls and the
+truthful aggregate learning claim. CI executes both a bounded P6.2 experiment
+smoke and a bounded P6.2 optimizer-integration smoke; Phase 0–5/P6.1 regressions
+and browser E2E remain GREEN.
+

@@ -5,6 +5,7 @@ import inspect
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from core import experiment as experiment_module
 from core.experiment import (
@@ -442,6 +443,193 @@ class Phase4IOTests(unittest.TestCase):
             ),
         )
         self.assertEqual(config.counterfactual_input_byte, 66)
+        self.assertEqual(config.evaluation_timeout_generations, 1024)
+
+
+    def test_p62_001_two_byte_sequence_protocol_serializes_timing_and_controls(self):
+        ByteSequenceMapping = getattr(experiment_module, "ByteSequenceMapping")
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            inter_input_generations=2,
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+        )
+
+        payload = protocol.to_dict()
+        self.assertEqual(
+            payload["mappings"],
+            [
+                {"input_bytes": [65, 65], "output_byte": 66},
+                {"input_bytes": [65, 67], "output_byte": 68},
+            ],
+        )
+        self.assertEqual(payload["inter_input_generations"], 2)
+        self.assertEqual(payload["counterfactual_prefix"], [65])
+        self.assertEqual(payload["counterfactual_input_sequence"], [67, 65])
+        self.assertEqual(ExperimentConfig.from_mapping(payload), protocol)
+
+        with self.assertRaises(ValueError):
+            ByteSequenceMapping((65,), 66)
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                mappings=(
+                    ByteSequenceMapping((65, 65), 66),
+                    ByteSequenceMapping((65, 65), 68),
+                ),
+                counterfactual_prefix=(65,),
+                counterfactual_input_sequence=(67, 65),
+            )
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                mappings=(ByteSequenceMapping((65, 65), 66),),
+                counterfactual_prefix=(65,),
+                counterfactual_input_sequence=(65, 65),
+            )
+
+    def test_p62_002_sequence_training_completes_both_inputs_before_teacher_output(self):
+        ByteSequenceMapping = getattr(experiment_module, "ByteSequenceMapping")
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            inter_input_generations=1,
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+        )
+        state = create_universe(seed=401, config=experiment_physics_config())
+        timeline = []
+
+        class RecordingExperiment(IOExperiment):
+            def drive_input(self, value, *, valid=True):
+                timeline.append(("input", value, self.state.generation))
+                return super().drive_input(value, valid=valid)
+
+            def teacher_output(self, event, **kwargs):
+                timeline.append(("teacher", event, self.state.generation))
+                return super().teacher_output(event, **kwargs)
+
+        io = RecordingExperiment(state, experiment=protocol)
+        records = io.train_mappings()
+
+        self.assertEqual(
+            [item.input_bytes for item in records],
+            [(65, 65), (65, 67)],
+        )
+        self.assertEqual(
+            timeline[:4],
+            [
+                ("input", 65, 0),
+                ("input", 65, 2),
+                ("teacher", OutputEvent.byte(66), 3),
+                ("teacher", OutputEvent.null(), 4),
+            ],
+        )
+        self.assertEqual(
+            timeline[4:],
+            [
+                ("input", 65, 5),
+                ("input", 67, 7),
+                ("teacher", OutputEvent.byte(68), 8),
+                ("teacher", OutputEvent.null(), 9),
+            ],
+        )
+        self.assertEqual(state.generation, 10)
+
+    def test_p62_003_output_before_full_sequence_is_failure_even_when_event_tuple_matches(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            evaluation_timeout_generations=1,
+            inter_input_generations=1,
+        )
+        io = IOExperiment(
+            create_universe(seed=402, config=experiment_physics_config()),
+            experiment=protocol,
+        )
+        expected = (OutputEvent.byte(66), OutputEvent.null())
+
+        with patch.object(
+            experiment_module.IOExperiment,
+            "observe_output_state",
+            side_effect=([OutputEvent.byte(66)], [], [], [OutputEvent.null()]),
+        ):
+            result = io.evaluate_autonomous_sequence(
+                input_bytes=(65, 65),
+                expected=expected,
+            )
+
+        self.assertEqual(result.autonomous_events, expected)
+        self.assertEqual(result.input_complete_generation, 3)
+        self.assertEqual(result.early_output_count, 1)
+        self.assertGreater(result.wrong_output_count, 0)
+        self.assertFalse(result.success)
+
+    def test_p62_004_sequence_measurement_gates_prefix_and_unmapped_sequence_controls(self):
+        ByteSequenceMapping = getattr(experiment_module, "ByteSequenceMapping")
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            inter_input_generations=0,
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+        )
+
+        measurement = compare_baseline_trained(
+            seeds=(403, 404),
+            config=experiment_physics_config(),
+            experiment=protocol,
+        )
+
+        self.assertEqual(measurement.mapping_count, 2)
+        self.assertEqual(measurement.evaluation_case_count, 4)
+        self.assertEqual(measurement.counterfactual_prefix, (65,))
+        self.assertEqual(measurement.counterfactual_input_sequence, (67, 65))
+        self.assertEqual(measurement.trained_prefix_input_clean, 2)
+        self.assertEqual(measurement.trained_sequence_counterfactual_clean, 2)
+        self.assertIn("prefix-only", measurement.criterion)
+        self.assertIn("unmapped-sequence", measurement.criterion)
+        self.assertFalse(measurement.learning_claim)
+
+
+    def test_p62_005_temporal_sequence_config_is_explicit_and_loadable(self):
+        loader = getattr(experiment_module, "load_experiment_config")
+        ByteSequenceMapping = getattr(experiment_module, "ByteSequenceMapping")
+        config = loader(
+            ROOT / "config" / "experiment_phase6_temporal_sequence.json"
+        )
+
+        self.assertEqual(
+            config.mappings,
+            (
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+        )
+        self.assertEqual(config.inter_input_generations, 4)
+        self.assertEqual(config.counterfactual_prefix, (65,))
+        self.assertEqual(config.counterfactual_input_sequence, (67, 65))
         self.assertEqual(config.evaluation_timeout_generations, 1024)
 
 
