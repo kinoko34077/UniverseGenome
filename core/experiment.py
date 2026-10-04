@@ -50,30 +50,55 @@ class ByteMapping:
 class ByteSequenceMapping:
     input_bytes: tuple[int, ...]
     output_byte: int
+    output_bytes: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         values = tuple(int(value) for value in self.input_bytes)
+        explicit_outputs = tuple(int(value) for value in self.output_bytes)
         object.__setattr__(self, "input_bytes", values)
+        object.__setattr__(self, "output_bytes", explicit_outputs)
         if len(values) != 2:
             raise ValueError("P6.2 sequence mappings require exactly two input bytes")
         for value in values:
             validate_byte(value)
         validate_byte(self.output_byte)
+        for value in explicit_outputs:
+            validate_byte(value)
+        if explicit_outputs:
+            if len(explicit_outputs) != 2:
+                raise ValueError(
+                    "bounded P6.7 explicit output sequences require exactly two bytes"
+                )
+            if len(set(explicit_outputs)) != len(explicit_outputs):
+                raise ValueError(
+                    "bounded P6.7 explicit output sequence bytes must be distinct"
+                )
+            if explicit_outputs[0] != self.output_byte:
+                raise ValueError(
+                    "output_byte must equal the first explicit output sequence byte"
+                )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "input_bytes": [int(value) for value in self.input_bytes],
             "output_byte": int(self.output_byte),
         }
+        if self.output_bytes:
+            payload["output_bytes"] = [int(value) for value in self.output_bytes]
+        return payload
 
     @classmethod
     def from_mapping(cls, mapping: Mapping[str, Any]) -> "ByteSequenceMapping":
         raw = mapping["input_bytes"]
         if not isinstance(raw, (list, tuple)):
             raise ValueError("input_bytes must be an array")
+        raw_outputs = mapping.get("output_bytes", ())
+        if not isinstance(raw_outputs, (list, tuple)):
+            raise ValueError("output_bytes must be an array")
         return cls(
             input_bytes=tuple(int(value) for value in raw),
             output_byte=int(mapping["output_byte"]),
+            output_bytes=tuple(int(value) for value in raw_outputs),
         )
 
 
@@ -125,6 +150,15 @@ class ExperimentConfig:
             raise ValueError("one-event protocols require output interval 0")
         if self.output_event_count == 2 and self.output_event_interval_generations < 2:
             raise ValueError("two-event P6.3 protocols require output interval >= 2")
+        for item in self.mappings:
+            if (
+                isinstance(item, ByteSequenceMapping)
+                and item.output_bytes
+                and len(item.output_bytes) != self.output_event_count
+            ):
+                raise ValueError(
+                    "explicit output sequence length must match output_event_count"
+                )
         if self.retention_enabled:
             if self.retention_delay_generations <= 0:
                 raise ValueError("P6.4 retention delay must be positive")
