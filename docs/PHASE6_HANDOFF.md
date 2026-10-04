@@ -1,7 +1,7 @@
 # Phase 6+ capability handoff
 
-Status: **ready for one new bounded Phase 6 child Issue after readiness rerun #60**.
-No Phase 6+ capability has been implemented.
+Status: **P6.1 multiple independent byte mappings accepted; P6.2 is the next bounded capability frontier**.
+P6.1 is implemented via #79 / PR #80. P6.2 and later capabilities are not implemented.
 
 ## Current v0.1 boundary
 
@@ -11,8 +11,9 @@ complete via PR #69 and Phase 5 search-semantics remediation #65 is complete
 via PR #70, merged to main as `3e8c8f31a1d87d3f2a7e88de731392b4f3202bd2`.
 GUI/authoritative-search integration #63 is complete via PR #73, and
 post-v0.1 residual reconciliation #61 is complete via PR #74, merged to main
-as `87de79012650b44b934651c8e1ba5a7b8d91e173`. No unresolved remediation
-owner remains. Readiness rerun #60 has passed from repaired current `main`.
+as `87de79012650b44b934651c8e1ba5a7b8d91e173`. No unresolved Phase 0–5 remediation owner remains. Readiness rerun #60 passed.
+Phase 6 roadmap #78 is active and P6.1 #79 / PR #80 is accepted on current
+`main`.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
 Earlier remediation established the current Phase 0–5 implementation boundary;
@@ -79,16 +80,25 @@ traceability audit #64 and handoff #67/#68. Remediation and residual
 reconciliation are complete, and the fresh #60 rerun has established the
 current readiness result.
 
-## Phase 4 outcome
+## Learning outcomes through P6.1
 
-The declared multi-seed `A → B → NULL` criterion was not met:
+The historical Phase 4 multi-seed `A → B → NULL` criterion was not met:
 
 - baseline successes: 0;
 - trained successes: 0;
 - learning claim: false.
 
-This is a recorded experimental outcome. It must not be reinterpreted as
-success, loosened after the fact, or bypassed with semantic shortcuts.
+The accepted bounded P6.1 real-entry smoke also did not demonstrate learning:
+
+- A→B baseline successes: 0; trained successes: 0;
+- C→D baseline successes: 0; trained successes: 0;
+- no-input cleanliness: 3/3;
+- unmapped-input cleanliness: 3/3;
+- aggregate `learning_claim=false`.
+
+These are recorded experimental outcomes. Capability implementation must not be
+reinterpreted as learning success, and success criteria must not be loosened
+after observing results.
 
 ## Phase 6 boundary
 
@@ -108,8 +118,8 @@ Before any Phase 6 mutation:
 
 Candidate order remains:
 
-1. `A→B` and `C→D` mappings;
-2. temporal sequences such as `AA→B` and `AC→D`;
+1. `A→B` and `C→D` mappings — **COMPLETE via #79 / PR #80**;
+2. temporal sequences such as `AA→B` and `AC→D` — **CURRENT FRONTIER**;
 3. multi-event output timing;
 4. forgetting and relearning;
 5. noise robustness;
@@ -117,8 +127,9 @@ Candidate order remains:
 7. multi-byte sequences;
 8. raw UTF-8 experiments.
 
-This ordering is a handoff sequence, not permission to implement all items in
-one work unit. Start with one bounded child Issue.
+This ordering is a capability ladder, not permission to implement all items in
+one work unit. P6.2 must start with its own bounded child Issue and acceptance
+contract.
 
 ## Completed post-v0.1 residual boundary
 
