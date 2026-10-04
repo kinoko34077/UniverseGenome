@@ -3584,5 +3584,174 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertNotIn("output byte 2 times", payload["criterion"])
 
 
+    def test_p68_001_canonical_and_smoke_configs_are_raw_valid_utf8_bytes(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_raw_utf8.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_raw_utf8_smoke.json"
+        )
+
+        expected_inputs = (
+            tuple("é".encode("utf-8")),
+            tuple("ö".encode("utf-8")),
+        )
+        expected_outputs = (
+            tuple("ñ".encode("utf-8")),
+            tuple("ø".encode("utf-8")),
+        )
+        self.assertEqual(expected_inputs, ((0xC3, 0xA9), (0xC3, 0xB6)))
+        self.assertEqual(expected_outputs, ((0xC3, 0xB1), (0xC3, 0xB8)))
+
+        for protocol in (canonical, smoke):
+            self.assertEqual(
+                tuple(item.input_bytes for item in protocol.mappings),
+                expected_inputs,
+            )
+            self.assertEqual(
+                tuple(item.output_bytes for item in protocol.mappings),
+                expected_outputs,
+            )
+            self.assertEqual(protocol.counterfactual_prefix, (0xC3,))
+            self.assertEqual(
+                protocol.counterfactual_input_sequence,
+                tuple("ç".encode("utf-8")),
+            )
+            for item in protocol.mappings:
+                bytes(item.input_bytes).decode("utf-8")
+                bytes(item.output_bytes).decode("utf-8")
+
+        self.assertEqual(canonical.output_event_count, 2)
+        self.assertEqual(canonical.output_event_interval_generations, 4)
+        self.assertEqual(canonical.evaluation_timeout_generations, 1024)
+        self.assertEqual(smoke.output_event_count, 2)
+        self.assertEqual(smoke.output_event_interval_generations, 2)
+        self.assertEqual(smoke.evaluation_timeout_generations, 2)
+
+    def test_p68_002_teacher_path_receives_only_raw_utf8_byte_values(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_raw_utf8_smoke.json"
+        )
+        state = create_universe(seed=1501, config=PhysicsConfig(max_cells=8))
+        records = IOExperiment(state, experiment=protocol).train_mappings()
+
+        self.assertEqual(
+            [
+                tuple(event.value for event in record.teacher_events if event.kind == "byte")
+                for record in records
+            ],
+            [
+                tuple("ñ".encode("utf-8")),
+                tuple("ø".encode("utf-8")),
+            ],
+        )
+        self.assertEqual(
+            [tuple(item.input_bytes) for item in protocol.mappings],
+            [
+                tuple("é".encode("utf-8")),
+                tuple("ö".encode("utf-8")),
+            ],
+        )
+
+    def test_p68_003_snapshot_and_timeout_override_preserve_raw_utf8_bytes(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_raw_utf8_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=1502,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(restored.experiment, protocol)
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--experiment-config",
+                        "config/experiment_phase6_raw_utf8_smoke.json",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        payload = json.loads(stdout.getvalue())
+        effective = captured[-1]
+        self.assertEqual(effective.evaluation_timeout_generations, 1)
+        self.assertEqual(
+            [list(item.input_bytes) for item in effective.mappings],
+            [[0xC3, 0xA9], [0xC3, 0xB6]],
+        )
+        self.assertEqual(
+            [list(item.output_bytes) for item in effective.mappings],
+            [[0xC3, 0xB1], [0xC3, 0xB8]],
+        )
+        self.assertEqual(
+            payload["optimizer_protocol"]["mappings"],
+            [
+                {
+                    "input_bytes": [0xC3, 0xA9],
+                    "output_byte": 0xC3,
+                    "output_bytes": [0xC3, 0xB1],
+                },
+                {
+                    "input_bytes": [0xC3, 0xB6],
+                    "output_byte": 0xC3,
+                    "output_bytes": [0xC3, 0xB8],
+                },
+            ],
+        )
+
+    def test_p68_004_runner_reports_raw_utf8_declared_and_observed_byte_evidence(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_raw_utf8_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertEqual(
+            [item["input_bytes"] for item in payload["per_mapping"]],
+            [[0xC3, 0xA9], [0xC3, 0xB6]],
+        )
+        self.assertEqual(
+            [item["output_bytes"] for item in payload["per_mapping"]],
+            [[0xC3, 0xB1], [0xC3, 0xB8]],
+        )
+        self.assertEqual(payload["counterfactual_prefix"], [0xC3])
+        self.assertEqual(
+            payload["counterfactual_input_sequence"],
+            [0xC3, 0xA7],
+        )
+        self.assertFalse(payload["learning_claim"])
+        for seed_record in payload["per_seed"]:
+            for mapping_record in seed_record["mappings"]:
+                self.assertIsInstance(mapping_record["baseline_events"], list)
+                self.assertIsInstance(mapping_record["trained_events"], list)
+
+
 if __name__ == "__main__":
     unittest.main()
