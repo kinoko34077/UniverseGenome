@@ -17,8 +17,9 @@ owner remains. Readiness owner #60 must rerun the audit from repaired current
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
 Earlier remediation established the current Phase 0–5 implementation boundary;
-the later #64 audit found cross-phase acceptance gaps that remain open. The
-historical implementation boundary is documented by:
+the later #64 audit found cross-phase acceptance gaps that were subsequently
+repaired through #66/#65/#63/#61. Current readiness still requires the #60
+rerun. The historical implementation boundary is documented by:
 
 - original Phase 1–5 implementation PRs;
 - completeness audit #27;
