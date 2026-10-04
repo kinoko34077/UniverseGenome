@@ -18,7 +18,7 @@ P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
 reconciliation #61 is complete via PR #74. No unresolved remediation owner remains. The fresh #60 rerun passed on repaired
 current `main`; the earlier invalidated PASS remains historical evidence only. The current Phase 4
 measurement remains baseline 0 / trained 0 with no learning claim. See the
-[Phase 6+ handoff](docs/PHASE6_HANDOFF.md) for the blocked boundary.
+[Phase 6+ handoff](docs/PHASE6_HANDOFF.md) for the bounded next-phase contract.
 
 ## Canonical entry points
 
