@@ -1373,6 +1373,77 @@ new explicit roadmap decision rather than automatic P6.9 work.
 
 ---
 
+# 22.9 Phase 6.9 mixed-length raw byte sequence requirements
+
+## REQ-280 — One bounded protocol may mix 1/2/3-byte mappings
+**Status: accepted**
+
+Phase 6.9 shall allow one experiment protocol to contain one-byte, two-byte and
+three-byte raw input mappings together, with declared output sequences of the
+corresponding bounded lengths. Mixed-length mappings must preserve their exact
+declared byte arrays without padding or truncation.
+
+The initial bounded mapped inputs shall be prefix-free so P6.9 isolates mixed
+length handling from valid-mapping prefix ambiguity.
+
+---
+
+## REQ-281 — Mapping-specific teacher and autonomous event counts
+**Status: accepted**
+
+Teacher execution and disposable-clone evaluation shall resolve output-event
+count from each mapping's declared output sequence. Success requires exact byte
+content, order, count, accepted inter-event timing and NULL termination.
+
+The legacy global output-event count remains the fallback for mappings without
+an explicit output tuple; existing P6.1–P6.8 fixed-length behavior must remain
+compatible.
+
+---
+
+## REQ-282 — Mixed-length controls and learning claim
+**Status: accepted**
+
+The bounded P6.9 protocol shall retain no-input cleanliness and use:
+- one proper-prefix control of the three-byte mapped input: `[0x47,0x48]`;
+- one unmapped complete sequence control: `[0x4D,0x4E]`.
+
+A learning claim remains all-mappings/all-seeds, strictly baseline-relative and
+counterfactual-gated. Failed learning remains `learning_claim=false`.
+
+---
+
+## REQ-283 — Phase 5 and semantic boundaries remain unchanged
+**Status: accepted**
+
+P6.9 shall not add tokenizer/vocabulary/Unicode semantic state, decoded-text
+scoring, arbitrary/unbounded sequence lengths, prefix-overlapping valid
+mappings, or hidden learned weights.
+
+It shall not change Phase 5 absolute-fitness ordering, reserved growth bit 7,
+retention/noise-robustness semantics, pruning, promising allocation, category
+isolation, seed handling, matched-seed behavior or authoritative-slot
+semantics. P6.1–P6.8 remain regression-compatible.
+
+---
+
+## REQ-284 — Persistence, public evidence and executable entrypoints
+**Status: accepted**
+
+Canonical and bounded-smoke P6.9 configs shall preserve exact mapping arrays,
+mixed lengths and timing through `ExperimentConfig`, optimizer
+snapshot/restore and explicit timeout reconstruction.
+
+Public experiment/optimizer diagnostics shall expose mapping input lengths,
+mapping output-event counts and declared/observed raw byte evidence. CI shall
+execute real P6.9 experiment and optimizer entrypoints together with the
+earlier capability regression set.
+
+Implementing P6.9 does not itself constitute evidence that the current universe
+learned the mixed-length tasks.
+
+---
+
 # 23. Traceability
 
 Historical rationale: #2  
