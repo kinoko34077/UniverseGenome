@@ -76,6 +76,7 @@
     "phase6_generalization": true,
     "phase6_multi_byte_sequences": true,
     "phase6_raw_utf8": true,
+    "phase6_mixed_length_sequences": true,
     "aging": true
   }
 }
