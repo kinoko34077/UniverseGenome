@@ -444,3 +444,66 @@ CI executes both a bounded P6.3 experiment smoke and a bounded P6.3 optimizer
 integration smoke. Phase 0–5, P6.1/P6.2 regressions and browser E2E remain
 GREEN.
 
+---
+
+## Phase 6.4 acceptance tests
+
+### TEST-P64-001 Retention protocol serialization and legacy compatibility
+
+P6.1/P6.2/P6.3 defaults leave retention fields disabled at zero. A P6.4
+protocol round-trips the declared delay, interference and relearning counts.
+
+### TEST-P64-002 Null-aware retention/relearning rates
+
+Zero retention-eligible or relearning-eligible cases produce null/non-evaluable
+rates. Positive eligible counts produce ordinary normalized rates.
+
+### TEST-P64-003 Growth bit 5 evidence gate
+
+Retention growth is comparable only when both Fitness values carry explicit
+retention evidence. Becoming newly evaluable does not set bit 5 and retention
+metadata does not change absolute fitness ordering.
+
+### TEST-P64-004 Phase 5 retention projection
+
+Only an evaluable P6.4 retention rate is projected into growth-only Fitness
+retention with an explicit evidence count. Non-evaluable measurements keep the
+retention growth dimension inactive.
+
+### TEST-P64-005 Continuing-state T0/T1/T2 execution
+
+A bounded P6.4 experiment records T0/T1/T2 for every mapping on one continuing
+training state. Physical checkpoint generations increase across retention delay,
+interference and relearning, with T1-T0 covering at least the declared delay.
+
+### TEST-P64-006 Retention / forgetting / relearning classification
+
+Synthetic T0/T1/T2 cases prove the declared eligibility rules independently:
+retained, forgotten, relearning-eligible and relearned counts/rates are derived
+only from the corresponding checkpoint outcomes.
+
+### TEST-P64-007 Phase 5 retention probe isolation
+
+The Phase 5 P6.4 probe executes T0/T1/T2 without mutating the authoritative
+optimizer Universe state.
+
+### TEST-P64-008 Canonical and bounded-smoke configs
+
+Canonical P6.4 config uses a 128-generation retention delay, one deterministic
+CA interference repetition and one relearning pass. A separate bounded smoke
+config uses the same semantics with shortened timing for executable CI.
+
+### TEST-P64-009 Public P6.4 reporting and real experiment smoke
+
+Public JSON exposes P6.4 protocol values, aggregate nullable
+retention/relearning evidence, per-seed checkpoint generations and per-mapping
+T0/T1/T2 success/event generations. CI executes the real bounded P6.4
+experiment entrypoint.
+
+### TEST-P64-010 Snapshot / timeout reconstruction and optimizer smoke
+
+Optimizer snapshot round-trip preserves all P6.4 protocol fields. Explicit
+timeout override changes only the evaluation timeout and preserves retention
+delay/interference/relearning values. CI executes a bounded P6.4 optimizer
+integration smoke.
+
