@@ -261,6 +261,15 @@ clone results and checkpoint observations are measurement/reporting evidence,
 not separately persisted authoritative clone state. P6.4 alone does not require
 a snapshot-format increment.
 
+For Phase 6.5, persisted `ExperimentConfig` may additionally contain
+`noise_robustness_rate_delta`. Authoritative optimizer Fitness may persist
+growth-only `noise_robustness` together with
+`noise_robustness_evidence_count` so non-evaluable remains distinct from
+numeric zero. Clean/noisy evaluation clone results, effective-rate observations
+and noisy counterfactual outcomes are measurement/reporting evidence and are not
+authoritative clone state. P6.5 alone does not require a snapshot-format
+increment.
+
 ---
 
 ---
