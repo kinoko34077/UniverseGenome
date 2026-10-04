@@ -1,0 +1,18 @@
+{
+  "byte_hold_generations": 4,
+  "byte_gap_generations": 4,
+  "teacher_delay_generations": 4,
+  "teacher_repetitions": 1,
+  "evaluation_timeout_generations": 1024,
+  "mappings": [
+    {
+      "input_byte": 65,
+      "output_byte": 66
+    },
+    {
+      "input_byte": 67,
+      "output_byte": 68
+    }
+  ],
+  "counterfactual_input_byte": 66
+}
