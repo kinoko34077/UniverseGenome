@@ -50,6 +50,10 @@ test("observer renders the authoritative Phase 5 optimizer and real replacement"
     () => window.universeGenomeState.last_search.replacements.find((item) => item.index === 0),
   );
   expect(replacement).toBeTruthy();
+  await expect.poll(
+    () => page.evaluate(() => window.universeGenomeState.summaries[0].parent_genome_key),
+  ).not.toBeNull();
+  await expect(page.locator("#optimizer-meta")).toContainText("parentGenome=");
   await expect(page.locator("#overview .thumbnail").nth(0)).toContainText(/e\d+/);
 
   await page.getByRole("button", { name: "Run Search" }).click();
