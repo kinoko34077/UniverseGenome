@@ -2338,5 +2338,135 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(optimizer_payload["relearning_teacher_repetitions"], 1)
 
 
+    def test_p65_001_noise_robustness_protocol_field_roundtrips_without_changing_legacy_defaults(self):
+        legacy = ExperimentConfig()
+        self.assertEqual(legacy.noise_robustness_rate_delta, 0)
+        self.assertFalse(legacy.noise_robustness_enabled)
+
+        protocol = ExperimentConfig(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+            noise_robustness_rate_delta=256,
+        )
+        restored = ExperimentConfig.from_mapping(protocol.to_dict())
+
+        self.assertTrue(protocol.noise_robustness_enabled)
+        self.assertEqual(restored, protocol)
+        self.assertEqual(restored.noise_robustness_rate_delta, 256)
+
+    def test_p65_002_noise_robustness_rate_is_none_without_clean_success_evidence(self):
+        base = dict(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(),
+        )
+        unavailable = LearningMeasurement(
+            **base,
+            noise_robustness_eligible_count=0,
+            noise_robust_count=0,
+            noise_failed_count=0,
+        )
+        self.assertIsNone(unavailable.noise_robustness_rate)
+
+        measured = LearningMeasurement(
+            **base,
+            noise_robustness_eligible_count=4,
+            noise_robust_count=3,
+            noise_failed_count=1,
+        )
+        self.assertEqual(measured.noise_robustness_rate, 0.75)
+
+    def test_p65_003_growth_bit6_requires_comparable_noise_robustness_evidence(self):
+        unavailable_before = Fitness(
+            noise_robustness=0.0,
+            noise_robustness_evidence_count=0,
+        )
+        newly_evaluable = Fitness(
+            noise_robustness=1.0,
+            noise_robustness_evidence_count=2,
+        )
+        self.assertEqual(
+            growth_flags(unavailable_before, newly_evaluable)
+            & (1 << GROWTH_BIT_NOISE_ROBUSTNESS),
+            0,
+        )
+
+        comparable_before = Fitness(
+            noise_robustness=0.25,
+            noise_robustness_evidence_count=2,
+        )
+        comparable_after = Fitness(
+            noise_robustness=0.5,
+            noise_robustness_evidence_count=2,
+        )
+        self.assertEqual(
+            growth_flags(comparable_before, comparable_after)
+            & (1 << GROWTH_BIT_NOISE_ROBUSTNESS),
+            1 << GROWTH_BIT_NOISE_ROBUSTNESS,
+        )
+        self.assertEqual(
+            comparable_before.sort_key(),
+            Fitness(
+                noise_robustness=1.0,
+                noise_robustness_evidence_count=99,
+            ).sort_key(),
+        )
+
+    def test_p65_004_phase5_projects_only_evaluable_noise_robustness_evidence(self):
+        result = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(),
+            success=False,
+            clone_generation=1,
+            evaluation_generations=1,
+            timed_out=True,
+        )
+        seed_record = SeedMeasurement(
+            seed=1,
+            baseline=result,
+            trained=result,
+            baseline_no_input=result,
+            trained_no_input=result,
+            baseline_alternate=result,
+            trained_alternate=result,
+        )
+        measurement = LearningMeasurement(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(seed_record,),
+            noise_robustness_eligible_count=4,
+            noise_robust_count=3,
+            noise_failed_count=1,
+        )
+
+        fitness = SteadyStateOptimizer._fitness_from_measurement(measurement)
+
+        self.assertEqual(fitness.noise_robustness, 0.75)
+        self.assertEqual(fitness.noise_robustness_evidence_count, 4)
+
+
 if __name__ == "__main__":
     unittest.main()
