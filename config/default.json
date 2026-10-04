@@ -23,26 +23,8 @@
     "permanent_cell_id": false
   },
   "movement": {
-    "logical_speeds": [
-      "0",
-      "1/8",
-      "1/4",
-      "1/2",
-      "1",
-      "2",
-      "4",
-      "8"
-    ],
-    "internal_step_magnitudes": [
-      0,
-      1,
-      2,
-      4,
-      8,
-      16,
-      32,
-      64
-    ],
+    "logical_speeds": ["0", "1/8", "1/4", "1/2", "1", "2", "4", "8"],
+    "internal_step_magnitudes": [0, 1, 2, 4, 8, 16, 32, 64],
     "directions": 8,
     "destination_only_collision": true
   },
@@ -86,7 +68,7 @@
     "io_learning": true,
     "evolution": true,
     "phase6_capabilities": true,
-    "aging": true,
-    "phase6_multi_mapping": true
+    "phase6_multi_mapping": true,
+    "aging": true
   }
 }
