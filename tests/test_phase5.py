@@ -3026,5 +3026,173 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIsNone(measurement.generalization_rate)
 
 
+    def test_p66_008_canonical_and_smoke_generalization_configs_are_explicit(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_generalization.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_generalization_smoke.json"
+        )
+
+        for protocol in (canonical, smoke):
+            self.assertTrue(protocol.generalization_enabled)
+            self.assertEqual(
+                protocol.held_out_mapping,
+                ByteSequenceMapping((65, 69), 70),
+            )
+            self.assertEqual(
+                tuple((item.input_bytes, item.output_byte) for item in protocol.mappings),
+                (((65, 65), 66), ((65, 67), 68)),
+            )
+            self.assertEqual(protocol.output_event_count, 2)
+
+    def test_p66_009_runner_reports_public_generalization_evidence(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_generalization_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertTrue(payload["generalization_enabled"])
+        self.assertEqual(
+            payload["held_out_mapping"],
+            {"input_bytes": [65, 69], "output_byte": 70},
+        )
+        for name in (
+            "training_qualified_count",
+            "generalization_eligible_count",
+            "generalized_count",
+            "generalization_failed_count",
+            "generalization_rate",
+        ):
+            self.assertIn(name, payload)
+        self.assertEqual(len(payload["per_seed"]), 3)
+        for seed_record in payload["per_seed"]:
+            self.assertIn("baseline_held_out_success", seed_record)
+            self.assertIn("trained_held_out_success", seed_record)
+            self.assertIn("baseline_held_out_event_generations", seed_record)
+            self.assertIn("trained_held_out_event_generations", seed_record)
+            self.assertIn("training_qualified", seed_record)
+            self.assertIn("generalization_eligible", seed_record)
+            self.assertIn("generalized", seed_record)
+            self.assertIn("generalization_failed", seed_record)
+
+    def test_p66_010_snapshot_and_timeout_override_preserve_held_out_protocol(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_generalization_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=903,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(
+            payload["experiment"]["held_out_mapping"],
+            {"input_bytes": [65, 69], "output_byte": 70},
+        )
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_generalization_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        overridden = captured[-1]
+        optimizer_payload = json.loads(stdout.getvalue())["optimizer_protocol"]
+        self.assertEqual(overridden.evaluation_timeout_generations, 1)
+        self.assertEqual(
+            overridden.held_out_mapping,
+            ByteSequenceMapping((65, 69), 70),
+        )
+        self.assertTrue(optimizer_payload["generalization_enabled"])
+        self.assertEqual(
+            optimizer_payload["held_out_mapping"],
+            {"input_bytes": [65, 69], "output_byte": 70},
+        )
+
+    def test_p66_011_generalization_evidence_does_not_change_phase5_fitness_or_growth_bit7(self):
+        result = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(),
+            success=False,
+            clone_generation=1,
+            evaluation_generations=1,
+            timed_out=True,
+        )
+        mapping_record = MappingSeedMeasurement(
+            mapping=ByteMapping(65, 66),
+            baseline=result,
+            trained=result,
+        )
+        seed_record = SeedMeasurement(
+            seed=1,
+            baseline=result,
+            trained=result,
+            baseline_no_input=result,
+            trained_no_input=result,
+            baseline_alternate=result,
+            trained_alternate=result,
+            mapping_results=(mapping_record,),
+        )
+        base = dict(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=0,
+            trained_no_input_clean=0,
+            baseline_alternate_input_clean=0,
+            trained_alternate_input_clean=0,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(seed_record,),
+            mapping_count=1,
+        )
+        without_generalization = LearningMeasurement(**base)
+        with_generalization = LearningMeasurement(
+            **base,
+            training_qualified_count=1,
+            generalization_eligible_count=1,
+            generalized_count=1,
+            generalization_failed_count=0,
+        )
+
+        before = SteadyStateOptimizer._fitness_from_measurement(without_generalization)
+        after = SteadyStateOptimizer._fitness_from_measurement(with_generalization)
+        self.assertEqual(after, before)
+        self.assertEqual(growth_flags(before, after) & (1 << 7), 0)
+
+
 if __name__ == "__main__":
     unittest.main()
