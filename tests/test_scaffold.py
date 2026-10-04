@@ -154,8 +154,10 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("P6.1", readme)
         self.assertIn("GUI/search integration #63 is complete via PR #73", readme)
         self.assertIn("Phase 5 search-semantic remediation #65 is complete via PR #70", readme)
-        self.assertIn("P6.1 #79 / PR #80 is accepted on main", readme)
-        self.assertIn("P6.2 #82 / PR #83 is accepted on main", readme)
+        self.assertIn(
+            "P6.1 #79 / PR #80 and P6.2 #82 / PR #83 are accepted on main",
+            readme,
+        )
         self.assertIn("authoritative Phase 5", readme)
         self.assertIn("P6.2 capability accepted through #82 / PR #83", specification)
         self.assertIn("P6.2", specification)
