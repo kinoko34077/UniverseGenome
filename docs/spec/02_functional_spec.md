@@ -258,7 +258,11 @@ Per category:
 - 32 slots total
 
 The eight parameter genomes are deterministic and distinct. Matched
-genome/seed positions should be used across categories when possible.
+genome/seed positions should be used across categories when possible. After
+initialization, allocating a seed for a genome should first reuse a seed already
+represented by that same genome in another category when the seed is still free
+inside the current category. This preserves matched comparison where practical
+without coupling category-local selection or pruning.
 
 ---
 
