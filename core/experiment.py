@@ -57,17 +57,17 @@ class ByteSequenceMapping:
         explicit_outputs = tuple(int(value) for value in self.output_bytes)
         object.__setattr__(self, "input_bytes", values)
         object.__setattr__(self, "output_bytes", explicit_outputs)
-        if len(values) != 2:
-            raise ValueError("P6.2 sequence mappings require exactly two input bytes")
+        if len(values) not in (2, 3):
+            raise ValueError("bounded sequence mappings require two or three input bytes")
         for value in values:
             validate_byte(value)
         validate_byte(self.output_byte)
         for value in explicit_outputs:
             validate_byte(value)
         if explicit_outputs:
-            if len(explicit_outputs) != 2:
+            if len(explicit_outputs) not in (2, 3):
                 raise ValueError(
-                    "bounded P6.7 explicit output sequences require exactly two bytes"
+                    "bounded explicit output sequences require two or three bytes"
                 )
             if len(set(explicit_outputs)) != len(explicit_outputs):
                 raise ValueError(
@@ -154,20 +154,7 @@ class ExperimentConfig:
         if self.noise_robustness_rate_delta > 0xFFFF:
             raise ValueError("noise_robustness_rate_delta must fit uint16")
         if self.output_event_count not in (1, 2):
-            raise ValueError("bounded P6.3 output_event_count must be 1 or 2")
-        if self.output_event_count == 1 and self.output_event_interval_generations != 0:
-            raise ValueError("one-event protocols require output interval 0")
-        if self.output_event_count == 2 and self.output_event_interval_generations < 2:
-            raise ValueError("two-event P6.3 protocols require output interval >= 2")
-        for item in self.mappings:
-            if (
-                isinstance(item, ByteSequenceMapping)
-                and item.output_bytes
-                and len(item.output_bytes) != self.output_event_count
-            ):
-                raise ValueError(
-                    "explicit output sequence length must match output_event_count"
-                )
+            raise ValueError("legacy/default output_event_count must be 1 or 2")
         if self.retention_enabled:
             if self.retention_delay_generations <= 0:
                 raise ValueError("P6.4 retention delay must be positive")
@@ -185,6 +172,55 @@ class ExperimentConfig:
         input_sequences = tuple(item.input_bytes for item in self.mappings)
         if len(set(input_sequences)) != len(input_sequences):
             raise ValueError("mapping input sequences must be unique")
+
+        input_lengths = {len(sequence) for sequence in input_sequences}
+        mapping_output_counts = tuple(
+            (
+                len(item.output_bytes)
+                if isinstance(item, ByteSequenceMapping) and item.output_bytes
+                else self.output_event_count
+            )
+            for item in self.mappings
+        )
+        mixed_length_protocol = (
+            len(input_lengths) > 1
+            or len(set(mapping_output_counts)) > 1
+        )
+        if mixed_length_protocol:
+            for first in input_sequences:
+                for second in input_sequences:
+                    if (
+                        first != second
+                        and len(first) < len(second)
+                        and second[: len(first)] == first
+                    ):
+                        raise ValueError(
+                            "bounded mixed-length mapped inputs must be prefix-free"
+                        )
+        else:
+            for item in self.mappings:
+                if (
+                    isinstance(item, ByteSequenceMapping)
+                    and item.output_bytes
+                    and len(item.output_bytes) != self.output_event_count
+                ):
+                    raise ValueError(
+                        "explicit output sequence length must match output_event_count"
+                    )
+
+        max_output_event_count = max(mapping_output_counts)
+        if (
+            max_output_event_count == 1
+            and self.output_event_interval_generations != 0
+        ):
+            raise ValueError("one-event protocols require output interval 0")
+        if (
+            max_output_event_count > 1
+            and self.output_event_interval_generations < 2
+        ):
+            raise ValueError(
+                "multi-event protocols require output interval >= 2"
+            )
         validate_byte(self.counterfactual_input_byte)
         one_byte_inputs = {
             item.input_bytes[0]
@@ -215,16 +251,36 @@ class ExperimentConfig:
             raise ValueError("P6.4 requires a deterministic unmapped interference sequence")
 
         if sequence_mappings:
-            if len(prefix) != 1:
-                raise ValueError("P6.2 counterfactual_prefix must contain one byte")
-            if not all(item.input_bytes[:1] == prefix for item in sequence_mappings):
-                raise ValueError("counterfactual_prefix must match the shared sequence prefix")
-            if len(counterfactual_sequence) != 2:
-                raise ValueError(
-                    "P6.2 counterfactual_input_sequence must contain two bytes"
-                )
-            if counterfactual_sequence in set(input_sequences):
-                raise ValueError("counterfactual input sequence must be unmapped")
+            if mixed_length_protocol:
+                if not prefix:
+                    raise ValueError(
+                        "mixed-length protocols require one proper-prefix control"
+                    )
+                if not any(
+                    len(prefix) < len(sequence)
+                    and sequence[: len(prefix)] == prefix
+                    for sequence in input_sequences
+                ):
+                    raise ValueError(
+                        "mixed-length counterfactual_prefix must be a proper mapped prefix"
+                    )
+                if not counterfactual_sequence:
+                    raise ValueError(
+                        "mixed-length protocols require one unmapped sequence control"
+                    )
+                if counterfactual_sequence in set(input_sequences):
+                    raise ValueError("counterfactual input sequence must be unmapped")
+            else:
+                if len(prefix) != 1:
+                    raise ValueError("P6.2 counterfactual_prefix must contain one byte")
+                if not all(item.input_bytes[:1] == prefix for item in sequence_mappings):
+                    raise ValueError("counterfactual_prefix must match the shared sequence prefix")
+                if len(counterfactual_sequence) != 2:
+                    raise ValueError(
+                        "P6.2 counterfactual_input_sequence must contain two bytes"
+                    )
+                if counterfactual_sequence in set(input_sequences):
+                    raise ValueError("counterfactual input sequence must be unmapped")
 
         if self.held_out_mapping is not None:
             held_out = self.held_out_mapping
@@ -994,6 +1050,10 @@ class IOExperiment:
 
         actual = tuple(observed)
         expected_tuple = tuple(expected)
+        expected_output_event_count = sum(
+            event.kind == "byte"
+            for event in expected_tuple
+        )
         expected_index = 0
         for event in actual:
             if expected_index < len(expected_tuple) and event == expected_tuple[expected_index]:
@@ -1008,14 +1068,14 @@ class IOExperiment:
         )
         timing_valid = True
         if (
-            self.experiment.output_event_count > 1
-            and len(actual) >= self.experiment.output_event_count
-            and len(event_generations) >= self.experiment.output_event_count
+            expected_output_event_count > 1
+            and len(actual) >= expected_output_event_count
+            and len(event_generations) >= expected_output_event_count
         ):
             timing_valid = all(
                 event_generations[index] - event_generations[index - 1]
                 == self.experiment.output_event_interval_generations
-                for index in range(1, self.experiment.output_event_count)
+                for index in range(1, expected_output_event_count)
             )
         return EvaluationResult(
             expected_events=expected_tuple,
@@ -1031,7 +1091,7 @@ class IOExperiment:
             activity_cost=activity_cost,
             timed_out=expected_index < len(expected_tuple),
             input_complete_generation=input_complete_generation,
-            expected_output_event_count=self.experiment.output_event_count,
+            expected_output_event_count=expected_output_event_count,
             expected_output_interval_generations=(
                 self.experiment.output_event_interval_generations
             ),
