@@ -3,8 +3,9 @@
 ## Current repository state
 
 Phase 0 through Phase 5 implementation is present on `main`, but current
-acceptance remediation remains active under #66, #65, and #63. Phase 6+ is
-blocked until readiness owner #60 reruns the audit from repaired `main`.
+status reconciliation #66 is complete via PR #69. Acceptance remediation
+remains active under #65 and #63. Phase 6+ is blocked until readiness owner
+#60 reruns the audit from repaired `main`.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -66,7 +67,7 @@ Current Phase 5 semantic and cross-phase acceptance remediation remains open in
 #65 and #63. Earlier implementation/remediation history: #24 / PR #25, #30 / PR #34,
 #36 / PR #39, #37 / PR #40, #38 / PR #41, #44 / PR #50, #56 / PR #57.
 
-## Phase 6+ — Capability ladder (blocked pending #63/#65/#66; readiness rerun #60)
+## Phase 6+ — Capability ladder (blocked pending #65/#63; readiness rerun #60)
 No Phase 6 capability is implemented yet. Candidate work includes multiple
 mappings, sequence discrimination, multi-event output, forgetting/relearning,
 robustness, generalization, multi-byte sequences and raw UTF-8 experiments.
