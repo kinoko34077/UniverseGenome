@@ -1068,16 +1068,19 @@ class Phase5OptimizerTests(unittest.TestCase):
             retention=0,
             noise_robustness=0,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
         no_input_after = Fitness(
             retention=1,
             noise_robustness=0,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
         alternate_after = Fitness(
             retention=0,
             noise_robustness=1,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
 
         self.assertFalse(hasattr(before, "trained_no_input_clean"))
