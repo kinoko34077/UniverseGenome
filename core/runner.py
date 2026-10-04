@@ -239,6 +239,14 @@ def main(argv: list[str] | None = None) -> int:
             "output_event_interval_generations": (
                 measurement.output_event_interval_generations
             ),
+            "retention_enabled": experiment.retention_enabled,
+            "retention_delay_generations": experiment.retention_delay_generations,
+            "retention_interference_repetitions": (
+                experiment.retention_interference_repetitions
+            ),
+            "relearning_teacher_repetitions": (
+                experiment.relearning_teacher_repetitions
+            ),
             "baseline_successes": measurement.baseline_successes,
             "trained_successes": measurement.trained_successes,
             "baseline_no_input_clean": measurement.baseline_no_input_clean,
@@ -253,6 +261,13 @@ def main(argv: list[str] | None = None) -> int:
             "trained_sequence_counterfactual_clean": (
                 measurement.trained_sequence_counterfactual_clean
             ),
+            "retention_eligible_count": measurement.retention_eligible_count,
+            "retained_count": measurement.retained_count,
+            "forgotten_count": measurement.forgotten_count,
+            "relearning_eligible_count": measurement.relearning_eligible_count,
+            "relearned_count": measurement.relearned_count,
+            "retention_rate": measurement.retention_rate,
+            "relearning_rate": measurement.relearning_rate,
             "per_mapping": [
                 {
                     "input_bytes": list(item.mapping.input_bytes),
@@ -270,6 +285,9 @@ def main(argv: list[str] | None = None) -> int:
             "per_seed": [
                 {
                     "seed": item.seed,
+                    "retention_checkpoint_generations": list(
+                        item.retention_checkpoint_generations
+                    ),
                     "mappings": [
                         {
                             "input_bytes": list(record.mapping.input_bytes),
@@ -281,6 +299,26 @@ def main(argv: list[str] | None = None) -> int:
                             ),
                             "trained_event_generations": list(
                                 record.trained.event_generations
+                            ),
+                            "t0_success": record.t0.success,
+                            "t1_success": (
+                                record.t1.success if record.t1 is not None else None
+                            ),
+                            "t2_success": (
+                                record.t2.success if record.t2 is not None else None
+                            ),
+                            "t0_event_generations": list(
+                                record.t0.event_generations
+                            ),
+                            "t1_event_generations": (
+                                list(record.t1.event_generations)
+                                if record.t1 is not None
+                                else None
+                            ),
+                            "t2_event_generations": (
+                                list(record.t2.event_generations)
+                                if record.t2 is not None
+                                else None
                             ),
                         }
                         for record in item.mapping_results
@@ -322,6 +360,16 @@ def main(argv: list[str] | None = None) -> int:
             "output_event_count": optimizer_experiment.output_event_count,
             "output_event_interval_generations": (
                 optimizer_experiment.output_event_interval_generations
+            ),
+            "retention_enabled": optimizer_experiment.retention_enabled,
+            "retention_delay_generations": (
+                optimizer_experiment.retention_delay_generations
+            ),
+            "retention_interference_repetitions": (
+                optimizer_experiment.retention_interference_repetitions
+            ),
+            "relearning_teacher_repetitions": (
+                optimizer_experiment.relearning_teacher_repetitions
             ),
             "experiment_config": args.experiment_config,
         }
