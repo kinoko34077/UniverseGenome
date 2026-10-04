@@ -3466,5 +3466,117 @@ class Phase5OptimizerTests(unittest.TestCase):
             self.assertFalse(failure.success)
 
 
+    def test_p67_006_canonical_and_smoke_configs_declare_distinct_sequences(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_multi_byte_sequences.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_multi_byte_sequences_smoke.json"
+        )
+
+        self.assertEqual(
+            tuple(item.output_bytes for item in canonical.mappings),
+            ((66, 67), (68, 69)),
+        )
+        self.assertEqual(canonical.output_event_count, 2)
+        self.assertEqual(canonical.output_event_interval_generations, 4)
+        self.assertEqual(canonical.evaluation_timeout_generations, 1024)
+
+        self.assertEqual(
+            tuple(item.output_bytes for item in smoke.mappings),
+            ((66, 67), (68, 69)),
+        )
+        self.assertEqual(smoke.output_event_count, 2)
+        self.assertEqual(smoke.output_event_interval_generations, 2)
+        self.assertEqual(smoke.evaluation_timeout_generations, 2)
+
+    def test_p67_007_snapshot_and_timeout_override_preserve_distinct_sequences(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_multi_byte_sequences_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=1404,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(
+            tuple(item.output_bytes for item in restored.experiment.mappings),
+            ((66, 67), (68, 69)),
+        )
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--experiment-config",
+                        "config/experiment_phase6_multi_byte_sequences_smoke.json",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(captured[-1].evaluation_timeout_generations, 1)
+        self.assertEqual(
+            tuple(item.output_bytes for item in captured[-1].mappings),
+            ((66, 67), (68, 69)),
+        )
+        self.assertEqual(
+            [item["output_bytes"] for item in payload["optimizer_protocol"]["mappings"]],
+            [[66, 67], [68, 69]],
+        )
+
+    def test_p67_008_runner_reports_declared_and_observed_sequence_evidence(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_multi_byte_sequences_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertEqual(
+            [item["output_bytes"] for item in payload["per_mapping"]],
+            [[66, 67], [68, 69]],
+        )
+        self.assertEqual(len(payload["per_seed"]), 3)
+        for seed_record in payload["per_seed"]:
+            self.assertEqual(len(seed_record["mappings"]), 2)
+            for mapping_record in seed_record["mappings"]:
+                self.assertIn(mapping_record["output_bytes"], ([66, 67], [68, 69]))
+                self.assertIsInstance(mapping_record["baseline_events"], list)
+                self.assertIsInstance(mapping_record["trained_events"], list)
+                for event in (
+                    mapping_record["baseline_events"]
+                    + mapping_record["trained_events"]
+                ):
+                    self.assertIn(event["kind"], ("byte", "null"))
+                    self.assertIn("value", event)
+                    self.assertIsInstance(event["generation"], int)
+        self.assertFalse(payload["learning_claim"])
+
+
 if __name__ == "__main__":
     unittest.main()
