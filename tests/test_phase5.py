@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 from core.experiment import (
     ByteMapping,
+    ByteSequenceMapping,
     EvaluationResult,
     ExperimentConfig,
     LearningMeasurement,
@@ -1686,6 +1687,120 @@ class Phase5OptimizerTests(unittest.TestCase):
             payload["optimizer_protocol"]["mode"],
             "explicit_timeout_override",
         )
+
+
+    def test_p62_005_optimizer_snapshot_roundtrips_sequence_protocol(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            inter_input_generations=1,
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=405,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(
+            payload["experiment"]["mappings"],
+            [
+                {"input_bytes": [65, 65], "output_byte": 66},
+                {"input_bytes": [65, 67], "output_byte": 68},
+            ],
+        )
+        self.assertEqual(payload["experiment"]["inter_input_generations"], 1)
+        self.assertEqual(payload["experiment"]["counterfactual_prefix"], [65])
+        self.assertEqual(
+            payload["experiment"]["counterfactual_input_sequence"],
+            [67, 65],
+        )
+
+    def test_p62_006_optimizer_timeout_override_preserves_sequence_protocol(self):
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_temporal_sequence_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        protocol = captured[-1]
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(protocol.evaluation_timeout_generations, 1)
+        self.assertEqual(
+            [item.input_bytes for item in protocol.mappings],
+            [(65, 65), (65, 67)],
+        )
+        self.assertEqual(protocol.inter_input_generations, 1)
+        self.assertEqual(protocol.counterfactual_prefix, (65,))
+        self.assertEqual(protocol.counterfactual_input_sequence, (67, 65))
+        self.assertEqual(payload["optimizer_protocol"]["mapping_count"], 2)
+        self.assertEqual(
+            payload["optimizer_protocol"]["counterfactual_prefix"],
+            [65],
+        )
+        self.assertEqual(
+            payload["optimizer_protocol"]["counterfactual_input_sequence"],
+            [67, 65],
+        )
+
+    def test_p62_007_runner_reports_sequence_results_and_controls(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_temporal_sequence_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertEqual(payload["mapping_count"], 2)
+        self.assertEqual(payload["evaluation_case_count"], 6)
+        self.assertEqual(
+            [item["input_bytes"] for item in payload["per_mapping"]],
+            [[65, 65], [65, 67]],
+        )
+        self.assertEqual(payload["counterfactual_prefix"], [65])
+        self.assertEqual(payload["counterfactual_input_sequence"], [67, 65])
+        self.assertEqual(payload["trained_prefix_input_clean"], 3)
+        self.assertEqual(payload["trained_sequence_counterfactual_clean"], 3)
+        self.assertFalse(payload["learning_claim"])
 
 
 if __name__ == "__main__":
