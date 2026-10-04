@@ -452,8 +452,26 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(all("state" in slot for slot in payload["slots"]))
 
     def test_p2g_growth_flags_include_retention_and_noise_robustness(self):
-        before = Fitness(0, 4, 3, 8, 10, 0, 0)
-        after = Fitness(1, 3, 2, 7, 9, 1, 1)
+        before = Fitness(
+            success=0,
+            wrong_outputs=4,
+            timeouts=3,
+            response_latency=8,
+            activity_cost=10,
+            retention=0,
+            noise_robustness=0,
+            retention_evidence_count=1,
+        )
+        after = Fitness(
+            success=1,
+            wrong_outputs=3,
+            timeouts=2,
+            response_latency=7,
+            activity_cost=9,
+            retention=1,
+            noise_robustness=1,
+            retention_evidence_count=1,
+        )
         self.assertEqual(growth_flags(before, after) & 0b1111111, 0b1111111)
 
     def test_p2g_pruning_uses_growth_bit_count_not_numeric_byte_sum(self):
@@ -1040,9 +1058,21 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertLess(len(surviving), 3)
 
     def test_p5_041_growth_bits_keep_canonical_retention_and_noise_names(self):
-        before = Fitness(retention=0, noise_robustness=0)
-        no_input_after = Fitness(retention=1, noise_robustness=0)
-        alternate_after = Fitness(retention=0, noise_robustness=1)
+        before = Fitness(
+            retention=0,
+            noise_robustness=0,
+            retention_evidence_count=1,
+        )
+        no_input_after = Fitness(
+            retention=1,
+            noise_robustness=0,
+            retention_evidence_count=1,
+        )
+        alternate_after = Fitness(
+            retention=0,
+            noise_robustness=1,
+            retention_evidence_count=1,
+        )
 
         self.assertFalse(hasattr(before, "trained_no_input_clean"))
         self.assertFalse(hasattr(before, "trained_alternate_input_clean"))
@@ -2033,7 +2063,15 @@ class Phase5OptimizerTests(unittest.TestCase):
         fitness = SteadyStateOptimizer._fitness_from_measurement(measurement)
         self.assertEqual(fitness.retention, 0.5)
         self.assertEqual(fitness.retention_evidence_count, 2)
-        self.assertEqual(fitness.sort_key(), Fitness().sort_key())
+        self.assertEqual(
+            fitness.sort_key(),
+            Fitness(
+                timeouts=1,
+                response_latency=4,
+                retention=0.0,
+                retention_evidence_count=0,
+            ).sort_key(),
+        )
 
 
 if __name__ == "__main__":
