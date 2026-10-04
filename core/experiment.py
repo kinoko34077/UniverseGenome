@@ -431,6 +431,39 @@ class SeedMeasurement:
     noisy_noise_rate: int = 0
 
     @property
+    def noisy_controls_clean(self) -> bool:
+        if self.noisy_no_input is None or not self.noisy_no_input.success:
+            return False
+        if self.noisy_prefix is not None or self.noisy_sequence_counterfactual is not None:
+            return bool(
+                self.noisy_prefix is not None
+                and self.noisy_prefix.success
+                and self.noisy_sequence_counterfactual is not None
+                and self.noisy_sequence_counterfactual.success
+            )
+        return bool(
+            self.noisy_alternate is not None
+            and self.noisy_alternate.success
+        )
+
+    def noise_classification(
+        self,
+        mapping: MappingSeedMeasurement,
+    ) -> tuple[bool, bool, bool]:
+        eligible = bool(
+            mapping.noisy is not None
+            and mapping.trained.success
+            and self.noisy_noise_rate > self.clean_noise_rate
+        )
+        robust = bool(
+            eligible
+            and mapping.noisy is not None
+            and mapping.noisy.success
+            and self.noisy_controls_clean
+        )
+        return eligible, robust, bool(eligible and not robust)
+
+    @property
     def baseline_evaluations(self) -> tuple[EvaluationResult, ...]:
         if self.mapping_results:
             return tuple(item.baseline for item in self.mapping_results)
@@ -1134,40 +1167,20 @@ def _assemble_learning_measurement(
         for mapping in retention_records
     )
 
-    def noisy_controls_clean(item: SeedMeasurement) -> bool:
-        if item.noisy_no_input is None or not item.noisy_no_input.success:
-            return False
-        if sequence_protocol:
-            return bool(
-                item.noisy_prefix is not None
-                and item.noisy_prefix.success
-                and item.noisy_sequence_counterfactual is not None
-                and item.noisy_sequence_counterfactual.success
-            )
-        return bool(
-            item.noisy_alternate is not None
-            and item.noisy_alternate.success
-        )
-
-    noise_records = tuple(
-        (item, mapping)
+    noise_classifications = tuple(
+        item.noise_classification(mapping)
         for item in records
         for mapping in item.mapping_results
         if mapping.noisy is not None
-        and item.noisy_noise_rate > item.clean_noise_rate
     )
     noise_robustness_eligible_count = sum(
-        mapping.trained.success
-        for _, mapping in noise_records
+        eligible for eligible, _, _ in noise_classifications
     )
     noise_robust_count = sum(
-        mapping.trained.success
-        and bool(mapping.noisy and mapping.noisy.success)
-        and noisy_controls_clean(item)
-        for item, mapping in noise_records
+        robust for _, robust, _ in noise_classifications
     )
-    noise_failed_count = (
-        noise_robustness_eligible_count - noise_robust_count
+    noise_failed_count = sum(
+        failed for _, _, failed in noise_classifications
     )
 
     per_mapping = tuple(
