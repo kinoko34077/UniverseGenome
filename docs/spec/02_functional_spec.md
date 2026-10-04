@@ -333,6 +333,12 @@ counterfactual measurements such as no-input-clean and alternate-input-clean
 are recorded as separate observables; this specification does not equate
 either observable with retention or noise robustness.
 
+The integrated v0.1 Phase 5 protocol does not yet define a retention or
+noise-robustness measurement procedure. Its authoritative measurement path
+therefore leaves those two Fitness fields at zero and bits 5/6 remain unset in
+integrated v0.1 growth history. Their semantic bit positions are reserved; they
+may become active only under a later explicitly accepted measurement protocol.
+
 ---
 
 ## SPEC-GROWTH-002
@@ -364,9 +370,18 @@ Recent growth score may use:
 At each authoritative multiple of 16 generations, short health records
 whether active cells remain and whether the physical window produced
 measurable activity. A window with no active cells is an
-`all_active_cells_gone` absolute failure. Persistent non-response remains a
-specification decision gate: the protocol, activity observable, and required
-duration are not fixed here and must not be inferred from `activity_cost`.
+`all_active_cells_gone` absolute failure.
+
+Persistent non-response uses the already-defined task/evaluation protocol,
+rather than generic physical activity. At each authoritative 128-generation
+growth boundary, the trained-state A-only evaluation clone records whether any
+autonomous output event occurred. Four consecutive boundary observations with
+no autonomous output event cover the accepted 512-generation stagnation
+horizon and produce `persistent_non_response`, provided active cells still
+remain. Any autonomous output event, including a wrong byte or NULL, counts as
+a response for this absolute-failure test and breaks the consecutive
+non-response run. Correctness remains the responsibility of absolute fitness
+and growth. `activity_cost` is not used as a substitute for task response.
 
 ---
 
@@ -400,10 +415,11 @@ Examples:
 
 Implementation corruption is an error, not evolutionary death.
 
-The v0.1 implementation retires the explicit all-active-cell-loss condition
-before growth-only protection and minimum-evidence maturity. Persistent
-non-response is not automatically retired until its protocol and threshold are
-approved. Malformed state/configuration remains an error.
+The v0.1 implementation retires both accepted measurable absolute failures
+before growth-only protection and minimum-evidence maturity:
+`all_active_cells_gone` and the 512-physical-generation
+`persistent_non_response` protocol defined by SPEC-PRUNE-001. Malformed
+state/configuration remains an error.
 
 ---
 
