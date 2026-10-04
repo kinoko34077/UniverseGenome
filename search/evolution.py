@@ -344,18 +344,32 @@ class SteadyStateOptimizer:
         return PhysicsConfig(**values)
 
     @staticmethod
+    def _trained_mapping_evaluations(
+        measurement: LearningMeasurement,
+    ) -> tuple[EvaluationResult, ...]:
+        results: list[EvaluationResult] = []
+        for item in measurement.per_seed:
+            mapping_results = tuple(getattr(item, "mapping_results", ()))
+            if mapping_results:
+                results.extend(mapping.trained for mapping in mapping_results)
+            else:
+                results.append(item.trained)
+        return tuple(results)
+
+    @staticmethod
     def _fitness_from_measurement(measurement: LearningMeasurement) -> Fitness:
-        trained = tuple(item.trained for item in measurement.per_seed)
-        denominator = float(measurement.seed_count)
+        trained = SteadyStateOptimizer._trained_mapping_evaluations(measurement)
+        evaluation_denominator = float(len(trained))
+        seed_denominator = float(measurement.seed_count)
         return Fitness(
-            success=measurement.trained_successes / denominator,
-            wrong_outputs=sum(result.wrong_output_count for result in trained) / denominator,
-            timeouts=sum(result.timed_out for result in trained) / denominator,
-            response_latency=sum(result.response_latency for result in trained) / denominator,
-            activity_cost=sum(result.activity_cost for result in trained) / denominator,
-            counterfactual_no_input_clean=measurement.trained_no_input_clean / denominator,
+            success=measurement.trained_successes / evaluation_denominator,
+            wrong_outputs=sum(result.wrong_output_count for result in trained) / evaluation_denominator,
+            timeouts=sum(result.timed_out for result in trained) / evaluation_denominator,
+            response_latency=sum(result.response_latency for result in trained) / evaluation_denominator,
+            activity_cost=sum(result.activity_cost for result in trained) / evaluation_denominator,
+            counterfactual_no_input_clean=measurement.trained_no_input_clean / seed_denominator,
             counterfactual_alternate_input_clean=(
-                measurement.trained_alternate_input_clean / denominator
+                measurement.trained_alternate_input_clean / seed_denominator
             ),
         )
 
@@ -407,8 +421,8 @@ class SteadyStateOptimizer:
         measurement: LearningMeasurement,
     ) -> bool:
         return any(
-            bool(item.trained.autonomous_events)
-            for item in measurement.per_seed
+            bool(result.autonomous_events)
+            for result in SteadyStateOptimizer._trained_mapping_evaluations(measurement)
         )
 
     def _record_response_observation(
