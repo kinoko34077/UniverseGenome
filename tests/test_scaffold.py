@@ -116,6 +116,62 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("readiness audit #60", handoff)
         self.assertIn("Phase 5", roadmap)
 
+    def test_current_state_separates_implementation_from_readiness(self):
+        status = build_status(load_config(ROOT / "config" / "default.json"))
+
+        self.assertTrue(status["phase5_optimizer_implemented"])
+        self.assertEqual(status["acceptance_state"], "remediation_in_progress")
+        self.assertFalse(status["phase6_ready"])
+        self.assertEqual(status["blocking_owners"], ["#65", "#63"])
+        self.assertEqual(status["readiness_owner"], "#60")
+        self.assertIn("Phase 5 acceptance remediation", status["next_phase"])
+        self.assertNotIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
+
+    def test_post_audit_documentation_routes_to_blocked_remediation(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        specification = (ROOT / "docs" / "SPECIFICATION.md").read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
+        handoff = (ROOT / "docs" / "PHASE6_HANDOFF.md").read_text(encoding="utf-8")
+        overview = (ROOT / "docs" / "spec" / "00_overview.md").read_text(encoding="utf-8")
+        functional = (ROOT / "docs" / "spec" / "02_functional_spec.md").read_text(encoding="utf-8")
+        changelog = (ROOT / "docs" / "spec" / "08_changelog.md").read_text(encoding="utf-8")
+        historical_plans = [
+            (
+                ROOT / "docs" / "superpowers" / "plans" / name
+            ).read_text(encoding="utf-8")
+            for name in (
+                "2026-10-03-phase5-authoritative-slots.md",
+                "2026-10-03-phase5-semantic-corrections.md",
+                "2026-10-04-phase5-free-slot-evidence.md",
+            )
+        ]
+
+        self.assertIn("Phase 0 through Phase 5 implementation is present", readme)
+        self.assertIn("Phase 6+ is blocked", readme)
+        self.assertIn("#63", readme)
+        self.assertIn("#65", readme)
+        self.assertNotIn("Phase 1 through Phase 5 are accepted on `main`", readme)
+        self.assertIn("remains unresolved under #63", readme)
+        self.assertNotIn(
+            "The GUI observes the server-owned runtime API and does not drive the authoritative simulation clock.",
+            readme,
+        )
+        self.assertIn("acceptance remediation is active", specification)
+        self.assertIn("Phase 6+ is blocked", specification)
+        self.assertIn(
+            "Phase 6+ — Capability ladder (blocked pending #65/#63; readiness rerun #60)",
+            roadmap,
+        )
+        self.assertIn("Status: **blocked pending remediation #65/#63; readiness rerun #60**", handoff)
+        self.assertIn("historical v0.1 physics/search contract", handoff)
+        self.assertIn("Status is a single base term", overview)
+        self.assertNotIn("Status: open / policy hook only", functional)
+        self.assertNotIn("Status: accepted invariant", functional)
+        self.assertIn("Phase 2D accepted (#16 / PR #17)", changelog)
+        self.assertIn("REQ-083", changelog)
+        for historical_plan in historical_plans:
+            self.assertIn("Historical execution record; not Current State authority.", historical_plan)
+
     def test_phase5_metadata_and_implemented_defaults_are_current(self):
         functional = (ROOT / "docs" / "spec" / "02_functional_spec.md").read_text(encoding="utf-8")
         behavior = (ROOT / "docs" / "spec" / "03_behavior_spec.md").read_text(encoding="utf-8")
@@ -124,6 +180,18 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertEqual(core.PHASE, 5)
         self.assertEqual(persistence.PHASE, 5)
         self.assertEqual(server.PHASE, 5)
+
+        core_init = (ROOT / "core" / "__init__.py").read_text(encoding="utf-8")
+        server_init = (ROOT / "server" / "__init__.py").read_text(encoding="utf-8")
+        persistence_init = (ROOT / "persistence" / "__init__.py").read_text(encoding="utf-8")
+        snapshot_module = (ROOT / "persistence" / "snapshot.py").read_text(encoding="utf-8")
+        for package_metadata in (core_init, server_init, persistence_init):
+            self.assertIn("implementation-level marker", package_metadata)
+            self.assertNotIn("accepted Phase 5", package_metadata)
+        self.assertIn("current UniverseState persistence contract", snapshot_module)
+        self.assertNotIn("Phase 2D authoritative state", snapshot_module)
+        self.assertNotIn("unable to read Phase 2D snapshot", snapshot_module)
+
         self.assertEqual(
             latent_ops.LATENT_OPERATOR_CATEGORIES,
             ("masked_copy", "masked_xor", "rotate_copy", "masked_and"),

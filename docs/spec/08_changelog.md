@@ -10,9 +10,20 @@
 - constrained integrated mutation to valid adjacent binary-grid values,
   including the effective `initial_density <= max_cells` bound and deterministic
   opposite-direction fallback;
-- made the distinct trained no-input-clean and trained alternate-input-clean
-  sources of growth bits 5 and 6 explicit; the promising-allocation policy
-  remains an unresolved Human decision gate.
+- preserved the canonical retention/noise-robustness growth-bit semantics; the
+  promising-allocation policy and any alternate cleanliness observables remain
+  unresolved Human/specification decision gates.
+
+## 2026-10-04 — Audit #64 / Issues #66/#67/#68 current-state correction
+
+- distinguished Phase 0–5 implementation presence from current acceptance and
+  readiness; unresolved P1 owners #66, #65, and #63 keep Phase 6+ blocked;
+- recorded #60 as the later readiness rerun owner and retained its earlier PASS
+  only as historical evidence;
+- marked the Phase 5 implementation plans as historical execution records whose
+  checkboxes do not define Current State;
+- added the missing Phase 2D acceptance trace `#16 / PR #17` and corrected the
+  historical Issue #8 `REQ-083` reference without introducing a new requirement.
 
 ## 2026-10-03 — Issue #58 Phase 5 authoritative Universe-slot corrections
 
@@ -124,6 +135,12 @@ Future physical-rule changes must record affected REQ/SPEC IDs, old/new behavior
 - `core/physics.py` implements deterministic fixed-capacity fragmentation,
   level-0 collapse/deletion, latent/HP/age split and headless counters.
 - Phase 2E aging and later phases remain deferred pending #16 acceptance.
+
+## 2026-10-03 — Phase 2D accepted (#16 / PR #17)
+- Deterministic fragmentation, bounded slot reuse, split-state semantics, and
+  continuation evidence passed the Phase 2D acceptance boundary.
+- Phase 2E aging remained deferred to #18 / PR #19 at this checkpoint.
+
 ## 2026-10-03 — Phase 2E aging implementation candidate (#18)
 - `core/physics.py` implements safe highest-set-bit age classes and
   deterministic power-of-two fragmentation pressure with uint16 saturation.

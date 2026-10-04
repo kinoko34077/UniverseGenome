@@ -1,5 +1,9 @@
 # Phase 5 Authoritative Universe Slots Implementation Plan
 
+> Historical execution record; not Current State authority. Its checkboxes and
+> handoff describe the original implementation checkpoint. Use live Devflow
+> Control and the owning Issues for current status.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or **superpowers:executing-plans** to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Restore Phase 5 to the original 128-authoritative-Universe architecture so persistent learning, 128/512-generation growth, allocation, pruning, and snapshot continuation all use real Universe slots.

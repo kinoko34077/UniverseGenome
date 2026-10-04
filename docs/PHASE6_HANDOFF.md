@@ -1,15 +1,21 @@
 # Phase 6+ capability handoff
 
-Status: **ready for a new bounded Phase 6 child Issue after readiness audit #60**.
+Status: **blocked pending remediation #65/#63; readiness rerun #60**.
 No Phase 6+ capability has been implemented.
 
-## Accepted v0.1 boundary
+## Current v0.1 boundary
 
-Phase 0 through Phase 5 are accepted on `main`.
+Phase 0 through Phase 5 implementation is present on `main`, but full current
+acceptance/readiness remains invalidated. Status-truth remediation #66 is
+complete via PR #69; P1 remediation owners #65 (Phase 5 search semantics) and
+#63 (GUI/authoritative-search integration) remain open. Readiness owner #60
+must rerun the audit from the
+repaired current `main`.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
-Subsequent audits found acceptance gaps that were repaired before this handoff.
-The current Phase 0–5 implementation boundary is established by:
+Earlier remediation established the current Phase 0–5 implementation boundary;
+the later #64 audit found cross-phase acceptance gaps that remain open. The
+historical implementation boundary is documented by:
 
 - original Phase 1–5 implementation PRs;
 - completeness audit #27;
@@ -34,7 +40,7 @@ PR #59 restored the original Phase 5 architecture and merged as
 - provisional versus depleted-mature evidence lifecycle;
 - deterministic optimizer snapshot/restore.
 
-Post-merge main CI `37137438184` succeeded with:
+The historical post-merge main CI `37137438184` succeeded with:
 
 - Python test suite: **130 tests / OK**;
 - Playwright Chromium browser E2E: **1 passed**.
@@ -53,9 +59,9 @@ retained as historical evidence rather than current state:
 These markers are superseded as current evidence by PR #59,
 `5844e989706afce7988c4b8d50f94fc33afb1228`, and CI `37137438184`.
 
-Readiness audit #60 found no unresolved P0/P1 in the accepted Phase 0–5 runtime
-path. Non-blocking P2/P3 residuals are tracked separately in #61 and do not
-change the accepted v0.1 boundary.
+The previous #60 PASS is historical and invalidated by the later full
+traceability audit #64 and handoff #67/#68. The unresolved P1 owners are not
+replaced by the historical CI result. P2/P3 residuals remain tracked in #61.
 
 ## Phase 4 outcome
 
@@ -71,16 +77,17 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 ## Phase 6 boundary
 
 Phase 6 must remain a new bounded capability layer rather than a silent change
-to the accepted Phase 0–5 physics/search contract.
+to the historical v0.1 physics/search contract.
 
-Before mutation:
+Before any Phase 6 mutation:
 
 1. reread live devflow Control #314;
-2. reread this handoff and the task-relevant canonical specs;
-3. create a new explicit repository-local child Issue with measurable
-   acceptance criteria;
-4. keep any new capability behind the Phase 6 boundary;
-5. preserve deterministic replay, authoritative-state separation and the
+2. resolve #65, then #63;
+3. rerun readiness owner #60 from current `main`;
+4. create a new explicit repository-local child Issue with measurable
+   acceptance criteria only after readiness passes;
+5. keep any new capability behind the Phase 6 boundary;
+6. preserve deterministic replay, authoritative-state separation and the
    no-semantic-shortcut rule.
 
 ## Candidate capability order
