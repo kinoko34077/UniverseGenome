@@ -1,14 +1,15 @@
 # Phase 6+ capability handoff
 
-Status: **blocked pending remediation #63/#65/#66; readiness rerun #60**.
+Status: **blocked pending remediation #65/#63; readiness rerun #60**.
 No Phase 6+ capability has been implemented.
 
 ## Current v0.1 boundary
 
 Phase 0 through Phase 5 implementation is present on `main`, but full current
-acceptance/readiness is invalidated while P1 remediation owners #66 (status
-truth), #65 (Phase 5 search semantics), and #63 (GUI/authoritative-search
-integration) remain open. Readiness owner #60 must rerun the audit from the
+acceptance/readiness remains invalidated. Status-truth remediation #66 is
+complete via PR #69; P1 remediation owners #65 (Phase 5 search semantics) and
+#63 (GUI/authoritative-search integration) remain open. Readiness owner #60
+must rerun the audit from the
 repaired current `main`.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
@@ -81,7 +82,7 @@ to the historical v0.1 physics/search contract.
 Before any Phase 6 mutation:
 
 1. reread live devflow Control #314;
-2. resolve #66, #65, and #63 in that order;
+2. resolve #65, then #63;
 3. rerun readiness owner #60 from current `main`;
 4. create a new explicit repository-local child Issue with measurable
    acceptance criteria only after readiness passes;

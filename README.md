@@ -12,8 +12,9 @@ contains the canonical v0.1 requirements/specification, deterministic local
 physics, the server-owned runtime/API, browser observer/control surface,
 physical I/O measurement, and the persistent authoritative Phase 5 optimizer.
 
-The full traceability audit (#64) and its handoff (#67/#68) identified active
-P1 owners #66 (status truth), #65 (Phase 5 search semantics), and #63 (GUI /
+The full traceability audit (#64) and its handoff (#67/#68) identified three
+P1 remediation tracks. Status-truth reconciliation #66 is complete via PR #69;
+the active P1 owners are #65 (Phase 5 search semantics) and #63 (GUI /
 authoritative-search integration). Readiness audit #60 is the later rerun
 owner, and its previous PASS is not current evidence. The current Phase 4
 measurement remains baseline 0 / trained 0 with no learning claim. See the
@@ -55,7 +56,8 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   128 persistent authoritative Universe slots, real seed evidence groups,
   real 128/512-generation growth windows, free-slot-only replacement, and
   deterministic optimizer persistence.
-- Current status remediation #66 owns completion/roadmap/handoff truth.
+- Current status remediation #66 is complete via PR #69; its blocked-state
+  projection is accepted on current main.
 - Phase 5 search-semantic remediation #65 and GUI/search integration #63 remain
   open P1 owners; residuals are tracked in #61.
 - Readiness audit #60 must be rerun from repaired current `main` before any
