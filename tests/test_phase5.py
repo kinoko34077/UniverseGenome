@@ -3888,5 +3888,162 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
 
 
+    def test_p69_003_configs_snapshot_and_timeout_override_preserve_mixed_lengths(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_mixed_length_sequences.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_mixed_length_sequences_smoke.json"
+        )
+
+        for protocol in (canonical, smoke):
+            self.assertEqual(
+                [len(item.input_bytes) for item in protocol.mappings],
+                [1, 2, 3],
+            )
+            self.assertEqual(
+                [
+                    len(getattr(item, "output_bytes", ()) or (item.output_byte,))
+                    for item in protocol.mappings
+                ],
+                [1, 2, 3],
+            )
+            self.assertEqual(protocol.counterfactual_prefix, (0x47, 0x48))
+            self.assertEqual(
+                protocol.counterfactual_input_sequence,
+                (0x4D, 0x4E),
+            )
+            self.assertEqual(
+                ExperimentConfig.from_mapping(protocol.to_dict()),
+                protocol,
+            )
+
+        self.assertEqual(canonical.evaluation_timeout_generations, 1024)
+        self.assertEqual(canonical.output_event_interval_generations, 4)
+        self.assertEqual(smoke.evaluation_timeout_generations, 2)
+        self.assertEqual(smoke.output_event_interval_generations, 2)
+
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=1602,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=smoke,
+        )
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(restored.experiment, smoke)
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--experiment-config",
+                        "config/experiment_phase6_mixed_length_sequences_smoke.json",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        payload = json.loads(stdout.getvalue())
+        effective = captured[-1]
+        self.assertEqual(effective.evaluation_timeout_generations, 1)
+        self.assertEqual(
+            [len(item.input_bytes) for item in effective.mappings],
+            [1, 2, 3],
+        )
+        self.assertEqual(
+            payload["optimizer_protocol"]["mapping_input_lengths"],
+            [1, 2, 3],
+        )
+        self.assertEqual(
+            payload["optimizer_protocol"]["mapping_output_event_counts"],
+            [1, 2, 3],
+        )
+        self.assertEqual(
+            payload["optimizer_protocol"]["output_event_interval_generations"],
+            2,
+        )
+
+    def test_p69_004_runner_reports_truthful_mixed_length_byte_evidence(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_mixed_length_sequences_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertEqual(payload["mapping_input_lengths"], [1, 2, 3])
+        self.assertEqual(
+            payload["mapping_output_event_counts"],
+            [1, 2, 3],
+        )
+        self.assertEqual(
+            [item["input_bytes"] for item in payload["per_mapping"]],
+            [
+                [0x41],
+                [0x43, 0x44],
+                [0x47, 0x48, 0x49],
+            ],
+        )
+        self.assertEqual(
+            [item["output_bytes"] for item in payload["per_mapping"]],
+            [
+                [0x42],
+                [0x45, 0x46],
+                [0x4A, 0x4B, 0x4C],
+            ],
+        )
+        self.assertEqual(payload["counterfactual_prefix"], [0x47, 0x48])
+        self.assertEqual(
+            payload["counterfactual_input_sequence"],
+            [0x4D, 0x4E],
+        )
+        self.assertFalse(payload["learning_claim"])
+        for seed_record in payload["per_seed"]:
+            self.assertEqual(len(seed_record["mappings"]), 3)
+            for mapping_record in seed_record["mappings"]:
+                self.assertIsInstance(mapping_record["baseline_events"], list)
+                self.assertIsInstance(mapping_record["trained_events"], list)
+
+    def test_p69_005_mixed_length_mapped_inputs_must_be_prefix_free(self):
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                mappings=(
+                    ByteMapping(0x41, 0x42),
+                    ByteSequenceMapping(
+                        (0x41, 0x43),
+                        0x44,
+                        output_bytes=(0x44, 0x45),
+                    ),
+                ),
+                counterfactual_input_byte=0x4D,
+                inter_input_generations=1,
+                counterfactual_prefix=(0x41,),
+                counterfactual_input_sequence=(0x4D, 0x4E),
+                output_event_count=1,
+                output_event_interval_generations=2,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
