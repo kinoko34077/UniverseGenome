@@ -465,6 +465,8 @@ class SeedMeasurement:
     trained_prefix: EvaluationResult | None = None
     baseline_sequence_counterfactual: EvaluationResult | None = None
     trained_sequence_counterfactual: EvaluationResult | None = None
+    baseline_held_out: EvaluationResult | None = None
+    trained_held_out: EvaluationResult | None = None
     retention_checkpoint_generations: tuple[int, int, int] = ()
     noisy_no_input: EvaluationResult | None = None
     noisy_alternate: EvaluationResult | None = None
@@ -1082,6 +1084,25 @@ def _seed_measurement(
             expected=(),
         )
 
+    baseline_held_out = None
+    trained_held_out = None
+    if protocol.held_out_mapping is not None:
+        held_out_expected = (
+            *(OutputEvent.byte(protocol.held_out_mapping.output_byte),)
+            * protocol.output_event_count,
+            OutputEvent.null(),
+        )
+        baseline_held_out = evaluate(
+            baseline,
+            protocol.held_out_mapping,
+            held_out_expected,
+        )
+        trained_held_out = evaluate(
+            trained,
+            protocol.held_out_mapping,
+            held_out_expected,
+        )
+
     noisy_no_input = None
     noisy_alternate = None
     noisy_prefix = None
@@ -1120,6 +1141,8 @@ def _seed_measurement(
         trained_prefix=trained_prefix,
         baseline_sequence_counterfactual=baseline_sequence_counterfactual,
         trained_sequence_counterfactual=trained_sequence_counterfactual,
+        baseline_held_out=baseline_held_out,
+        trained_held_out=trained_held_out,
         retention_checkpoint_generations=retention_checkpoint_generations,
         noisy_no_input=noisy_no_input,
         noisy_alternate=noisy_alternate,
