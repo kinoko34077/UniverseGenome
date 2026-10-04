@@ -14,7 +14,7 @@ physics, the server-owned runtime/API, browser observer/control surface,
 physical I/O measurement, and the persistent authoritative Phase 5 optimizer.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
-P1 remediation tracks #66, #65, and #63 are complete. Post-v0.1 residual
+P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
 reconciliation #61 is complete via PR #74. No unresolved remediation owner
 remains; #60 must rerun readiness from repaired current `main`, and its
 previous PASS is not current evidence. The current Phase 4
