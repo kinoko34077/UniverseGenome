@@ -5,7 +5,7 @@
   "current_state": {
     "acceptance_state": "remediation_in_progress",
     "phase6_ready": false,
-    "blocking_owners": ["#63", "#65", "#66"],
+    "blocking_owners": ["#65", "#63"],
     "readiness_owner": "#60",
     "next_phase": "Phase 5 acceptance remediation (Phase 6+ blocked)"
   },
