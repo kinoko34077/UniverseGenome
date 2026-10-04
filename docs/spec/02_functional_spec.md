@@ -914,8 +914,9 @@ snapshot/restore and explicit timeout reconstruction without requiring a new
 snapshot format solely for P6.5.
 
 Public experiment JSON reports protocol state, aggregate null-aware robustness,
-per-seed clean/noisy effective rates and controls, and per-mapping noisy success
-and event generations. Canonical config uses delta 256; the bounded smoke config
+per-seed clean/noisy effective rates and controls, and per-mapping explicit
+noise-eligible / noise-robust / noise-failed classification together with noisy
+success and event generations. Canonical config uses delta 256; the bounded smoke config
 uses an explicitly stronger delta 65535 while preserving the same semantics.
 CI executes both P6.5 experiment and optimizer entrypoints.
 
