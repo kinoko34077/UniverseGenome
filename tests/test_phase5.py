@@ -2646,5 +2646,114 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(all(item.noisy is not None for item in seed_record.mapping_results))
 
 
+    def test_p65_008_canonical_and_smoke_noise_configs_are_explicit(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_noise_robustness.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_noise_robustness_smoke.json"
+        )
+
+        self.assertTrue(canonical.noise_robustness_enabled)
+        self.assertEqual(canonical.noise_robustness_rate_delta, 256)
+        self.assertEqual(canonical.retention_delay_generations, 128)
+        self.assertEqual(canonical.output_event_count, 2)
+
+        self.assertTrue(smoke.noise_robustness_enabled)
+        self.assertEqual(smoke.noise_robustness_rate_delta, 65535)
+        self.assertEqual(smoke.retention_delay_generations, 2)
+        self.assertEqual(smoke.output_event_count, 2)
+
+    def test_p65_009_runner_reports_public_noise_robustness_evidence(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_noise_robustness_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertTrue(payload["noise_robustness_enabled"])
+        self.assertEqual(payload["noise_robustness_rate_delta"], 65535)
+        self.assertIn("noise_robustness_eligible_count", payload)
+        self.assertIn("noise_robust_count", payload)
+        self.assertIn("noise_failed_count", payload)
+        self.assertIn("noise_robustness_rate", payload)
+        self.assertEqual(len(payload["per_seed"]), 3)
+        for seed_record in payload["per_seed"]:
+            self.assertIn("clean_noise_rate", seed_record)
+            self.assertIn("noisy_noise_rate", seed_record)
+            self.assertGreater(
+                seed_record["noisy_noise_rate"],
+                seed_record["clean_noise_rate"],
+            )
+            self.assertIn("noisy_no_input_clean", seed_record)
+            self.assertIn("noisy_sequence_counterfactual_clean", seed_record)
+            for mapping_record in seed_record["mappings"]:
+                self.assertIn("noisy_success", mapping_record)
+                self.assertIn("noisy_event_generations", mapping_record)
+                self.assertIsInstance(
+                    mapping_record["noisy_event_generations"],
+                    list,
+                )
+
+    def test_p65_010_snapshot_and_timeout_override_preserve_noise_protocol(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_noise_robustness_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=803,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(
+            payload["experiment"]["noise_robustness_rate_delta"],
+            65535,
+        )
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_noise_robustness_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        overridden = captured[-1]
+        optimizer_payload = json.loads(stdout.getvalue())["optimizer_protocol"]
+        self.assertEqual(overridden.evaluation_timeout_generations, 1)
+        self.assertEqual(overridden.noise_robustness_rate_delta, 65535)
+        self.assertTrue(overridden.noise_robustness_enabled)
+        self.assertEqual(optimizer_payload["noise_robustness_rate_delta"], 65535)
+        self.assertTrue(optimizer_payload["noise_robustness_enabled"])
+
+
 if __name__ == "__main__":
     unittest.main()
