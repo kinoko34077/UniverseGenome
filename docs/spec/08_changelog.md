@@ -1,5 +1,30 @@
 # Specification Changelog
 
+## 2026-10-04 — Phase 6.4 forgetting/relearning candidate (#88 / PR #89)
+
+- extends the accepted P6.3 timed mappings with explicit T0 immediate,
+  T1 delayed/interfered and T2 post-relearning clone evaluations on one
+  continuing training state;
+- adds a canonical 128-generation no-teacher retention delay, one deterministic
+  unmapped-CA interference episode and one same-curriculum relearning pass,
+  while keeping P6.5 stochastic noise robustness separate;
+- records explicit retention eligibility, retained/forgotten,
+  relearning-eligible/relearned counts and null rates when no denominator
+  exists;
+- permits canonical growth bit 5 to use genuine evaluable P6.4 retention
+  evidence while preserving the absolute-fitness ordering and all Phase 5
+  search/category semantics;
+- preserves P6.4 protocol fields through ExperimentConfig, optimizer snapshots
+  and explicit timeout reconstruction;
+- adds canonical and bounded-smoke configs, public T0/T1/T2 reporting, and real
+  P6.4 experiment/optimizer CI smokes;
+- latest verified implementation checkpoint `fa535c6d...` passed CI #236
+  (`37204758609`) with 183 tests / OK and browser E2E SUCCESS;
+- capability acceptance remains pending exact-head canonical reconciliation,
+  review, merge and post-main Current State update; no retention success is
+  claimed when T0 produces no learned cases.
+
+
 ## 2026-10-04 — Phase 6.3 multi-event output timing accepted (#85 / PR #86)
 
 - extends the accepted P6.2 temporal mappings with a bounded repeated-output
