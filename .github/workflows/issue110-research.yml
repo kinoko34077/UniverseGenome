@@ -1,0 +1,53 @@
+name: Issue 110 research scan
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  single_event_floor:
+    if: github.head_ref == 'research/issue110-single-event-floor'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: 0
+            start_seed: 0
+            end_seed: 15
+          - shard: 1
+            start_seed: 16
+            end_seed: 31
+          - shard: 2
+            start_seed: 32
+            end_seed: 47
+          - shard: 3
+            start_seed: 48
+            end_seed: 63
+          - shard: 4
+            start_seed: 64
+            end_seed: 79
+          - shard: 5
+            start_seed: 80
+            end_seed: 95
+          - shard: 6
+            start_seed: 96
+            end_seed: 111
+          - shard: 7
+            start_seed: 112
+            end_seed: 127
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run fixed-physics single-event shard
+        run: >-
+          python tools/issue110_single_event_floor.py
+          --start-seed ${{ matrix.start_seed }}
+          --end-seed ${{ matrix.end_seed }}
+          --target-generation 2000
