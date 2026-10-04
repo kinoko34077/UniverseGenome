@@ -8,8 +8,9 @@ The inner system is intended to learn through deterministic time evolution of an
 
 **Phase 0 through Phase 5 are readiness-accepted on `main`, and Phase 6.1
 multiple independent byte mappings are implemented/accepted through #79 / PR
-#80.** The repository contains the canonical v0.1 foundation plus the first
-bounded Phase 6 experimental capability. The current P6.1 public smoke still
+#80.** The repository contains the canonical v0.1 foundation, the server-owned
+runtime/API, browser observer/control surface, persistent authoritative Phase 5
+optimizer, and the first bounded Phase 6 experimental capability. The current P6.1 public smoke still
 reports A→B baseline 0 / trained 0 and C→D baseline 0 / trained 0 with
 `learning_claim=false`; capability acceptance does not relabel that result as
 learning success.
