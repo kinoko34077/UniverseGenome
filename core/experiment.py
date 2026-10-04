@@ -95,17 +95,25 @@ class ExperimentConfig:
     inter_input_generations: int = 0
     counterfactual_prefix: tuple[int, ...] = ()
     counterfactual_input_sequence: tuple[int, ...] = ()
+    output_event_count: int = 1
+    output_event_interval_generations: int = 0
 
     def __post_init__(self) -> None:
         for name in (
             "byte_hold_generations", "byte_gap_generations", "teacher_delay_generations",
             "teacher_repetitions", "evaluation_timeout_generations",
-            "inter_input_generations",
+            "inter_input_generations", "output_event_interval_generations",
         ):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
         if self.teacher_repetitions < 1:
             raise ValueError("teacher_repetitions must be positive")
+        if self.output_event_count not in (1, 2):
+            raise ValueError("bounded P6.3 output_event_count must be 1 or 2")
+        if self.output_event_count == 1 and self.output_event_interval_generations != 0:
+            raise ValueError("one-event protocols require output interval 0")
+        if self.output_event_count == 2 and self.output_event_interval_generations < 1:
+            raise ValueError("two-event P6.3 protocols require output interval >= 1")
         if not self.mappings:
             raise ValueError("at least one byte mapping is required")
         if any(
@@ -170,6 +178,11 @@ class ExperimentConfig:
             payload["counterfactual_input_sequence"] = list(
                 self.counterfactual_input_sequence
             )
+        if self.output_event_count != 1:
+            payload["output_event_count"] = self.output_event_count
+            payload["output_event_interval_generations"] = (
+                self.output_event_interval_generations
+            )
         if (
             self.mappings != DEFAULT_BYTE_MAPPINGS
             or self.counterfactual_input_byte != 66
@@ -222,6 +235,12 @@ class ExperimentConfig:
             values["counterfactual_input_sequence"] = tuple(
                 int(value) for value in raw_sequence
             )
+        if mapping.get("output_event_count") is not None:
+            values["output_event_count"] = int(mapping["output_event_count"])
+        if mapping.get("output_event_interval_generations") is not None:
+            values["output_event_interval_generations"] = int(
+                mapping["output_event_interval_generations"]
+            )
         return cls(**values)
 
 
@@ -253,6 +272,8 @@ class EvaluationResult:
     activity_cost: int = 0
     timed_out: bool = False
     input_complete_generation: int = 0
+    expected_output_event_count: int = 1
+    expected_output_interval_generations: int = 0
 
     @property
     def early_output_count(self) -> int:
@@ -267,6 +288,7 @@ class EvaluationResult:
     def wrong_output_count(self) -> int:
         expected_index = 0
         wrong = 0
+        last_matched_output_generation: int | None = None
         for event, generation in zip(self.autonomous_events, self.event_generations):
             if (
                 self.input_complete_generation > 0
@@ -275,12 +297,26 @@ class EvaluationResult:
                 wrong += 1
                 continue
             if (
-                expected_index < len(self.expected_events)
-                and event == self.expected_events[expected_index]
+                expected_index >= len(self.expected_events)
+                or event != self.expected_events[expected_index]
             ):
-                expected_index += 1
-            else:
                 wrong += 1
+                continue
+            if (
+                expected_index < self.expected_output_event_count
+                and expected_index > 0
+                and self.expected_output_interval_generations > 0
+                and (
+                    last_matched_output_generation is None
+                    or generation - last_matched_output_generation
+                    != self.expected_output_interval_generations
+                )
+            ):
+                wrong += 1
+                continue
+            if expected_index < self.expected_output_event_count:
+                last_matched_output_generation = generation
+            expected_index += 1
         return wrong
 
     @property
@@ -360,6 +396,8 @@ class LearningMeasurement:
     trained_prefix_input_clean: int = 0
     baseline_sequence_counterfactual_clean: int = 0
     trained_sequence_counterfactual_clean: int = 0
+    output_event_count: int = 1
+    output_event_interval_generations: int = 0
 
     @property
     def no_input_clean(self) -> int:
@@ -500,20 +538,30 @@ class IOExperiment:
             advance(())
         byte_event = OutputEvent.byte(mapping.output_byte)
         null_event = OutputEvent.null()
-        self.teacher_output(
-            byte_event,
-            on_generation=on_generation,
-            on_step=on_step,
-        )
+        teacher_events: list[OutputEvent] = []
+        for output_index in range(self.experiment.output_event_count):
+            self.teacher_output(
+                byte_event,
+                on_generation=on_generation,
+                on_step=on_step,
+            )
+            teacher_events.append(byte_event)
+            if output_index < self.experiment.output_event_count - 1:
+                for _ in range(
+                    self.experiment.output_event_interval_generations - 1
+                ):
+                    self.release_input()
+                    advance(())
         self.teacher_output(
             null_event,
             on_generation=on_generation,
             on_step=on_step,
         )
+        teacher_events.append(null_event)
         return TrainingRecord(
             input_byte=mapping.input_bytes[0],
             output_byte=mapping.output_byte,
-            teacher_events=(byte_event, null_event),
+            teacher_events=tuple(teacher_events),
             generation=self.state.generation,
             input_bytes=mapping.input_bytes,
         )
@@ -629,16 +677,35 @@ class IOExperiment:
             if enforce_full_sequence
             else 0
         )
+        timing_valid = True
+        if (
+            self.experiment.output_event_count > 1
+            and len(actual) >= self.experiment.output_event_count
+            and len(event_generations) >= self.experiment.output_event_count
+        ):
+            timing_valid = all(
+                event_generations[index] - event_generations[index - 1]
+                == self.experiment.output_event_interval_generations
+                for index in range(1, self.experiment.output_event_count)
+            )
         return EvaluationResult(
             expected_events=expected_tuple,
             autonomous_events=actual,
-            success=actual == expected_tuple and early_output_count == 0,
+            success=(
+                actual == expected_tuple
+                and early_output_count == 0
+                and timing_valid
+            ),
             clone_generation=clone.generation,
             event_generations=tuple(event_generations),
             evaluation_generations=evaluation_generations,
             activity_cost=activity_cost,
             timed_out=expected_index < len(expected_tuple),
             input_complete_generation=input_complete_generation,
+            expected_output_event_count=self.experiment.output_event_count,
+            expected_output_interval_generations=(
+                self.experiment.output_event_interval_generations
+            ),
         )
 
     def evaluate_autonomous(
@@ -681,7 +748,10 @@ def _seed_measurement(
     mapping_results: list[MappingSeedMeasurement] = []
 
     for mapping in protocol.mappings:
-        expected = (OutputEvent.byte(mapping.output_byte), OutputEvent.null())
+        expected = (
+            *(OutputEvent.byte(mapping.output_byte),) * protocol.output_event_count,
+            OutputEvent.null(),
+        )
         if isinstance(mapping, ByteSequenceMapping):
             baseline_result = baseline.evaluate_autonomous_sequence(
                 input_bytes=mapping.input_bytes,
@@ -772,6 +842,8 @@ def _assemble_learning_measurement(
     counterfactual_input_byte: int = 66,
     counterfactual_prefix: tuple[int, ...] = (),
     counterfactual_input_sequence: tuple[int, ...] = (),
+    output_event_count: int = 1,
+    output_event_interval_generations: int = 0,
 ) -> LearningMeasurement:
     records = tuple(measurements)
     if not records:
@@ -834,7 +906,13 @@ def _assemble_learning_measurement(
         for index, mapping in enumerate(mapping_values)
     )
 
-    if sequence_protocol:
+    if sequence_protocol and output_event_count > 1:
+        criterion = (
+            "all sequences across all seeds must autonomously emit the declared output byte "
+            f"{output_event_count} times at the declared {output_event_interval_generations}-generation onset interval then NULL only after the full input sequence, "
+            "trained successes must exceed baseline, and no-input/prefix-only/unmapped-sequence counterfactuals must remain output-clean"
+        )
+    elif sequence_protocol:
         criterion = (
             "all sequences across all seeds must autonomously emit each declared output byte then NULL only after the full input sequence, "
             "trained successes must exceed baseline, and no-input/prefix-only/unmapped-sequence counterfactuals must remain output-clean"
@@ -882,6 +960,8 @@ def _assemble_learning_measurement(
         trained_prefix_input_clean=trained_prefix_input_clean,
         baseline_sequence_counterfactual_clean=baseline_sequence_counterfactual_clean,
         trained_sequence_counterfactual_clean=trained_sequence_counterfactual_clean,
+        output_event_count=output_event_count,
+        output_event_interval_generations=output_event_interval_generations,
     )
 
 
@@ -905,6 +985,8 @@ def measure_trained_state(
         counterfactual_input_byte=protocol.counterfactual_input_byte,
         counterfactual_prefix=protocol.counterfactual_prefix,
         counterfactual_input_sequence=protocol.counterfactual_input_sequence,
+        output_event_count=protocol.output_event_count,
+        output_event_interval_generations=protocol.output_event_interval_generations,
     )
 
 
@@ -938,4 +1020,6 @@ def compare_baseline_trained(
         counterfactual_input_byte=protocol.counterfactual_input_byte,
         counterfactual_prefix=protocol.counterfactual_prefix,
         counterfactual_input_sequence=protocol.counterfactual_input_sequence,
+        output_event_count=protocol.output_event_count,
+        output_event_interval_generations=protocol.output_event_interval_generations,
     )
