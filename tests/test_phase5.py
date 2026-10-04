@@ -3269,5 +3269,86 @@ class Phase5OptimizerTests(unittest.TestCase):
             )
 
 
+    def test_p67_003_teacher_emits_distinct_output_sequence_in_declared_order(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            inter_input_generations=1,
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+        state = create_universe(seed=1401, config=PhysicsConfig(max_cells=8))
+        records = IOExperiment(state, experiment=protocol).train_mappings()
+
+        self.assertEqual(
+            records[0].teacher_events,
+            (
+                OutputEvent.byte(66),
+                OutputEvent.byte(67),
+                OutputEvent.null(),
+            ),
+        )
+        self.assertEqual(
+            records[1].teacher_events,
+            (
+                OutputEvent.byte(68),
+                OutputEvent.byte(69),
+                OutputEvent.null(),
+            ),
+        )
+
+    def test_p67_004_mapping_evaluation_expects_distinct_sequence_content(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            inter_input_generations=1,
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+        baseline = create_universe(seed=1402, config=PhysicsConfig(max_cells=8))
+        trained = create_universe(seed=1402, config=PhysicsConfig(max_cells=8))
+        measurement = experiment_module._seed_measurement(
+            seed=1402,
+            baseline_state=baseline,
+            trained_state=trained,
+            protocol=protocol,
+        )
+
+        self.assertEqual(
+            measurement.mapping_results[0].trained.expected_events,
+            (
+                OutputEvent.byte(66),
+                OutputEvent.byte(67),
+                OutputEvent.null(),
+            ),
+        )
+        self.assertEqual(
+            measurement.mapping_results[1].trained.expected_events,
+            (
+                OutputEvent.byte(68),
+                OutputEvent.byte(69),
+                OutputEvent.null(),
+            ),
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
