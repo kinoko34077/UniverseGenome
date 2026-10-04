@@ -3576,6 +3576,11 @@ class Phase5OptimizerTests(unittest.TestCase):
                     self.assertIn("value", event)
                     self.assertIsInstance(event["generation"], int)
         self.assertFalse(payload["learning_claim"])
+        self.assertIn(
+            "declared ordered output-byte sequence",
+            payload["criterion"],
+        )
+        self.assertNotIn("output byte 2 times", payload["criterion"])
 
 
 if __name__ == "__main__":
