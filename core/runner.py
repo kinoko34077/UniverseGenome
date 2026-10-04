@@ -1,4 +1,4 @@
-"""Headless runner and bounded performance reporting through Phase 5."""
+"""Headless runner and bounded performance reporting through Phase 6.1."""
 
 from __future__ import annotations
 
@@ -53,10 +53,16 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
     phase3 = bool(config.get("features", {}).get("multi_universe_runtime", False))
     phase4 = bool(config.get("features", {}).get("io_learning", False))
     phase5 = bool(config.get("features", {}).get("evolution", False))
+    phase6 = bool(config.get("features", {}).get("phase6_capabilities", False))
+    phase6_multi_mapping = bool(
+        config.get("features", {}).get("phase6_multi_mapping", False)
+    )
     return {
         "project": "UniverseGenome",
         "phase": (
-            5
+            6
+            if phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
+            else 5
             if phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
             else 4
             if phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
@@ -78,6 +84,8 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
         "phase3_runtime_implemented": phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase4_io_learning_implemented": phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase5_optimizer_implemented": phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
+        "phase6_capabilities_implemented": phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
+        "phase6_multi_mapping_implemented": phase6_multi_mapping and phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "acceptance_state": current_state["acceptance_state"],
         "phase6_ready": current_state["phase6_ready"],
         "phase6_blocked": not current_state["phase6_ready"],
@@ -153,12 +161,12 @@ def run_headless(seed: int, generations: int, config: PhysicsConfig) -> dict[str
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="UniverseGenome headless Phase 5 runner")
+    parser = argparse.ArgumentParser(description="UniverseGenome headless runner through Phase 6.1")
     parser.add_argument("--config", default="config/default.json")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--generations", type=int, default=0)
     parser.add_argument("--population", action="store_true", help="run the Phase 3 128-slot population")
-    parser.add_argument("--experiment", action="store_true", help="run the Phase 4 baseline/trained measurement")
+    parser.add_argument("--experiment", action="store_true", help="run the configured baseline/trained experiment")
     parser.add_argument(
         "--experiment-config",
         default="config/experiment_v0_1.json",
