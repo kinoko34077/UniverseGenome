@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-05 — Phase 6.7 bounded distinct multi-byte sequence candidate (#98 / PR #99)
+## 2026-10-05 — Phase 6.7 bounded distinct multi-byte sequences accepted (#98 / PR #99)
 
 - extends two-event temporal mappings from repeated identical output bytes to
   explicit ordered distinct byte tuples;
@@ -13,9 +13,17 @@
   declared/observed sequence evidence and real experiment/optimizer CI lanes;
 - keeps baseline-relative/counterfactual-gated learning claims, Phase 5
   absolute fitness/search policy and reserved growth bit7 unchanged;
-- P6.8 raw UTF-8 remains explicitly deferred;
-- capability acceptance will report observed learning honestly and does not
-  require successful sequence learning.
+- exact reviewed implementation head
+  `667095db0ee6832dcc2591ee96617b0d336e7649` passed CI #308
+  (`37215132723`) with 213 tests / OK, P6.1–P6.7 real smokes and browser E2E;
+- exact-head review `5407048901` had no blocking finding;
+- squash-merged implementation main
+  `7ce83696bcea4e2410d0f95a00fe5d6487417013`; all 11 changed files were
+  verified blob-identical to the reviewed head;
+- bounded P6.7 smoke produced zero trained mapped successes and
+  `learning_claim=false`; capability acceptance does not claim successful
+  distinct-sequence learning;
+- the next bounded frontier is P6.8 raw UTF-8 experiments.
 
 ## 2026-10-05 — Phase 6.6 held-out relation generalization accepted (#95 / PR #96)
 

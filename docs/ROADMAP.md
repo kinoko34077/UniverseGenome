@@ -9,9 +9,10 @@ Phase 6 roadmap #78 is active. P6.1 multiple independent byte mappings are
 accepted through #79 / PR #80, P6.2 temporal sequence discrimination through
 #82 / PR #83, P6.3 multi-event output timing through #85 / PR #86, P6.4
 forgetting/relearning retention through #88 / PR #89, P6.5 controlled
-physical-noise robustness through #91 / PR #92, and P6.6 predeclared held-out
-relation generalization through #95 / PR #96 on main; the next bounded frontier
-is P6.7 multi-byte sequences.
+physical-noise robustness through #91 / PR #92, P6.6 predeclared held-out
+relation generalization through #95 / PR #96, and P6.7 bounded distinct
+multi-byte output sequences through #98 / PR #99 on main; the next bounded
+frontier is P6.8 raw UTF-8 experiments.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -109,5 +110,11 @@ through #95 / PR #96. The bounded smoke produced teacher success 0→0,
 `generalization_rate=null`; `learning_claim=false`. Capability acceptance is
 therefore not a successful-generalization claim.
 
-Next frontier: **P6.7 multi-byte sequences** as one new bounded child Issue.
-P6.8 remains deferred: raw UTF-8 experiments.
+P6.7 bounded distinct multi-byte output sequences are implemented/accepted
+through #98 / PR #99. The capability changes the timed output target from
+repeated identical bytes to exact ordered tuples `B,C` and `D,E`, while
+preserving legacy protocol behavior and Phase 5 search semantics. The bounded
+smoke produced zero trained mapped successes and `learning_claim=false`;
+capability acceptance is not a sequence-learning-success claim.
+
+Next frontier: **P6.8 raw UTF-8 experiments** as one new bounded child Issue.
