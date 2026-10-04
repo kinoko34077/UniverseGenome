@@ -127,7 +127,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertEqual(status["next_phase"], "Phase 6+ capability ladder (handoff only)")
         self.assertIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
 
-    def test_post_audit_documentation_routes_to_blocked_remediation(self):
+    def test_post_audit_documentation_routes_to_phase6_handoff(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         specification = (ROOT / "docs" / "SPECIFICATION.md").read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
@@ -147,13 +147,13 @@ class Phase0ScaffoldTests(unittest.TestCase):
         ]
 
         self.assertIn("Phase 0 through Phase 5 implementation is present", readme)
-        self.assertIn("Phase 6+ is blocked", readme)
+        self.assertIn("readiness rerun #60 passed", readme)
         self.assertIn("GUI/search integration #63 is complete via PR #73", readme)
         self.assertIn("Phase 5 search-semantic remediation #65 is complete via PR #70", readme)
         self.assertNotIn("Phase 1 through Phase 5 are accepted on `main`", readme)
         self.assertIn("authoritative Phase 5", readme)
         self.assertIn("readiness-accepted after rerun #60", specification)
-        self.assertIn("Phase 6+ is blocked", specification)
+        self.assertIn("readiness-accepted", specification)
         self.assertIn(
             "Phase 6+ — Capability ladder (ready for one new bounded child Issue after #60)",
             roadmap,
