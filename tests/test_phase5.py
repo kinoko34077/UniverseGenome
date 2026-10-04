@@ -22,7 +22,7 @@ from core.experiment import (
     load_experiment_config,
     measure_trained_state,
 )
-from core.io_bus import OutputEvent
+from core.io_bus import OutputEvent, OutputSignal
 from core.population import run_population_headless
 from core.physics import PhysicsConfig, StepMetrics, create_universe
 from core.runner import build_status, load_config, main as runner_main
@@ -3390,6 +3390,80 @@ class Phase5OptimizerTests(unittest.TestCase):
             ],
             [(66, 67), (68, 69)],
         )
+
+
+    def test_p67_005_distinct_sequence_evaluation_rejects_content_order_timing_and_termination_errors(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=5,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+        state = create_universe(seed=1403, config=PhysicsConfig(max_cells=8))
+        experiment = IOExperiment(state, experiment=protocol)
+        expected = (
+            OutputEvent.byte(66),
+            OutputEvent.byte(67),
+            OutputEvent.null(),
+        )
+
+        def evaluate_with(signals):
+            values = iter(signals)
+
+            def next_signal(_state):
+                return next(values, OutputSignal())
+
+            with patch("core.experiment.read_output_signal", side_effect=next_signal):
+                return experiment.evaluate_autonomous_sequence(
+                    input_bytes=(65, 65),
+                    expected=expected,
+                )
+
+        quiet = OutputSignal()
+        byte_b = OutputSignal(value=66, valid=True)
+        byte_c = OutputSignal(value=67, valid=True)
+        byte_x = OutputSignal(value=88, valid=True)
+        null = OutputSignal(valid=True, null=True)
+
+        correct = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, byte_c, quiet, null)
+        )
+        reversed_order = evaluate_with(
+            (quiet, quiet, quiet, byte_c, quiet, byte_b, quiet, null)
+        )
+        repeated = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, byte_b, quiet, null)
+        )
+        wrong_timing = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, quiet, byte_c, null)
+        )
+        extra = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, byte_c, quiet, byte_x)
+        )
+        missing_null = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, byte_c, quiet, quiet)
+        )
+
+        self.assertTrue(correct.success)
+        self.assertEqual(correct.autonomous_events, expected)
+        self.assertEqual(correct.event_generations[:2], (3, 5))
+        for failure in (
+            reversed_order,
+            repeated,
+            wrong_timing,
+            extra,
+            missing_null,
+        ):
+            self.assertFalse(failure.success)
 
 
 if __name__ == "__main__":
