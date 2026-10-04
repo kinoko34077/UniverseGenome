@@ -1806,7 +1806,7 @@ class Phase5OptimizerTests(unittest.TestCase):
 
 
     def test_p63_005_optimizer_snapshot_roundtrips_multi_event_timing_protocol(self):
-        protocol = evolution_module.load_experiment_config(
+        protocol = experiment_module.load_experiment_config(
             ROOT / "config" / "experiment_phase6_multi_event_timing_smoke.json"
         )
         optimizer = SteadyStateOptimizer.from_defaults(
