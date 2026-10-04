@@ -1,5 +1,20 @@
 # Specification Changelog
 
+## 2026-10-05 — Phase 6.9 mixed-length raw byte sequence implementation candidate (#104)
+
+- extends the accepted raw-byte protocol so one experiment can coexist with
+  one-, two- and three-byte mappings without padding or truncation;
+- retains legacy fixed-length P6.1–P6.8 validation while allowing bounded mixed
+  mapping-specific output-event counts;
+- canonical mappings are 41→42, 43 44→45 46 and 47 48 49→4A 4B 4C, with
+  prefix 47 48 and unmapped 4D 4E controls;
+- teacher/evaluation timing derives expected output count from each mapping's
+  declared bytes;
+- adds canonical/smoke configs, snapshot/timeout preservation, truthful public
+  length/evidence fields and real P6.9 experiment/optimizer CI entrypoints;
+- preserves Phase 5 search/growth semantics, byte-only protocol authority and
+  the honest-learning-claim boundary.
+
 ## 2026-10-05 — Phase 6.8 bounded raw UTF-8 byte experiments accepted (#101 / PR #102)
 
 - reuses the accepted P6.7 byte-sequence runtime rather than adding a tokenizer,
