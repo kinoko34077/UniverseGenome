@@ -95,7 +95,7 @@ function updateMetadata() {
     `Category / seed: ${selected.category ?? "?"} / ${selected.seed ?? "?"}`,
     `Genome: ${JSON.stringify(selected.genome || {})}`,
     `Evidence: ${selected.evidence_group_size ?? 0} slots; mature=${Boolean(selected.evidence_mature)}`,
-    `Lineage: parent=${selected.parent_index ?? "none"}; mutation=${selected.last_mutation_field ?? "none"}; allocation=${selected.allocation_reason ?? "?"}`,
+    `Lineage: parentGenome=${selected.parent_genome_key ?? "none"}; parentSlot=${selected.parent_index ?? "none"}; mutation=${selected.last_mutation_field ?? "none"}; allocation=${selected.allocation_reason ?? "?"}`,
     `Fitness: success=${fitness.success ?? 0}, wrong=${fitness.wrong_outputs ?? 0}, timeout=${fitness.timeouts ?? 0}, latency=${fitness.response_latency ?? 0}, activity=${fitness.activity_cost ?? 0}`,
     `Growth windows: ${growth || "none"}`,
     `Last replacement event: ${event}`,
