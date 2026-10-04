@@ -123,13 +123,14 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertTrue(status["phase6_capabilities_implemented"])
         self.assertTrue(status["phase6_multi_mapping_implemented"])
         self.assertTrue(status["phase6_temporal_sequence_implemented"])
+        self.assertTrue(status["phase6_multi_event_timing_implemented"])
         self.assertEqual(status["phase"], 6)
         self.assertEqual(status["acceptance_state"], "accepted")
         self.assertTrue(status["phase6_ready"])
         self.assertEqual(status["blocking_owners"], [])
         self.assertEqual(status["readiness_owner"], "#60")
-        self.assertEqual(status["next_phase"], "Phase 6.3 multi-event output timing (bounded child Issue required)")
-        self.assertIn("Phase 6.3 multi-event output timing (bounded child Issue required)", status["next_phase"])
+        self.assertEqual(status["next_phase"], "Phase 6.4 forgetting/relearning (bounded child Issue required)")
+        self.assertIn("Phase 6.4 forgetting/relearning (bounded child Issue required)", status["next_phase"])
 
     def test_post_audit_documentation_routes_to_phase6_handoff(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -155,15 +156,15 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("GUI/search integration #63 is complete via PR #73", readme)
         self.assertIn("Phase 5 search-semantic remediation #65 is complete via PR #70", readme)
         self.assertIn(
-            "P6.1 #79 / PR #80 and P6.2 #82 / PR #83 are accepted on main",
+            "P6.1 #79 / PR #80, P6.2 #82 / PR #83, and P6.3 #85 / PR #86 are accepted on main",
             readme,
         )
         self.assertIn("authoritative Phase 5", readme)
-        self.assertIn("P6.2 capability accepted through #82 / PR #83", specification)
-        self.assertIn("P6.2", specification)
-        self.assertIn("P6.2 temporal sequence discrimination is implemented/accepted", roadmap)
+        self.assertIn("P6.3 capability accepted through #85 / PR #86", specification)
+        self.assertIn("P6.3", specification)
+        self.assertIn("P6.3 multi-event output timing is implemented/accepted", roadmap)
         self.assertIn(
-            "Status: **P6.1 and P6.2 accepted; P6.3 multi-event output timing is the next bounded child frontier**",
+            "Status: **P6.1, P6.2 and P6.3 accepted; P6.4 forgetting/relearning is the next bounded child frontier**",
             handoff,
         )
         self.assertIn("historical v0.1 physics/search contract", handoff)

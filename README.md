@@ -7,15 +7,16 @@ The inner system is intended to learn through deterministic time evolution of an
 ## Current state
 
 **Phase 0 through Phase 5 are readiness-accepted on `main`; Phase 6.1
-multiple independent byte mappings and Phase 6.2 temporal sequence
-discrimination are implemented/accepted through #79 / PR #80 and #82 / PR
-#83.** The repository contains the canonical v0.1 foundation, server-owned runtime/API,
-browser observer/control surface, authoritative Phase 5 optimizer,
-and the first two bounded Phase 6 experimental capabilities.
-The accepted P6.2 bounded smoke observed AA→B baseline 0 / trained 0 and AC→D
-baseline 0 / trained 0 across three seeds, with no-input, prefix-A and unmapped
-CA controls clean and `learning_claim=false`; capability acceptance does not
-relabel that result as learning success.
+multiple independent byte mappings, Phase 6.2 temporal sequence
+discrimination, and Phase 6.3 multi-event output timing are implemented/accepted
+through #79 / PR #80, #82 / PR #83, and #85 / PR #86.** The repository contains
+the canonical v0.1 foundation, server-owned runtime/API, browser observer/control
+surface, authoritative Phase 5 optimizer, and the first three bounded Phase 6
+experimental capabilities.
+The accepted P6.3 bounded smoke observed AA→B,B baseline 0 / trained 0 and
+AC→D,D baseline 0 / trained 0 across three seeds, with no-input, prefix-A and
+unmapped-CA controls clean and `learning_claim=false`; capability acceptance
+does not relabel that result as learning success.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
@@ -45,8 +46,9 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
 - Issue #22 owns the original Phase 4 I/O and A→B→NULL experiment; audit
   remediation #28 / PR #32 wires real autonomous output collection.
 - Phase 6 roadmap #78 owns the bounded capability ladder; P6.1 #79 / PR #80
-  implements multiple independent byte mappings, and P6.2 #82 / PR #83
-  implements temporal sequence discrimination.
+  implements multiple independent byte mappings, P6.2 #82 / PR #83 implements
+  temporal sequence discrimination, and P6.3 #85 / PR #86 implements
+  multi-event output timing.
 - Issue #24 owns the original Phase 5 optimizer mechanics; audit remediation
   #30 / PR #34 integrates genome mapping and real Phase 4 candidate evaluation.
 - Audit remediation #29 / PR #33 connects the Phase 3 GUI to the runtime API.
@@ -71,9 +73,9 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   parallel Phase 3 population.
 - Post-v0.1 residual reconciliation #61 is complete via PR #74.
 - Readiness audit #60 passed on the repaired Phase 0–5 boundary.
-- Phase 6 roadmap #78 is active; P6.1 #79 / PR #80 and P6.2 #82 / PR #83 are accepted on main.
-- The next permitted capability is one bounded P6.3 multi-event-output-timing
-  child Issue. P6.3+ is not implemented yet.
+- Phase 6 roadmap #78 is active; P6.1 #79 / PR #80, P6.2 #82 / PR #83, and P6.3 #85 / PR #86 are accepted on main.
+- The next permitted capability is one bounded P6.4 forgetting/relearning
+  child Issue. P6.4+ is not implemented yet.
 
 ## Headless verification commands
 
