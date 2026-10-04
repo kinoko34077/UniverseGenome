@@ -9,8 +9,9 @@ The inner system is intended to learn through deterministic time evolution of an
 **Phase 0 through Phase 5 are readiness-accepted on `main`; Phase 6.1
 multiple independent byte mappings and Phase 6.2 temporal sequence
 discrimination are implemented/accepted through #79 / PR #80 and #82 / PR
-#83.** The repository contains the canonical v0.1 foundation, authoritative
-Phase 5 optimizer, and the first two bounded Phase 6 experimental capabilities.
+#83.** The repository contains the canonical v0.1 foundation, server-owned
+runtime/API, browser observer/control surface, authoritative Phase 5 optimizer,
+and the first two bounded Phase 6 experimental capabilities.
 The accepted P6.2 bounded smoke observed AA→B baseline 0 / trained 0 and AC→D
 baseline 0 / trained 0 across three seeds, with no-input, prefix-A and unmapped
 CA controls clean and `learning_claim=false`; capability acceptance does not
