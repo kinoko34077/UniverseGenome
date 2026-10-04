@@ -1616,5 +1616,76 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(len(measurement.per_seed[0].mapping_results), 2)
 
 
+    def test_p6_008_optimizer_snapshot_roundtrips_multi_mapping_protocol(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+            counterfactual_input_byte=66,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=306,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(
+            payload["experiment"]["mappings"],
+            [
+                {"input_byte": 65, "output_byte": 66},
+                {"input_byte": 67, "output_byte": 68},
+            ],
+        )
+        self.assertEqual(restored.to_snapshot(), payload)
+
+    def test_p6_009_optimizer_timeout_override_preserves_mapping_protocol(self):
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_multi_mapping_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(captured[-1].evaluation_timeout_generations, 1)
+        self.assertEqual(
+            [(item.input_byte, item.output_byte) for item in captured[-1].mappings],
+            [(65, 66), (67, 68)],
+        )
+        self.assertEqual(payload["optimizer_protocol"]["mapping_count"], 2)
+        self.assertEqual(
+            payload["optimizer_protocol"]["mode"],
+            "explicit_timeout_override",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
