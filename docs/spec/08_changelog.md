@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-04 — Issue #61 residual reconciliation candidate
+## 2026-10-04 — Issue #61 residual reconciliation accepted (#61 / PR #74)
 
 - preserves the canonical Phase 4 evaluation timeout on the public optimizer
   CLI by default and labels any explicit timeout override in JSON output;
@@ -24,7 +24,11 @@
 - records the existing fixed-length Python-list authoritative state as an
   explicit SPEC-IMPL-001 implementation-default deviation; NumPy/Numba
   migration is deferred until profiling or a concrete performance target shows
-  benefit, without changing upper-level state/physics contracts.
+  benefit, without changing upper-level state/physics contracts;
+- exact reviewed head `1441d0bf2b7faa58e265efdc263a8bbf4b3a5414`
+  passed CI #138 (`37183145594`) with 149 tests / OK and browser E2E SUCCESS,
+  then squash-merged to main as
+  `87de79012650b44b934651c8e1ba5a7b8d91e173`.
 
 ## 2026-10-04 — Issue #63 authoritative Phase 5 browser integration
 
