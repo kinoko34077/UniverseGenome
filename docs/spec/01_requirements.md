@@ -1144,9 +1144,79 @@ learned or is noise-robust.
 
 # 22.6 Phase 6.6 predeclared held-out relation generalization requirements
 
-# 22.6 Phase 6.6 predeclared held-out relation generalization requirements
+## REQ-250 — Predeclared held-out relation protocol
+**Status: accepted**
 
+Phase 6.6 shall evaluate a held-out relation declared before results are observed.
+The bounded initial relation keeps one fixed prefix and maps the second input
+byte to its successor byte. Teacher training remains limited to:
 
+- `AA → B, B → NULL`;
+- `AC → D, D → NULL`.
+
+The held-out case is `AE → F, F → NULL`. It shall be protocol data, never an
+evolved UniverseGenome field, and shall not be included in teacher training.
+
+---
+
+## REQ-251 — Held-out validation and clone isolation
+**Status: accepted**
+
+Teacher and held-out mappings shall be ordered two-byte sequences with the same
+declared prefix. Each relation target must equal the second input byte plus one.
+The held-out input, second byte and target shall be distinct from the
+teacher-trained cases.
+
+Baseline held-out and trained held-out evaluations shall use separate disposable
+clones. Neither evaluation may mutate the authoritative training Universe.
+
+---
+
+## REQ-252 — Baseline-relative generalization evaluability
+**Status: accepted**
+
+A seed is training-qualified only when every teacher mapping succeeds after
+training, each corresponding teacher baseline did not already succeed, and the
+required trained counterfactual controls remain clean.
+
+A seed is generalization-eligible only when it is training-qualified and its
+baseline held-out evaluation did not already succeed. An eligible seed is
+generalized when the trained held-out evaluation succeeds, otherwise it is a
+generalization failure.
+
+Aggregate reporting shall expose training-qualified, eligible, generalized and
+failed counts. Generalization rate is defined only when eligible count is
+non-zero; zero eligible cases are non-evaluable/null.
+
+---
+
+## REQ-253 — P6.6 remains outside Phase 5 search objective
+**Status: accepted**
+
+P6.6 generalization evidence is measurement/reporting evidence only. It shall
+not change the canonical absolute-fitness tuple or ordering, shall not consume
+reserved growth bit 7, and shall not alter category isolation, pruning,
+promising allocation, seed handling or authoritative-slot semantics.
+
+P6.4 retention/bit5 and P6.5 noise-robustness/bit6 remain independent.
+
+---
+
+## REQ-254 — P6.6 persistence, public evidence and executable entrypoints
+**Status: accepted**
+
+Experiment serialization, optimizer snapshot/restore and explicit timeout
+reconstruction shall preserve the predeclared held-out mapping. Public reporting
+shall expose held-out protocol identity, per-seed baseline/trained held-out
+success and event generations, per-seed classification, aggregate null-aware
+counts/rate, and the unchanged learning claim.
+
+Canonical and bounded-smoke configs shall use the same semantics. CI shall
+execute real P6.6 experiment and optimizer entrypoints. Implementing the
+capability does not itself constitute evidence that the current universe
+generalizes.
+
+---
 
 # 23. Traceability
 
