@@ -129,6 +129,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertTrue(status["phase6_generalization_implemented"])
         self.assertTrue(status["phase6_multi_byte_sequences_implemented"])
         self.assertTrue(status["phase6_raw_utf8_implemented"])
+        self.assertTrue(status["phase6_mixed_length_sequences_implemented"])
         self.assertEqual(status["phase"], 6)
         self.assertEqual(status["acceptance_state"], "accepted")
         self.assertTrue(status["phase6_ready"])
@@ -161,18 +162,18 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("GUI/search integration #63 is complete via PR #73", readme)
         self.assertIn("Phase 5 search-semantic remediation #65 is complete via PR #70", readme)
         self.assertIn(
-            "P6.1 through P6.8 are accepted on main through",
+            "P6.1 through P6.9 are accepted on main through",
             readme,
         )
         self.assertIn("authoritative Phase 5", readme)
-        self.assertIn("P6.8 bounded raw UTF-8 byte experiments through #101 / PR #102", specification)
-        self.assertIn("P6.8", specification)
-        self.assertIn("P6.8 bounded raw UTF-8 byte experiments are implemented/accepted", roadmap)
+        self.assertIn("P6.9 bounded mixed-length raw byte sequences through #104 / PR #105", specification)
+        self.assertIn("P6.9", specification)
+        self.assertIn("P6.9 bounded mixed-length raw byte sequence mappings are implemented/accepted", roadmap)
         self.assertIn(
-            "Status: **P6.1 through P6.8 accepted; no later capability is currently selected**",
+            "Status: **P6.1 through P6.9 accepted; no later capability is currently selected**",
             handoff,
         )
-        self.assertIn("No automatic P6.9 is authorized", handoff)
+        self.assertIn("No automatic P6.10 is authorized", handoff)
         self.assertIn("historical v0.1 physics/search contract", handoff)
         self.assertIn("Status is a single base term", overview)
         self.assertNotIn("Status: open / policy hook only", functional)
