@@ -1137,6 +1137,16 @@ def _measurement_summary(measurement: LearningMeasurement) -> dict[str, Any]:
         "trained_no_input_clean": measurement.trained_no_input_clean,
         "baseline_alternate_input_clean": measurement.baseline_alternate_input_clean,
         "trained_alternate_input_clean": measurement.trained_alternate_input_clean,
+        "held_out_mapping": (
+            measurement.held_out_mapping.to_dict()
+            if measurement.held_out_mapping is not None
+            else None
+        ),
+        "training_qualified_count": measurement.training_qualified_count,
+        "generalization_eligible_count": measurement.generalization_eligible_count,
+        "generalized_count": measurement.generalized_count,
+        "generalization_failed_count": measurement.generalization_failed_count,
+        "generalization_rate": measurement.generalization_rate,
         "criterion": measurement.criterion,
         "learning_claim": measurement.learning_claim,
         "per_seed": [
@@ -1148,6 +1158,30 @@ def _measurement_summary(measurement: LearningMeasurement) -> dict[str, Any]:
                 "trained_no_input_clean": item.trained_no_input.success,
                 "baseline_alternate_input_clean": item.baseline_alternate.success,
                 "trained_alternate_input_clean": item.trained_alternate.success,
+                "baseline_held_out_success": (
+                    item.baseline_held_out.success
+                    if item.baseline_held_out is not None
+                    else None
+                ),
+                "trained_held_out_success": (
+                    item.trained_held_out.success
+                    if item.trained_held_out is not None
+                    else None
+                ),
+                "baseline_held_out_event_generations": (
+                    list(item.baseline_held_out.event_generations)
+                    if item.baseline_held_out is not None
+                    else []
+                ),
+                "trained_held_out_event_generations": (
+                    list(item.trained_held_out.event_generations)
+                    if item.trained_held_out is not None
+                    else []
+                ),
+                "training_qualified": item.generalization_classification()[0],
+                "generalization_eligible": item.generalization_classification()[1],
+                "generalized": item.generalization_classification()[2],
+                "generalization_failed": item.generalization_classification()[3],
                 "baseline_event_count": len(item.baseline.autonomous_events),
                 "trained_event_count": len(item.trained.autonomous_events),
                 "wrong_output_count": item.trained.wrong_output_count,
