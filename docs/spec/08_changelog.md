@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-04 — Phase 6.3 multi-event output timing candidate (#85 / PR #86)
+## 2026-10-04 — Phase 6.3 multi-event output timing accepted (#85 / PR #86)
 
 - extends the accepted P6.2 temporal mappings with a bounded repeated-output
   protocol: AA→B,B→NULL and AC→D,D→NULL;
@@ -18,8 +18,17 @@
   explicit timeout reconstruction without changing Phase 5 search policy;
 - adds canonical and bounded-smoke P6.3 configs, per-seed event-generation
   reporting, and real experiment/optimizer CI smokes;
-- P6.7 arbitrary distinct output-byte sequences and P6.4+ capabilities remain
-  deferred.
+- exact reviewed head `08a6df9741f864a3482732818040667bbf865a74`
+  passed CI #214 (`37195498334`) with 173 tests / OK, real P6.3
+  experiment/optimizer smokes, and browser E2E SUCCESS;
+- squash-merged implementation main:
+  `1df6e29687ab383fb01812ddb5c1e25cc86d6652`;
+- bounded public smoke: 3 seeds × 2 timed mappings, AA→B,B 0→0 and AC→D,D 0→0;
+  no-input, prefix-A and unmapped-CA counterfactuals clean,
+  `learning_claim=false`;
+- capability acceptance is therefore not a learning-success claim; P6.7
+  arbitrary distinct output-byte sequences remain deferred and the next bounded
+  frontier is P6.4 forgetting/relearning.
 
 
 ## 2026-10-04 — Phase 6.2 temporal sequence discrimination accepted (#82 / PR #83)
