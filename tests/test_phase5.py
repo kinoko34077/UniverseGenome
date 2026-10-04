@@ -1390,5 +1390,36 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
 
 
+    def test_p5_052_post_initial_seed_evidence_prefers_cross_category_match_when_practical(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=200)
+        genome = UniverseGenome.initial_population()[0]
+        copy_parent = next(
+            slot
+            for slot in optimizer.slots
+            if slot.category == "masked_copy" and slot.genome == genome
+        )
+        xor_parent = next(
+            slot
+            for slot in optimizer.slots
+            if slot.category == "masked_xor" and slot.genome == genome
+        )
+
+        copy_evidence = optimizer.allocate_seed_slot(
+            free_index=31,
+            parent=copy_parent,
+        )
+        optimizer.slots[31] = copy_evidence
+
+        xor_evidence = optimizer.allocate_seed_slot(
+            free_index=63,
+            parent=xor_parent,
+        )
+
+        self.assertEqual(copy_evidence.seed, 232)
+        self.assertEqual(xor_evidence.seed, copy_evidence.seed)
+        self.assertEqual(xor_evidence.genome, genome)
+        self.assertEqual(xor_evidence.category, "masked_xor")
+
+
 if __name__ == "__main__":
     unittest.main()
