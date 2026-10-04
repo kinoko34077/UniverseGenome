@@ -162,8 +162,10 @@ without rebuilding a parallel population.
 ### TEST-P3-005 Bounded rewind memory evidence
 
 The original Phase 3 128/256/512 whole-population history policies continue to
-retain at most the selected bounded entry count, report a reproducible compact
-history memory estimate, and remain within the explicit runtime budget.
+retain at most the selected bounded entry count and report a reproducible
+compact-history memory estimate against the documented 256 MiB reference
+budget. That budget is measured guidance rather than a hard rejection
+threshold; bounded entry count remains the normative REQ-151 constraint.
 
 For the integrated Phase 5 observer, the 128/256/512 observation-clone history
 is separately bounded to the selected isolated clone and never becomes an
@@ -235,9 +237,12 @@ same-genome seed group, advances growth only at real 128-generation boundaries,
 applies the accepted category-local `tiered_category_rank` policy: aggregate
 canonical fitness ranks evidence groups, 4→8 uses the top 1/2, 8→16 the top
 1/4, and 16→32 the top 1/8; fractional cutoffs use floor division with a
-minimum of one group. Never-matured mutation groups still complete to four
-real seeds first; otherwise each category persistently alternates promising
-evidence and mutation 1:1 when both are available, preferring lower evidence
+minimum of one group. Post-initial allocation preserves REQ-122 matched
+comparisons where practical by reusing a same-genome seed already present in
+another category when that seed is free locally; this does not couple category
+selection. Never-matured mutation groups still complete to four real seeds
+first; otherwise each category persistently alternates promising evidence and
+mutation 1:1 when both are available, preferring lower evidence
 count then better aggregate fitness then stable genome key. It
 does not replace a live slot without a real free/prune-eligible target, keeps
 groups below four real seed slots out of parent/protection selection, completes
@@ -263,15 +268,27 @@ v0.1 measurement keeps retention/noise-robustness fields zero, so growth bits
 Optimizer persistence includes the effective base/protocol configuration,
 all 128 authoritative Universe states and their parameters, normalized
 fitness/growth references, short-health/failure state, physical cadence state,
-lineage, and scheduler policy state. It does not retain disposable evaluation
-clones. Restore/resume produces the same bounded slot population as
-uninterrupted continuation.
+lineage, explicit prune history, and scheduler policy state. A child persists a
+stable parent-genome key independently of its reusable parent slot index.
+Prune history contains actual retired/replaced targets and round-trips through
+the optimizer snapshot. Current format version 5 must restore exactly; a v5 seed-evidence or mutation
+child missing its durable `parent_genome_key` is malformed and must be
+rejected. Legacy version 4 remains readable with absent new lineage/history
+fields defaulted safely. It does not retain disposable evaluation clones.
+Restore/resume produces the same bounded slot population as uninterrupted
+continuation.
 
 The headless performance path reports bounded optimizer iterations, evaluated
 slots, replacements, mutation fields, actual same-genome slot-group counts,
 and throughput. Promising-allocation state reports the accepted persisted
 policy name and only reports evidence growth represented by corresponding real
 authoritative slots.
+
+The public optimizer CLI preserves the loaded experiment protocol unchanged by
+default. A reduced evaluation timeout is permitted only through an explicit
+`--optimizer-timeout-generations` override, and JSON output identifies whether
+the effective protocol is canonical or explicitly overridden. CI exercises a
+real optimizer CLI smoke with the shortened timeout supplied explicitly.
 
 ### TEST-P5-006 Phase 6+ handoff boundary
 

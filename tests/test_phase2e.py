@@ -8,6 +8,7 @@ import unittest
 from pathlib import Path
 
 from core.physics import (
+    EVENT_FRAGMENTATION,
     PhysicsConfig,
     age_class,
     age_scaled_fragmentation_rate,
@@ -64,7 +65,17 @@ class Phase2EAgingTests(unittest.TestCase):
         seed = next(
             candidate
             for candidate in range(10000)
-            if 100 <= event_u16(event_key(candidate, 0, 0, 4, 0)) < 400
+            if 100
+            <= event_u16(
+                event_key(
+                    candidate,
+                    0,
+                    0,
+                    EVENT_FRAGMENTATION,
+                    0x10000,
+                )
+            )
+            < 400
         )
         young = create_universe(seed=seed, config=aging_config())
         old = create_universe(seed=seed, config=aging_config())

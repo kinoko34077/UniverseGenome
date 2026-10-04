@@ -142,8 +142,11 @@ Use bounded ring/history storage, not unbounded generation retention.
 The Phase 3 population helper stores each retained checkpoint as compact
 deterministic JSON text rather than a live nested Python dictionary. Its runtime
 summaries expose the retained entry count, serialized object memory estimate, a
-256 MiB bound, and whether the estimate is within that bound. That remains
-executable evidence for the original whole-population history implementation.
+256 MiB reference budget, and whether the estimate is within that reference.
+The 256 MiB value is measured guidance/evidence, not a hard allocation or
+runtime-rejection contract; REQ-151 requires bounded history cardinality, not a
+fixed byte ceiling. This remains executable evidence for the original
+whole-population history implementation.
 
 After Phase 5 integration, the browser no longer owns that parallel population
 history. Rewind is a selected observation-clone operation: the runtime retains

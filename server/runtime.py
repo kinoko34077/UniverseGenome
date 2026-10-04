@@ -42,6 +42,7 @@ class OptimizerObservationClone:
     evidence_group_size: int
     evidence_mature: bool
     parent_index: int | None
+    parent_genome_key: str | None
     last_mutation_field: str | None
     allocation_reason: str
     absolute_failure: bool
@@ -168,6 +169,7 @@ class PopulationRuntime:
             "evidence_group_size": int(group_counts.get(slot.evidence_group, 0)),
             "evidence_mature": slot.evidence_mature,
             "parent_index": slot.parent_index,
+            "parent_genome_key": slot.parent_genome_key,
             "last_mutation_field": slot.last_mutation_field,
             "allocation_reason": slot.allocation_reason,
             "absolute_failure": slot.absolute_failure,
@@ -213,6 +215,7 @@ class PopulationRuntime:
             evidence_group_size=int(counts.get(slot.evidence_group, 0)),
             evidence_mature=slot.evidence_mature,
             parent_index=slot.parent_index,
+            parent_genome_key=slot.parent_genome_key,
             last_mutation_field=slot.last_mutation_field,
             allocation_reason=slot.allocation_reason,
             absolute_failure=slot.absolute_failure,
@@ -253,6 +256,7 @@ class PopulationRuntime:
             "evidence_group_size": clone.evidence_group_size,
             "evidence_mature": clone.evidence_mature,
             "parent_index": clone.parent_index,
+            "parent_genome_key": clone.parent_genome_key,
             "last_mutation_field": clone.last_mutation_field,
             "allocation_reason": clone.allocation_reason,
             "absolute_failure": clone.absolute_failure,

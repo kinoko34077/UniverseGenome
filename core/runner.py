@@ -174,8 +174,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--optimizer-timeout-generations",
         type=int,
-        default=8,
-        help="per-candidate Phase 4 timeout budget for optimizer runs (default: 8)",
+        default=None,
+        help=(
+            "explicit per-candidate Phase 4 timeout override for optimizer runs; "
+            "when omitted, preserve the experiment protocol unchanged"
+        ),
     )
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
@@ -222,14 +225,23 @@ def main(argv: list[str] | None = None) -> int:
         if not status["phase5_optimizer_implemented"]:
             raise ValueError("config must explicitly enable Phase 5 optimizer")
         optimizer_experiment = load_experiment_config(args.experiment_config)
-        if args.optimizer_timeout_generations < 0:
-            raise ValueError("optimizer timeout generations must be non-negative")
-        optimizer_values = optimizer_experiment.to_dict()
-        optimizer_values["evaluation_timeout_generations"] = min(
-            optimizer_values["evaluation_timeout_generations"],
-            args.optimizer_timeout_generations,
-        )
-        optimizer_experiment = ExperimentConfig(**optimizer_values)
+        protocol_mode = "canonical"
+        if args.optimizer_timeout_generations is not None:
+            if args.optimizer_timeout_generations < 0:
+                raise ValueError("optimizer timeout generations must be non-negative")
+            optimizer_values = optimizer_experiment.to_dict()
+            optimizer_values["evaluation_timeout_generations"] = (
+                args.optimizer_timeout_generations
+            )
+            optimizer_experiment = ExperimentConfig(**optimizer_values)
+            protocol_mode = "explicit_timeout_override"
+        status["optimizer_protocol"] = {
+            "mode": protocol_mode,
+            "evaluation_timeout_generations": (
+                optimizer_experiment.evaluation_timeout_generations
+            ),
+            "experiment_config": args.experiment_config,
+        }
         status["optimizer_measurement"] = run_optimizer_headless(
             seeds=(args.seed, args.seed + 1, args.seed + 2, args.seed + 3),
             base_config=config,

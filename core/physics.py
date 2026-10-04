@@ -638,7 +638,23 @@ def _fragment_active_cells(
             state.age[slot],
             aging_enabled=config.aging_enabled,
         )
-        if event_u16(event_key(state.seed, generation, 0, EVENT_FRAGMENTATION, slot)) >= rate:
+        old_x = state.x[slot]
+        old_y = state.y[slot]
+        spatial_address = (tile_coordinate(old_y) << 5) | tile_coordinate(old_x)
+        physical_local_index = ((old_x & 0xFF) << 8) | (old_y & 0xFF)
+        chance_local_index = 0x10000 | physical_local_index
+        if (
+            event_u16(
+                event_key(
+                    state.seed,
+                    generation,
+                    spatial_address,
+                    EVENT_FRAGMENTATION,
+                    chance_local_index,
+                )
+            )
+            >= rate
+        ):
             continue
         structure = state.structure[slot]
         level = structure_level(structure)
@@ -653,16 +669,17 @@ def _fragment_active_cells(
                 fragmentation_count += 1
             continue
 
-        old_x = state.x[slot]
-        old_y = state.y[slot]
         old_latent = state.latent[slot]
         old_hp = state.hp[slot]
         old_age = state.age[slot]
         old_direction = state.direction[slot]
         old_speed = state.speed_code[slot]
-        spatial_address = (tile_coordinate(old_y) << 5) | tile_coordinate(old_x)
-        local_index = ((old_x & 0xFF) << 8) | (old_y & 0xFF)
-        split_mask = fragmentation_split_mask(state.seed, generation, spatial_address, local_index)
+        split_mask = fragmentation_split_mask(
+            state.seed,
+            generation,
+            spatial_address,
+            physical_local_index,
+        )
         dx, dy = velocity_vector(old_direction, speed_code_for_magnitude(1))
         try:
             fragment = state.spawn(

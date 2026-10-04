@@ -7,7 +7,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from core.physics import PhysicsConfig, create_universe, fragmentation_split_mask, step
+from core.physics import (
+    EVENT_FRAGMENTATION,
+    PhysicsConfig,
+    create_universe,
+    fragmentation_split_mask,
+    step,
+)
+from core.rng import event_key, event_u16
 from core.geometry import tile_coordinate
 from core.runner import build_status
 from core.state import Lifecycle, SHAPE_HORIZONTAL, SHAPE_SINGLE, structure_level, structure_shape
@@ -111,6 +118,57 @@ class Phase2DFragmentationTests(unittest.TestCase):
         step(uninterrupted)
         step(resumed)
         self.assertEqual(resumed.to_snapshot(), uninterrupted.to_snapshot())
+
+
+    def test_p2d_006_fragmentation_chance_is_independent_of_reusable_storage_slot(self):
+        seed = next(
+            candidate
+            for candidate in range(1024)
+            if event_u16(event_key(candidate, 0, 0, EVENT_FRAGMENTATION, 0))
+            != event_u16(event_key(candidate, 0, 0, EVENT_FRAGMENTATION, 1))
+        )
+        legacy_a = event_u16(event_key(seed, 0, 0, EVENT_FRAGMENTATION, 0))
+        legacy_b = event_u16(event_key(seed, 0, 0, EVENT_FRAGMENTATION, 1))
+        rate = (legacy_a + legacy_b) // 2
+        if rate <= min(legacy_a, legacy_b):
+            rate = min(legacy_a, legacy_b) + 1
+
+        config = fragmentation_config(fragmentation_rate=rate, max_cells=4)
+
+        slot_zero = create_universe(seed=seed, config=config)
+        slot_zero.spawn(
+            x=40,
+            y=56,
+            structure=SHAPE_SINGLE,
+            hp=100,
+            direction=0,
+            speed_code=0,
+        )
+
+        slot_one = create_universe(seed=seed, config=config)
+        dummy = slot_one.spawn(x=200, y=200, hp=100, speed_code=0)
+        target = slot_one.spawn(
+            x=40,
+            y=56,
+            structure=SHAPE_SINGLE,
+            hp=100,
+            direction=0,
+            speed_code=0,
+        )
+        self.assertEqual(target, 1)
+        slot_one.free(dummy)
+
+        result_zero = step(slot_zero)
+        result_one = step(slot_one)
+
+        self.assertEqual(
+            result_zero.fragmentation_count,
+            result_one.fragmentation_count,
+        )
+        self.assertEqual(
+            bool(slot_zero.active_slots()),
+            bool(slot_one.active_slots()),
+        )
 
     def test_p2d_005_status_and_headless_counter(self):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))

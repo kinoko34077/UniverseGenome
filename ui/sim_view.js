@@ -17,6 +17,7 @@ const metadata = document.getElementById("optimizer-meta");
 const pendingLabel = document.getElementById("pending-parameters");
 const collisionDamage = document.getElementById("collision-damage");
 const noiseAttempts = document.getElementById("noise-attempts");
+const resetParameterForm = document.getElementById("reset-parameters");
 let currentState = null;
 let detailFrame = 0;
 
@@ -94,7 +95,7 @@ function updateMetadata() {
     `Category / seed: ${selected.category ?? "?"} / ${selected.seed ?? "?"}`,
     `Genome: ${JSON.stringify(selected.genome || {})}`,
     `Evidence: ${selected.evidence_group_size ?? 0} slots; mature=${Boolean(selected.evidence_mature)}`,
-    `Lineage: parent=${selected.parent_index ?? "none"}; mutation=${selected.last_mutation_field ?? "none"}; allocation=${selected.allocation_reason ?? "?"}`,
+    `Lineage: parentGenome=${selected.parent_genome_key ?? "none"}; parentSlot=${selected.parent_index ?? "none"}; mutation=${selected.last_mutation_field ?? "none"}; allocation=${selected.allocation_reason ?? "?"}`,
     `Fitness: success=${fitness.success ?? 0}, wrong=${fitness.wrong_outputs ?? 0}, timeout=${fitness.timeouts ?? 0}, latency=${fitness.response_latency ?? 0}, activity=${fitness.activity_cost ?? 0}`,
     `Growth windows: ${growth || "none"}`,
     `Last replacement event: ${event}`,
@@ -105,10 +106,9 @@ function updateMetadata() {
 function updateResetControls() {
   const pending = currentState?.pending_reset_parameters || {};
   const config = currentState?.reset_config || {};
-  if (document.activeElement !== collisionDamage) {
+  const editingResetParameters = resetParameterForm?.contains(document.activeElement);
+  if (!editingResetParameters) {
     collisionDamage.value = pending.collision_damage ?? config.collision_damage ?? 0;
-  }
-  if (document.activeElement !== noiseAttempts) {
     noiseAttempts.value = pending.noise_attempts ?? config.noise_attempts ?? 0;
   }
   const keys = Object.keys(pending);

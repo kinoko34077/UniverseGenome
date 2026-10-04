@@ -67,6 +67,15 @@ Core first choice:
 
 This is implementation-level and may change without changing upper-level behavior requirements.
 
+The current v0.1 authoritative state uses fixed-capacity structure-of-arrays
+semantics implemented with fixed-length Python lists, and does not currently
+use a Numba hot-loop path. This is an explicit implementation-default
+deviation, not a change to cell/state semantics: capacity is still fixed,
+snapshot/replay behavior is deterministic, and bounded performance is measured.
+Do not migrate the stable core solely to match the preferred stack. Revisit
+NumPy/Numba only when profiling or a concrete performance target demonstrates
+a benefit and preserve the same upper-level behavior contracts.
+
 ---
 
 ## SPEC-IMPL-002

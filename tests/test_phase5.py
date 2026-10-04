@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 from core.experiment import (
     EvaluationResult,
@@ -13,7 +16,7 @@ from core.experiment import (
 from core.io_bus import OutputEvent
 from core.population import run_population_headless
 from core.physics import PhysicsConfig, StepMetrics, create_universe
-from core.runner import build_status, load_config
+from core.runner import build_status, load_config, main as runner_main
 from core.state import UniverseState
 from search import evolution as evolution_module
 from search.evolution import (
@@ -439,7 +442,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         payload = optimizer.to_snapshot()
         restored = SteadyStateOptimizer.from_snapshot(payload)
         self.assertEqual(restored.to_snapshot(), payload)
-        self.assertEqual(payload["format_version"], 4)
+        self.assertEqual(payload["format_version"], 5)
         self.assertEqual(len(payload["slots"]), 128)
         self.assertTrue(all("state" in slot for slot in payload["slots"]))
 
@@ -556,7 +559,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIn("experiment", payload)
         self.assertIn("scheduler", payload)
         self.assertEqual(len(payload["slots"]), 128)
-        self.assertEqual(payload["format_version"], 4)
+        self.assertEqual(payload["format_version"], 5)
         self.assertTrue(all("state" in slot for slot in payload["slots"]))
         self.assertTrue(all("training_states" not in slot for slot in payload["slots"]))
 
@@ -689,7 +692,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=108)
         payload = optimizer.to_snapshot()
 
-        self.assertEqual(payload["format_version"], 4)
+        self.assertEqual(payload["format_version"], 5)
         self.assertEqual(len(payload["slots"]), 128)
         self.assertTrue(all("state" in record for record in payload["slots"]))
         self.assertTrue(all("training_states" not in record for record in payload["slots"]))
@@ -1325,6 +1328,215 @@ class Phase5OptimizerTests(unittest.TestCase):
             restored._next_allocation_mode("masked_xor", promising_available=True),
             "mutation_child",
         )
+
+
+    def test_p5_051_optimizer_cli_preserves_canonical_protocol_unless_override_is_explicit(self):
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--json",
+                    ]),
+                    0,
+                )
+        default_payload = json.loads(stdout.getvalue())
+        self.assertEqual(captured[-1].evaluation_timeout_generations, 1024)
+        self.assertEqual(
+            default_payload["optimizer_protocol"]["mode"],
+            "canonical",
+        )
+        self.assertEqual(
+            default_payload["optimizer_protocol"]["evaluation_timeout_generations"],
+            1024,
+        )
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "8",
+                        "--json",
+                    ]),
+                    0,
+                )
+        smoke_payload = json.loads(stdout.getvalue())
+        self.assertEqual(captured[-1].evaluation_timeout_generations, 8)
+        self.assertEqual(
+            smoke_payload["optimizer_protocol"]["mode"],
+            "explicit_timeout_override",
+        )
+        self.assertEqual(
+            smoke_payload["optimizer_protocol"]["evaluation_timeout_generations"],
+            8,
+        )
+
+
+    def test_p5_052_post_initial_seed_evidence_prefers_cross_category_match_when_practical(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=200)
+        genome = UniverseGenome.initial_population()[0]
+        copy_parent = next(
+            slot
+            for slot in optimizer.slots
+            if slot.category == "masked_copy" and slot.genome == genome
+        )
+        xor_parent = next(
+            slot
+            for slot in optimizer.slots
+            if slot.category == "masked_xor" and slot.genome == genome
+        )
+
+        copy_evidence = optimizer.allocate_seed_slot(
+            free_index=31,
+            parent=copy_parent,
+        )
+        optimizer.slots[31] = copy_evidence
+
+        xor_evidence = optimizer.allocate_seed_slot(
+            free_index=63,
+            parent=xor_parent,
+        )
+
+        self.assertEqual(copy_evidence.seed, 232)
+        self.assertEqual(xor_evidence.seed, copy_evidence.seed)
+        self.assertEqual(xor_evidence.genome, genome)
+        self.assertEqual(xor_evidence.category, "masked_xor")
+
+
+    def test_p5_053_parent_genome_reference_is_durable_across_slot_reuse_and_snapshot(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=201)
+        parent = optimizer.slots[0]
+        expected_parent_genome_key = parent.genome_key
+
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=1,
+            field="hp_decay",
+        )
+        optimizer.slots[31] = child
+        optimizer._refresh_evidence_maturity(child.evidence_group)
+        self.assertEqual(child.parent_genome_key, expected_parent_genome_key)
+        self.assertEqual(child.parent_index, parent.index)
+
+        other_parent = optimizer.slots[4]
+        replacement = optimizer.replace_free_slot(
+            free_index=parent.index,
+            parent=other_parent,
+            direction=1,
+            field="hp_decay",
+        )
+        optimizer.slots[parent.index] = replacement
+        optimizer._refresh_evidence_maturity(replacement.evidence_group)
+        self.assertNotEqual(
+            optimizer.slots[parent.index].genome_key,
+            expected_parent_genome_key,
+        )
+
+        payload = optimizer.to_snapshot()
+        self.assertEqual(payload["format_version"], 5)
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+        self.assertEqual(
+            restored.slots[31].parent_genome_key,
+            expected_parent_genome_key,
+        )
+
+    def test_p5_054_prune_history_records_actual_retirement_and_roundtrips(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=202,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        target = optimizer.slots[0]
+        retired = {
+            "index": target.index,
+            "category": target.category,
+            "genome_key": target.genome_key,
+            "seed": target.seed,
+        }
+        target.absolute_failure = True
+        target.absolute_failure_reason = "all_active_cells_gone"
+
+        summary = optimizer.step()
+
+        self.assertEqual(summary["replacement_count"], 1)
+        self.assertEqual(len(optimizer.prune_history), 1)
+        event = optimizer.prune_history[0]
+        self.assertEqual(event["optimizer_generation"], 1)
+        self.assertEqual(event["index"], retired["index"])
+        self.assertEqual(event["category"], retired["category"])
+        self.assertEqual(event["genome_key"], retired["genome_key"])
+        self.assertEqual(event["seed"], retired["seed"])
+        self.assertEqual(event["retirement_reason"], "all_active_cells_gone")
+
+        payload = optimizer.to_snapshot()
+        self.assertEqual(payload["prune_history"], optimizer.prune_history)
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+        self.assertEqual(restored.prune_history, optimizer.prune_history)
+        self.assertEqual(restored.to_snapshot(), payload)
+
+    def test_p5_055_snapshot_v4_restores_without_new_lineage_history_fields(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=203)
+        payload = optimizer.to_snapshot()
+        payload["format_version"] = 4
+        payload.pop("prune_history", None)
+        for slot in payload["slots"]:
+            slot.pop("parent_genome_key", None)
+
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+
+        self.assertEqual(restored.prune_history, [])
+        self.assertTrue(
+            all(slot.parent_genome_key is None for slot in restored.slots)
+        )
+        self.assertEqual(restored.to_snapshot()["format_version"], 5)
+
+
+    def test_p5_056_snapshot_v5_rejects_missing_durable_parent_genome_key_for_child(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=204)
+        parent = optimizer.slots[0]
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=1,
+            field="hp_decay",
+        )
+        optimizer.slots[31] = child
+        optimizer._refresh_evidence_maturity(child.evidence_group)
+
+        payload = optimizer.to_snapshot()
+        self.assertEqual(payload["format_version"], 5)
+        child_payload = payload["slots"][31]
+        self.assertEqual(child_payload["allocation_reason"], "mutation_child")
+        child_payload.pop("parent_genome_key")
+
+        with self.assertRaises(ValueError):
+            SteadyStateOptimizer.from_snapshot(payload)
 
 
 if __name__ == "__main__":

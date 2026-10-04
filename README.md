@@ -70,6 +70,8 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
 ```bash
 python -m core.runner --config config/default.json --generations 8 --json
 python -m core.runner --config config/default.json --optimizer --json
+# Optional bounded smoke only; explicit override is reported in JSON:
+python -m core.runner --config config/default.json --optimizer --optimizer-iterations 0 --optimizer-timeout-generations 8 --json
 python -m unittest discover -s tests -v
 python -m server.app --help
 ```

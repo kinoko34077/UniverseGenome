@@ -674,6 +674,13 @@ Preferred random key components:
 
 A hash/counter-style deterministic generator is preferred over one monolithic sequential stream when it improves matched comparisons.
 
+For fragmentation probability, the implemented event key uses the cell's
+physical tile as `spatial_address` and a fixed-point-position-derived
+`local_index` with a dedicated chance subevent tag. Reusable storage-slot
+indices are not part of the probability key. The fragmentation split-mask draw
+continues to use physical position addressing with a distinct local-index
+domain, so chance and split draws remain deterministic but separate.
+
 Exact hash/generator choice is implementation-specific but must be documented.
 
 ---
