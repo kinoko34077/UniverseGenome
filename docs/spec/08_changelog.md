@@ -1,5 +1,25 @@
 # Specification Changelog
 
+## 2026-10-05 — Phase 6.6 held-out relation generalization candidate (#95 / PR #96)
+
+- adds one predeclared held-out relation, AE→F,F→NULL, while teacher training
+  remains limited to AA→B,B→NULL and AC→D,D→NULL;
+- validates one fixed prefix and the explicit second-byte+1 relation across
+  teacher and held-out cases before measurement;
+- records baseline and trained held-out outcomes on separate disposable clones
+  without advancing authoritative training state;
+- requires baseline-relative teacher improvement plus clean counterfactuals for
+  training qualification, excludes innate held-out success from eligibility,
+  and reports null generalization when no eligible seed exists;
+- keeps generalization measurement/reporting outside Phase 5 absolute fitness
+  and leaves reserved growth bit7 unused;
+- preserves the held-out protocol through ExperimentConfig, optimizer snapshots
+  and explicit timeout reconstruction;
+- adds canonical/smoke P6.6 configs, public per-seed/aggregate evidence and real
+  P6.6 experiment/optimizer CI entrypoints;
+- capability acceptance does not imply that the current universe generalized;
+  observed smoke outcome and final verification are recorded at acceptance.
+
 ## 2026-10-04 — Phase 6.5 controlled physical-noise robustness accepted (#91 / PR #92)
 
 - adds explicit experiment-level `noise_robustness_rate_delta`, with canonical
