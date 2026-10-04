@@ -2,8 +2,8 @@
 
 ## Current repository state
 
-Phase 0 through Phase 5 implementation is present on `main`, but current
-status reconciliation #66 is complete via PR #69 and Phase 5 search-semantic
+Phase 0 through Phase 5 are readiness-accepted on `main`. Current State
+reconciliation #66 is complete via PR #69 and Phase 5 search-semantic
 remediation #65 is complete via PR #70 and GUI/authoritative-search
 integration #63 is complete via PR #73. Post-v0.1 residual reconciliation #61
 is complete via PR #74. No remediation owner remains; readiness rerun #60 has
