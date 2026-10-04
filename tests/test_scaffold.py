@@ -57,7 +57,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
 
     def test_default_config_is_parseable_and_preserves_no_cell_id(self):
         config = load_config(ROOT / "config" / "default.json")
-        self.assertEqual(config["phase"], 5)
+        self.assertEqual(config["phase"], 6)
         self.assertEqual(config["world"]["logical_size"], 32)
         self.assertEqual(config["world"]["fixed_point_size"], 256)
         self.assertEqual(config["world"]["max_cells"], 1024)
@@ -120,12 +120,15 @@ class Phase0ScaffoldTests(unittest.TestCase):
         status = build_status(load_config(ROOT / "config" / "default.json"))
 
         self.assertTrue(status["phase5_optimizer_implemented"])
+        self.assertTrue(status["phase6_capabilities_implemented"])
+        self.assertTrue(status["phase6_multi_mapping_implemented"])
+        self.assertEqual(status["phase"], 6)
         self.assertEqual(status["acceptance_state"], "accepted")
         self.assertTrue(status["phase6_ready"])
         self.assertEqual(status["blocking_owners"], [])
         self.assertEqual(status["readiness_owner"], "#60")
-        self.assertEqual(status["next_phase"], "Phase 6+ capability ladder (handoff only)")
-        self.assertIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
+        self.assertEqual(status["next_phase"], "Phase 6.2 temporal sequence discrimination (bounded child Issue required)")
+        self.assertIn("Phase 6.2 temporal sequence discrimination (bounded child Issue required)", status["next_phase"])
 
     def test_post_audit_documentation_routes_to_phase6_handoff(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -146,20 +149,17 @@ class Phase0ScaffoldTests(unittest.TestCase):
             )
         ]
 
-        self.assertIn("Phase 0 through Phase 5 are accepted on `main`", readme)
-        self.assertIn("readiness rerun #60 passed", readme)
+        self.assertIn("Phase 0 through Phase 5 are readiness-accepted on `main`", readme)
+        self.assertIn("P6.1", readme)
         self.assertIn("GUI/search integration #63 is complete via PR #73", readme)
         self.assertIn("Phase 5 search-semantic remediation #65 is complete via PR #70", readme)
-        self.assertIn("capability has been implemented yet", readme)
+        self.assertIn("P6.1 #79 / PR #80 is accepted on main", readme)
         self.assertIn("authoritative Phase 5", readme)
-        self.assertIn("readiness-accepted after rerun #60", specification)
-        self.assertIn("readiness-accepted", specification)
+        self.assertIn("P6.1 capability accepted through #79 / PR #80", specification)
+        self.assertIn("P6.1", specification)
+        self.assertIn("P6.1 multiple independent byte mappings is implemented/accepted", roadmap)
         self.assertIn(
-            "Phase 6+ — Capability ladder (ready for one new bounded child Issue after #60)",
-            roadmap,
-        )
-        self.assertIn(
-            "Status: **ready for one new bounded Phase 6 child Issue after readiness rerun #60**",
+            "Status: **P6.1 multiple independent byte mappings accepted; P6.2 is the next bounded child frontier**",
             handoff,
         )
         self.assertIn("historical v0.1 physics/search contract", handoff)
@@ -246,7 +246,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
             text=True,
         )
         status = json.loads(proc.stdout)
-        self.assertEqual(status["phase"], 5)
+        self.assertEqual(status["phase"], 6)
         self.assertTrue(status["phase1_physics_implemented"])
 
 
