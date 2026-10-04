@@ -1588,5 +1588,33 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(fitness.activity_cost, 4.0)
 
 
+    def test_p6_007_phase5_authoritative_training_uses_all_declared_mappings(self):
+        ByteMapping = getattr(experiment_module, "ByteMapping")
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+            mappings=(
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+            counterfactual_input_byte=66,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=305,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        slot = optimizer.slots[0]
+
+        measurement = optimizer._evaluate_slot(slot)
+
+        self.assertEqual(slot.state.generation, 6)
+        self.assertEqual(measurement.mapping_count, 2)
+        self.assertEqual(len(measurement.per_seed[0].mapping_results), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
