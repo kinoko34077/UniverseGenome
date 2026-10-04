@@ -7,9 +7,10 @@ reconciliation #66, Phase 5 remediation #65, GUI/search integration #63, and
 post-v0.1 residual reconciliation #61 are complete; readiness rerun #60 passed.
 Phase 6 roadmap #78 is active. P6.1 multiple independent byte mappings are
 accepted through #79 / PR #80, P6.2 temporal sequence discrimination through
-#82 / PR #83, P6.3 multi-event output timing through #85 / PR #86, and P6.4
-forgetting/relearning retention through #88 / PR #89 on main; the next bounded
-frontier is P6.5 noise robustness.
+#82 / PR #83, P6.3 multi-event output timing through #85 / PR #86, P6.4
+forgetting/relearning retention through #88 / PR #89, and P6.5 controlled
+physical-noise robustness through #91 / PR #92 on main; the next bounded
+frontier is P6.6 generalization.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -89,6 +90,17 @@ seeds × two mappings. Therefore retention/relearning were explicitly
 non-evaluable (`null`) and `learning_claim=false`; capability acceptance is
 not a learning or retention-success claim.
 
-Next frontier: **P6.5 noise robustness** as one new bounded child Issue.
-P6.6+ remains deferred: generalization, multi-byte sequences, and raw UTF-8
-experiments.
+P6.5 controlled physical-noise robustness is implemented/accepted through #91 /
+PR #92. It compares matched clean/noisy disposable evaluations from the same
+trained T0 state, uses the existing physical background-noise path, requires
+clean mapped success for evaluability, and exposes null-aware robust/failure
+evidence. Evaluable noise robustness may drive growth-only Phase 5 bit 6 without
+changing absolute fitness.
+
+The accepted bounded P6.5 smoke produced zero clean-success eligible cases.
+Noise robustness was therefore explicitly non-evaluable (`null`) and
+`learning_claim=false`; capability acceptance is not a robustness-success
+claim.
+
+Next frontier: **P6.6 generalization** as one new bounded child Issue.
+P6.7+ remains deferred: multi-byte sequences and raw UTF-8 experiments.
