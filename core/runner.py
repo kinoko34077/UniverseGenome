@@ -212,12 +212,24 @@ def main(argv: list[str] | None = None) -> int:
         )
         status["experiment_measurement"] = {
             "seed_count": measurement.seed_count,
+            "mapping_count": measurement.mapping_count,
+            "evaluation_case_count": measurement.evaluation_case_count,
+            "counterfactual_input_byte": measurement.counterfactual_input_byte,
             "baseline_successes": measurement.baseline_successes,
             "trained_successes": measurement.trained_successes,
             "baseline_no_input_clean": measurement.baseline_no_input_clean,
             "trained_no_input_clean": measurement.trained_no_input_clean,
             "baseline_alternate_input_clean": measurement.baseline_alternate_input_clean,
             "trained_alternate_input_clean": measurement.trained_alternate_input_clean,
+            "per_mapping": [
+                {
+                    "input_byte": item.mapping.input_byte,
+                    "output_byte": item.mapping.output_byte,
+                    "baseline_successes": item.baseline_successes,
+                    "trained_successes": item.trained_successes,
+                }
+                for item in measurement.per_mapping
+            ],
             "criterion": measurement.criterion,
             "learning_claim": measurement.learning_claim,
         }
@@ -233,13 +245,15 @@ def main(argv: list[str] | None = None) -> int:
             optimizer_values["evaluation_timeout_generations"] = (
                 args.optimizer_timeout_generations
             )
-            optimizer_experiment = ExperimentConfig(**optimizer_values)
+            optimizer_experiment = ExperimentConfig.from_mapping(optimizer_values)
             protocol_mode = "explicit_timeout_override"
         status["optimizer_protocol"] = {
             "mode": protocol_mode,
             "evaluation_timeout_generations": (
                 optimizer_experiment.evaluation_timeout_generations
             ),
+            "mapping_count": len(optimizer_experiment.mappings),
+            "counterfactual_input_byte": optimizer_experiment.counterfactual_input_byte,
             "experiment_config": args.experiment_config,
         }
         status["optimizer_measurement"] = run_optimizer_headless(

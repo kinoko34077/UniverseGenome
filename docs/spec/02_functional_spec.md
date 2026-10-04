@@ -556,4 +556,59 @@ authoritative slot counts, replacement/allocation counts, mutation fields,
 seed-group counts, and generations per second. No unapproved promising
 threshold is implied by this diagnostic output.
 
+
+# 34. Phase 6.1 multiple byte mappings
+
+## SPEC-P6MAP-001 — Ordered mapping protocol
+**Status: accepted**
+
+Phase 6.1 experiment protocol stores an ordered tuple of byte mappings outside
+UniverseGenome. The first declared protocol is:
+
+- `0x41 → 0x42` (A → B)
+- `0x43 → 0x44` (C → D)
+
+Input bytes must be unique within one protocol. A separate predeclared
+counterfactual input byte must not be one of the mapped inputs.
+
+The legacy Phase 4 single `A → B` protocol remains the default when no
+Phase 6 mapping list is supplied.
+
+## SPEC-P6MAP-002 — Shared training state
+**Status: accepted**
+
+For each teacher repetition, mappings are presented in declared order to one
+continuing authoritative training Universe. Each mapping uses the existing
+input hold/gap/delay and teacher byte + NULL stimulation. No reset occurs
+between mappings.
+
+Teacher stimulation is never inserted into autonomous output observations.
+
+## SPEC-P6MAP-003 — Per-mapping clone evaluation
+**Status: accepted**
+
+Baseline and trained evaluation create a separate disposable clone for each
+mapping. A mapping succeeds only when its autonomous event tuple exactly equals
+the declared output byte followed by NULL. Cross-mapping bytes, extra events,
+missing events and missing NULL remain failures.
+
+No-input and the predeclared unmapped-input counterfactual are evaluated
+separately from valid mapped inputs.
+
+## SPEC-P6MAP-004 — Measurement and Phase 5 integration
+**Status: accepted**
+
+Measurements expose per-seed mapping results and per-mapping aggregate
+successes. The aggregate learning claim requires all mapping/seed evaluation
+cases to succeed, trained successes to exceed baseline successes, and both
+counterfactual cleanliness gates to pass.
+
+Phase 5 absolute fitness normalizes task success and output/error/latency/
+activity metrics across all mapping evaluation cases selected by the active
+experiment protocol. Counterfactual cleanliness remains normalized per seed.
+
+Adding this measurement capability does not change Phase 5 category isolation,
+seed evolution, pruning or promising-allocation semantics and does not by
+itself establish a successful learning result.
+
 ---

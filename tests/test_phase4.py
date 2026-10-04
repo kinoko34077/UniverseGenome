@@ -271,5 +271,179 @@ class Phase4IOTests(unittest.TestCase):
         self.assertEqual(measurement.per_seed[0].trained.evaluation_generations, 11)
 
 
+    def test_p6_001_multi_mapping_protocol_is_serializable_and_rejects_ambiguity(self):
+        ByteMapping = getattr(experiment_module, "ByteMapping")
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+            counterfactual_input_byte=66,
+        )
+
+        payload = protocol.to_dict()
+        self.assertEqual(
+            payload["mappings"],
+            [
+                {"input_byte": 65, "output_byte": 66},
+                {"input_byte": 67, "output_byte": 68},
+            ],
+        )
+        self.assertEqual(payload["counterfactual_input_byte"], 66)
+        self.assertEqual(ExperimentConfig.from_mapping(payload), protocol)
+
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                mappings=(
+                    ByteMapping(65, 66),
+                    ByteMapping(65, 68),
+                ),
+            )
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                mappings=(
+                    ByteMapping(65, 66),
+                    ByteMapping(67, 68),
+                ),
+                counterfactual_input_byte=67,
+            )
+
+    def test_p6_002_declared_mappings_train_one_authoritative_state_in_order(self):
+        ByteMapping = getattr(experiment_module, "ByteMapping")
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+            mappings=(
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+            counterfactual_input_byte=66,
+        )
+        state = create_universe(seed=301, config=experiment_physics_config())
+        io = IOExperiment(state, experiment=protocol)
+
+        records = io.train_mappings()
+
+        self.assertEqual(
+            [(item.input_byte, item.output_byte) for item in records],
+            [(65, 66), (67, 68)],
+        )
+        self.assertEqual(
+            io.teacher_events,
+            [
+                OutputEvent.byte(66),
+                OutputEvent.null(),
+                OutputEvent.byte(68),
+                OutputEvent.null(),
+            ],
+        )
+        self.assertEqual(state.generation, 6)
+
+    def test_p6_003_multi_mapping_measurement_is_mapping_specific_and_clone_only(self):
+        ByteMapping = getattr(experiment_module, "ByteMapping")
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+            mappings=(
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+            counterfactual_input_byte=66,
+        )
+
+        measurement = compare_baseline_trained(
+            seeds=(302, 303),
+            config=experiment_physics_config(),
+            experiment=protocol,
+        )
+
+        self.assertEqual(measurement.seed_count, 2)
+        self.assertEqual(measurement.mapping_count, 2)
+        self.assertEqual(measurement.evaluation_case_count, 4)
+        self.assertEqual(measurement.counterfactual_input_byte, 66)
+        self.assertEqual(
+            [
+                (item.mapping.input_byte, item.mapping.output_byte)
+                for item in measurement.per_mapping
+            ],
+            [(65, 66), (67, 68)],
+        )
+        self.assertEqual(
+            [
+                (item.mapping.input_byte, item.mapping.output_byte)
+                for item in measurement.per_seed[0].mapping_results
+            ],
+            [(65, 66), (67, 68)],
+        )
+        self.assertTrue(
+            all(
+                item.baseline.expected_events
+                == (OutputEvent.byte(item.mapping.output_byte), OutputEvent.null())
+                and item.trained.expected_events
+                == (OutputEvent.byte(item.mapping.output_byte), OutputEvent.null())
+                for seed in measurement.per_seed
+                for item in seed.mapping_results
+            )
+        )
+        self.assertEqual(measurement.trained_successes, 0)
+        self.assertFalse(measurement.learning_claim)
+        self.assertIn("all mappings", measurement.criterion)
+        self.assertIn("unmapped-input", measurement.criterion)
+
+    def test_p6_004_measure_trained_state_does_not_mutate_authority_for_two_mappings(self):
+        ByteMapping = getattr(experiment_module, "ByteMapping")
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+            counterfactual_input_byte=66,
+        )
+        state = create_universe(seed=304, config=experiment_physics_config())
+        IOExperiment(state, experiment=protocol).train_mappings()
+        before = state.to_snapshot()
+
+        measurement = experiment_module.measure_trained_state(
+            state,
+            experiment=protocol,
+        )
+
+        self.assertEqual(state.to_snapshot(), before)
+        self.assertEqual(measurement.mapping_count, 2)
+        self.assertEqual(len(measurement.per_seed[0].mapping_results), 2)
+
+
+    def test_p6_006_phase6_multi_mapping_config_is_explicit_and_loadable(self):
+        loader = getattr(experiment_module, "load_experiment_config")
+        ByteMapping = getattr(experiment_module, "ByteMapping")
+        config = loader(ROOT / "config" / "experiment_phase6_multi_mapping.json")
+
+        self.assertEqual(
+            config.mappings,
+            (
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+        )
+        self.assertEqual(config.counterfactual_input_byte, 66)
+        self.assertEqual(config.evaluation_timeout_generations, 1024)
+
+
 if __name__ == "__main__":
     unittest.main()

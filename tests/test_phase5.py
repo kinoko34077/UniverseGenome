@@ -4,10 +4,12 @@ import json
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 from core.experiment import (
+    ByteMapping,
     EvaluationResult,
     ExperimentConfig,
     LearningMeasurement,
@@ -1537,6 +1539,152 @@ class Phase5OptimizerTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             SteadyStateOptimizer.from_snapshot(payload)
+
+
+    def test_p6_005_phase5_fitness_consumes_all_mapping_evaluations(self):
+        clean = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(),
+            success=False,
+            clone_generation=0,
+            event_generations=(),
+            evaluation_generations=1,
+            activity_cost=2,
+            timed_out=True,
+        )
+        wrong = EvaluationResult(
+            expected_events=(OutputEvent.byte(68), OutputEvent.null()),
+            autonomous_events=(OutputEvent.byte(66),),
+            success=False,
+            clone_generation=0,
+            event_generations=(1,),
+            evaluation_generations=1,
+            activity_cost=6,
+            timed_out=True,
+        )
+        seed_record = SimpleNamespace(
+            trained=clean,
+            mapping_results=(
+                SimpleNamespace(trained=clean),
+                SimpleNamespace(trained=wrong),
+            ),
+        )
+        measurement = SimpleNamespace(
+            seed_count=1,
+            mapping_count=2,
+            evaluation_case_count=2,
+            trained_successes=0,
+            trained_no_input_clean=1,
+            trained_alternate_input_clean=1,
+            no_input_clean=1,
+            alternate_input_clean=1,
+            per_seed=(seed_record,),
+        )
+
+        fitness = SteadyStateOptimizer._fitness_from_measurement(measurement)
+
+        self.assertEqual(fitness.success, 0.0)
+        self.assertEqual(fitness.wrong_outputs, 0.5)
+        self.assertEqual(fitness.timeouts, 1.0)
+        self.assertEqual(fitness.activity_cost, 4.0)
+
+
+    def test_p6_007_phase5_authoritative_training_uses_all_declared_mappings(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+            mappings=(
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+            counterfactual_input_byte=66,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=305,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        slot = optimizer.slots[0]
+
+        measurement = optimizer._evaluate_slot(slot)
+
+        self.assertEqual(slot.state.generation, 6)
+        self.assertEqual(measurement.mapping_count, 2)
+        self.assertEqual(len(measurement.per_seed[0].mapping_results), 2)
+
+
+    def test_p6_008_optimizer_snapshot_roundtrips_multi_mapping_protocol(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+            counterfactual_input_byte=66,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=306,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(
+            payload["experiment"]["mappings"],
+            [
+                {"input_byte": 65, "output_byte": 66},
+                {"input_byte": 67, "output_byte": 68},
+            ],
+        )
+        self.assertEqual(restored.to_snapshot(), payload)
+
+    def test_p6_009_optimizer_timeout_override_preserves_mapping_protocol(self):
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_multi_mapping_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(captured[-1].evaluation_timeout_generations, 1)
+        self.assertEqual(
+            [(item.input_byte, item.output_byte) for item in captured[-1].mappings],
+            [(65, 66), (67, 68)],
+        )
+        self.assertEqual(payload["optimizer_protocol"]["mapping_count"], 2)
+        self.assertEqual(
+            payload["optimizer_protocol"]["mode"],
+            "explicit_timeout_override",
+        )
 
 
 if __name__ == "__main__":

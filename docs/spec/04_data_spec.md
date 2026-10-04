@@ -227,6 +227,13 @@ which the next save emits version 5.
 
 Disposable evaluation clones are never part of the authoritative snapshot.
 
+For Phase 6.1, the persisted `ExperimentConfig` may additionally contain an
+ordered byte-mapping list and a predeclared unmapped counterfactual input byte.
+These remain experiment-protocol data, not UniverseGenome fields. Their
+serialization is sufficient to restore the same evaluation/training protocol;
+no evaluation-clone state is persisted and no new snapshot format version is
+required solely for these protocol fields.
+
 ---
 
 ---

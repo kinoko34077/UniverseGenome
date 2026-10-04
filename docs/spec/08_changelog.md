@@ -1,5 +1,25 @@
 # Specification Changelog
 
+## 2026-10-04 — Phase 6.1 multiple independent byte mappings candidate (#79 / PR #80)
+
+- establishes roadmap #78 and bounded child #79 as the first post-readiness
+  Phase 6 capability unit;
+- adds ordered protocol-level byte mappings with A→B and C→D as the explicit
+  initial pair while preserving the legacy single A→B default;
+- trains all declared mappings on one continuing authoritative Universe per seed
+  and evaluates each mapping on a separate disposable clone;
+- records mapping-level and aggregate baseline/trained results under an
+  all-mappings/all-seeds, baseline-relative, counterfactual-gated criterion;
+- adds an explicit unmapped-input counterfactual distinct from valid mapped
+  inputs and keeps failed learning as `learning_claim=false`;
+- extends Phase 5 fitness/response aggregation across every active mapping
+  evaluation case without changing search/pruning/category semantics;
+- adds `config/experiment_phase6_multi_mapping.json` and headless reporting of
+  mapping count, evaluation cases, counterfactual input and per-mapping results;
+- exact implementation checkpoint `8509b67b...` passed CI #159
+  (`37189692525`) with 155 tests / OK and browser E2E SUCCESS before final
+  documentation/review reconciliation.
+
 ## 2026-10-04 — Phase 6 readiness rerun accepted (#60)
 
 - audited repaired main `78e9d87a11952197f320602031cfb08852bed078`;
