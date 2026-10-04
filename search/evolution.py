@@ -33,6 +33,7 @@ SLOTS_PER_CATEGORY = 32
 OPTIMIZER_POPULATION_SIZE = 128
 GROWTH_WINDOW_GENERATIONS = 128
 MINIMUM_EVIDENCE_SEEDS = 4
+PROMISING_POLICY_TIERED_CATEGORY_RANK = "tiered_category_rank"
 
 
 def seed_escalation(seed_count: int) -> int:
@@ -212,12 +213,12 @@ class SteadyStateOptimizer:
         experiment: ExperimentConfig | None = None,
         generation: int = 0,
         scheduler: Mapping[str, Any] | None = None,
-        promising_policy: str | None = None,
+        promising_policy: str | None = PROMISING_POLICY_TIERED_CATEGORY_RANK,
     ) -> None:
         if generation < 0:
             raise ValueError("optimizer generation must be non-negative")
-        if promising_policy is not None:
-            raise ValueError("no promising allocation policy is approved")
+        if promising_policy not in (None, PROMISING_POLICY_TIERED_CATEGORY_RANK):
+            raise ValueError(f"unsupported promising allocation policy: {promising_policy}")
         self.slots = list(slots)
         self.base_config = base_config or PhysicsConfig()
         self.experiment = experiment or ExperimentConfig()
@@ -229,12 +230,16 @@ class SteadyStateOptimizer:
             "evaluation_count": 0,
             "promising_policy": promising_policy,
         }
+        for category in CATEGORY_OPERATORS:
+            self.scheduler[f"allocation_mode_cursor:{category}"] = 0
         if scheduler is not None:
             for key, value in scheduler.items():
                 if key == "promising_policy":
-                    if value is not None:
-                        raise ValueError("no promising allocation policy is approved")
-                    self.scheduler[key] = None
+                    if value not in (None, PROMISING_POLICY_TIERED_CATEGORY_RANK):
+                        raise ValueError(
+                            f"unsupported promising allocation policy: {value}"
+                        )
+                    self.scheduler[key] = value
                 else:
                     self.scheduler[key] = int(value)
 
@@ -254,7 +259,7 @@ class SteadyStateOptimizer:
         base_seed: int = 0,
         base_config: PhysicsConfig | None = None,
         experiment: ExperimentConfig | None = None,
-        promising_policy: str | None = None,
+        promising_policy: str | None = PROMISING_POLICY_TIERED_CATEGORY_RANK,
     ) -> "SteadyStateOptimizer":
         base = base_config or PhysicsConfig()
         protocol = experiment or ExperimentConfig()
@@ -588,12 +593,111 @@ class SteadyStateOptimizer:
         aggregates = self.group_fitnesses(local)
         return min(sources, key=lambda slot: self._selection_key(slot, aggregates))
 
-    def _is_promising(self, slot: UniverseSlot, local: list[UniverseSlot]) -> bool:
-        """Policy hook; no concrete promising rule is approved for v0.1."""
-        del slot, local
+    @staticmethod
+    def _promising_tier_divisor(seed_count: int) -> int | None:
+        if MINIMUM_EVIDENCE_SEEDS <= seed_count < 8:
+            return 2
+        if 8 <= seed_count < 16:
+            return 4
+        if 16 <= seed_count < 32:
+            return 8
+        return None
+
+    def _promising_group_keys(
+        self,
+        local: list[UniverseSlot],
+    ) -> set[tuple[str, str]]:
         if self.promising_policy is None:
-            return False
-        raise ValueError("no promising allocation policy is approved")
+            return set()
+        if self.promising_policy != PROMISING_POLICY_TIERED_CATEGORY_RANK:
+            raise ValueError(
+                f"unsupported promising allocation policy: {self.promising_policy}"
+            )
+        if not local:
+            return set()
+        categories = {slot.category for slot in local}
+        if len(categories) != 1:
+            raise ValueError("promising ranking must be category-local")
+
+        counts = self._evidence_group_counts(local)
+        aggregates = self.group_fitnesses(local)
+        eligible_keys = [
+            group_key
+            for group_key, count in counts.items()
+            if count >= MINIMUM_EVIDENCE_SEEDS
+        ]
+        ranked = sorted(
+            eligible_keys,
+            key=lambda group_key: (
+                aggregates[group_key].sort_key(),
+                group_key[1],
+            ),
+        )
+        rank_by_group = {
+            group_key: rank
+            for rank, group_key in enumerate(ranked)
+        }
+
+        promising: set[tuple[str, str]] = set()
+        for group_key in ranked:
+            count = counts[group_key]
+            divisor = self._promising_tier_divisor(count)
+            if divisor is None:
+                continue
+            cutoff = max(1, len(ranked) // divisor)
+            if rank_by_group[group_key] < cutoff:
+                promising.add(group_key)
+        return promising
+
+    def _is_promising(self, slot: UniverseSlot, local: list[UniverseSlot]) -> bool:
+        return slot.evidence_group in self._promising_group_keys(local)
+
+    def _select_promising_parent(
+        self,
+        local: list[UniverseSlot],
+        *,
+        excluded_group: tuple[str, str] | None = None,
+    ) -> UniverseSlot | None:
+        promising = self._promising_group_keys(local)
+        if excluded_group is not None:
+            promising.discard(excluded_group)
+        if not promising:
+            return None
+
+        counts = self._evidence_group_counts(local)
+        aggregates = self.group_fitnesses(local)
+        representatives: dict[tuple[str, str], UniverseSlot] = {}
+        for slot in local:
+            if slot.evidence_group not in promising:
+                continue
+            current = representatives.get(slot.evidence_group)
+            if current is None or slot.index < current.index:
+                representatives[slot.evidence_group] = slot
+
+        return min(
+            representatives.values(),
+            key=lambda slot: (
+                counts[slot.evidence_group],
+                aggregates[slot.evidence_group].sort_key(),
+                slot.genome_key,
+                slot.index,
+            ),
+        )
+
+    def _next_allocation_mode(
+        self,
+        category: str,
+        *,
+        promising_available: bool,
+    ) -> str:
+        if category not in CATEGORY_OPERATORS:
+            raise ValueError("unsupported optimizer category")
+        if not promising_available:
+            return "mutation_child"
+        key = f"allocation_mode_cursor:{category}"
+        cursor = int(self.scheduler.get(key, 0))
+        self.scheduler[key] = cursor + 1
+        return "seed_evidence" if cursor % 2 == 0 else "mutation_child"
 
     def _protected_indices(self, local: list[UniverseSlot]) -> set[int]:
         aggregates = self.group_fitnesses(local)
@@ -663,17 +767,22 @@ class SteadyStateOptimizer:
                 )
                 reason = "seed_evidence"
             else:
-                eligible_indices = {
-                    slot.index for slot in self._selection_eligible_slots(local)
-                }
-                promising = [
-                    slot
-                    for slot in sources
-                    if slot.index in eligible_indices and self._is_promising(slot, local)
-                ]
-                if promising:
-                    parent = min(promising, key=lambda slot: self._selection_key(slot, aggregates))
-                    child = self.allocate_seed_slot(free_index=target.index, parent=parent)
+                promising_parent = self._select_promising_parent(
+                    sources,
+                    excluded_group=target.evidence_group,
+                )
+                allocation_mode = self._next_allocation_mode(
+                    category,
+                    promising_available=promising_parent is not None,
+                )
+                if allocation_mode == "seed_evidence":
+                    if promising_parent is None:
+                        raise RuntimeError("seed-evidence mode requires a promising parent")
+                    parent = promising_parent
+                    child = self.allocate_seed_slot(
+                        free_index=target.index,
+                        parent=parent,
+                    )
                     reason = "seed_evidence"
                 else:
                     parent = self._select_parent(local, excluded_index=target_index)
