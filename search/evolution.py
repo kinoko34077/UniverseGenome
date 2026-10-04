@@ -19,6 +19,7 @@ from core.state import UniverseState
 from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
 from .pruning import (
+    RESPONSE_HISTORY_LIMIT,
     SHORT_HEALTH_HISTORY_LIMIT,
     SHORT_WINDOW,
     absolute_failure_reason,
@@ -66,6 +67,7 @@ class UniverseSlot:
     evidence_mature: bool = False
     short_health_windows: tuple[int, ...] = ()
     short_health_activity_cost: int = 0
+    response_windows: tuple[int, ...] = ()
     absolute_failure: bool = False
     absolute_failure_reason: str | None = None
 
@@ -84,6 +86,10 @@ class UniverseSlot:
             raise ValueError("slot short-health windows must fit two bits")
         if self.short_health_activity_cost < 0:
             raise ValueError("slot short-health activity cost must be non-negative")
+        if any(int(window) not in (0, 1) for window in self.response_windows):
+            raise ValueError("slot response windows must be binary")
+        if len(self.response_windows) > RESPONSE_HISTORY_LIMIT:
+            raise ValueError("slot response history exceeds the 512-generation horizon")
         if self.growth_reference is not None and not isinstance(self.growth_reference, Fitness):
             raise ValueError("slot growth_reference must be Fitness")
         if self.last_mutation_field is not None and self.last_mutation_field not in UNIVERSE_GENOME_FIELDS:
@@ -97,6 +103,7 @@ class UniverseSlot:
         if self.absolute_failure_reason not in (
             None,
             "all_active_cells_gone",
+            "persistent_non_response",
         ):
             raise ValueError("unsupported slot absolute failure reason")
         if self.absolute_failure_reason is not None and not self.absolute_failure:
@@ -132,6 +139,7 @@ class UniverseSlot:
             "evidence_mature": self.evidence_mature,
             "short_health_windows": list(self.short_health_windows),
             "short_health_activity_cost": self.short_health_activity_cost,
+            "response_windows": list(self.response_windows),
             "absolute_failure": self.absolute_failure,
             "absolute_failure_reason": self.absolute_failure_reason,
         }
@@ -166,6 +174,9 @@ class UniverseSlot:
         raw_health_windows = payload.get("short_health_windows", ())
         if not isinstance(raw_health_windows, (list, tuple)):
             raise ValueError("slot short_health_windows must be an array")
+        raw_response_windows = payload.get("response_windows", ())
+        if not isinstance(raw_response_windows, (list, tuple)):
+            raise ValueError("slot response_windows must be an array")
         absolute_failure = bool(payload.get("absolute_failure", False))
         absolute_failure_reason_value = payload.get("absolute_failure_reason")
         if absolute_failure_reason_value is not None:
@@ -197,6 +208,7 @@ class UniverseSlot:
             evidence_mature=bool(payload["evidence_mature"]),
             short_health_windows=tuple(int(window) for window in raw_health_windows),
             short_health_activity_cost=int(payload.get("short_health_activity_cost", 0)),
+            response_windows=tuple(int(window) for window in raw_response_windows),
             absolute_failure=absolute_failure,
             absolute_failure_reason=absolute_failure_reason_value,
         )
@@ -335,7 +347,10 @@ class SteadyStateOptimizer:
             *slot.short_health_windows,
             flags,
         )[-SHORT_HEALTH_HISTORY_LIMIT:]
-        reason = absolute_failure_reason(slot.short_health_windows)
+        reason = absolute_failure_reason(
+            slot.short_health_windows,
+            response_history=slot.response_windows,
+        )
         if not slot.absolute_failure and reason is not None:
             slot.absolute_failure = True
             slot.absolute_failure_reason = reason
@@ -356,14 +371,44 @@ class SteadyStateOptimizer:
             )
             slot.short_health_activity_cost = 0
 
+    @staticmethod
+    def _measurement_has_autonomous_response(
+        measurement: LearningMeasurement,
+    ) -> bool:
+        return any(
+            bool(item.trained.autonomous_events)
+            for item in measurement.per_seed
+        )
+
+    def _record_response_observation(
+        self,
+        slot: UniverseSlot,
+        *,
+        responded: bool,
+    ) -> None:
+        slot.response_windows = (
+            *slot.response_windows,
+            1 if responded else 0,
+        )[-RESPONSE_HISTORY_LIMIT:]
+        reason = absolute_failure_reason(
+            slot.short_health_windows,
+            response_history=slot.response_windows,
+        )
+        if not slot.absolute_failure and reason is not None:
+            slot.absolute_failure = True
+            slot.absolute_failure_reason = reason
+
     def _observe_growth_boundary(self, slot: UniverseSlot) -> None:
         measurement, observed_fitness = self._measure_slot(slot)
         if slot.growth_reference is not None:
             flags = growth_flags(slot.growth_reference, observed_fitness)
             slot.growth_windows = (*slot.growth_windows, flags)[-4:]
+        self._record_response_observation(
+            slot,
+            responded=self._measurement_has_autonomous_response(measurement),
+        )
         slot.growth_reference = observed_fitness
         slot.fitness = observed_fitness
-        del measurement
 
     def _evaluate_slot(self, slot: UniverseSlot) -> LearningMeasurement:
         if slot.growth_reference is None:
