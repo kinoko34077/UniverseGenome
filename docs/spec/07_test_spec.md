@@ -395,9 +395,10 @@ and browser E2E remain GREEN.
 ### TEST-P63-001 Repeated-event protocol and serialization
 
 The default protocol remains one expected byte event with interval zero.
-P6.3 serializes and reconstructs a bounded two-event protocol with a positive
-`output_event_interval_generations`. Unsupported event counts and a zero
-interval for two-event mode are rejected.
+P6.3 serializes and reconstructs a bounded two-event protocol with
+`output_event_interval_generations >= 2`, guaranteeing at least one released
+physical generation between the one-generation teacher pulses. Unsupported
+event counts and intervals below two for two-event mode are rejected.
 
 ### TEST-P63-002 Teacher event timing
 
