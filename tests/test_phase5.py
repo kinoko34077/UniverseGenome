@@ -2910,5 +2910,121 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIsInstance(seed_record.trained_held_out.event_generations, tuple)
 
 
+    def test_p66_006_generalization_classification_is_baseline_relative_and_null_aware(self):
+        expected = (
+            OutputEvent.byte(70),
+            OutputEvent.byte(70),
+            OutputEvent.null(),
+        )
+
+        def result(success: bool) -> EvaluationResult:
+            return EvaluationResult(
+                expected_events=expected,
+                autonomous_events=expected if success else (),
+                success=success,
+                clone_generation=4,
+                evaluation_generations=4,
+                timed_out=not success,
+            )
+
+        clean_control = EvaluationResult(
+            expected_events=(),
+            autonomous_events=(),
+            success=True,
+            clone_generation=4,
+            evaluation_generations=4,
+            timed_out=False,
+        )
+        training_mappings = (
+            ByteSequenceMapping((65, 65), 66),
+            ByteSequenceMapping((65, 67), 68),
+        )
+
+        def seed_record(
+            seed: int,
+            *,
+            held_baseline: bool,
+            held_trained: bool,
+            second_baseline_success: bool = False,
+        ) -> SeedMeasurement:
+            mapping_results = (
+                MappingSeedMeasurement(
+                    mapping=training_mappings[0],
+                    baseline=result(False),
+                    trained=result(True),
+                ),
+                MappingSeedMeasurement(
+                    mapping=training_mappings[1],
+                    baseline=result(second_baseline_success),
+                    trained=result(True),
+                ),
+            )
+            return SeedMeasurement(
+                seed=seed,
+                baseline=mapping_results[0].baseline,
+                trained=mapping_results[0].trained,
+                baseline_no_input=clean_control,
+                trained_no_input=clean_control,
+                baseline_alternate=clean_control,
+                trained_alternate=clean_control,
+                mapping_results=mapping_results,
+                baseline_prefix=clean_control,
+                trained_prefix=clean_control,
+                baseline_sequence_counterfactual=clean_control,
+                trained_sequence_counterfactual=clean_control,
+                baseline_held_out=result(held_baseline),
+                trained_held_out=result(held_trained),
+            )
+
+        generalized = seed_record(1, held_baseline=False, held_trained=True)
+        failed = seed_record(2, held_baseline=False, held_trained=False)
+        innate = seed_record(3, held_baseline=True, held_trained=True)
+        not_improved = seed_record(
+            4,
+            held_baseline=False,
+            held_trained=True,
+            second_baseline_success=True,
+        )
+
+        measurement = experiment_module._assemble_learning_measurement(
+            (generalized, failed, innate, not_improved),
+            mappings=training_mappings,
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            held_out_mapping=ByteSequenceMapping((65, 69), 70),
+        )
+
+        self.assertEqual(generalized.generalization_classification(), (True, True, True, False))
+        self.assertEqual(failed.generalization_classification(), (True, True, False, True))
+        self.assertEqual(innate.generalization_classification(), (True, False, False, False))
+        self.assertEqual(not_improved.generalization_classification(), (False, False, False, False))
+        self.assertEqual(measurement.training_qualified_count, 3)
+        self.assertEqual(measurement.generalization_eligible_count, 2)
+        self.assertEqual(measurement.generalized_count, 1)
+        self.assertEqual(measurement.generalization_failed_count, 1)
+        self.assertEqual(measurement.generalization_rate, 0.5)
+
+    def test_p66_007_zero_generalization_eligible_cases_report_none(self):
+        measurement = LearningMeasurement(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(),
+            training_qualified_count=0,
+            generalization_eligible_count=0,
+            generalized_count=0,
+            generalization_failed_count=0,
+        )
+        self.assertIsNone(measurement.generalization_rate)
+
+
 if __name__ == "__main__":
     unittest.main()
