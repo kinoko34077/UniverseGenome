@@ -44,6 +44,15 @@ jobs:
           --experiment
           --experiment-config config/experiment_phase6_temporal_sequence_smoke.json
           --json
+      - name: Headless Phase 6.2 optimizer integration smoke
+        run: >-
+          python -m core.runner
+          --config config/default.json
+          --optimizer
+          --optimizer-iterations 0
+          --experiment-config config/experiment_phase6_temporal_sequence_smoke.json
+          --optimizer-timeout-generations 2
+          --json
       - name: Static server entrypoint smoke
         run: python -m server.app --help
 
