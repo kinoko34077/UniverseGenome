@@ -169,6 +169,10 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(fitness.noise_robustness, 0.0)
         self.assertEqual(fitness.counterfactual_no_input_clean, 1.0)
         self.assertEqual(fitness.counterfactual_alternate_input_clean, 1.0)
+        self.assertTrue(
+            SteadyStateOptimizer._measurement_has_autonomous_response(measurement)
+        )
+        self.assertEqual(growth_flags(Fitness(), fitness) & ((1 << 5) | (1 << 6)), 0)
         self.assertEqual(
             Fitness(success=1, retention=0, noise_robustness=0).sort_key(),
             Fitness(success=1, retention=1, noise_robustness=1).sort_key(),
@@ -1067,52 +1071,31 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(slot.absolute_failure)
         self.assertEqual(slot.absolute_failure_reason, "all_active_cells_gone")
 
-    def test_p5_043_persistent_non_response_remains_a_specification_gate(self):
+    def test_p5_043_persistent_non_response_requires_four_128_generation_response_windows(self):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=123)
         slot = optimizer.slots[0]
-        metrics = StepMetrics(
-            generation=16,
-            active_cells=1,
-            collision_count=0,
-            collision_pair_evaluations=0,
-            bond_contact_count=0,
-            latent_transmission_count=0,
-            fusion_count=0,
-            fragmentation_count=0,
-            noise_spawn_count=0,
-            generations_per_second=1.0,
+        self.assertTrue(tuple(slot.state.active_slots()))
+        slot.short_health_windows = (
+            short_health_flags(active_cells=1, activity_cost=0),
         )
 
-        optimizer._observe_short_health(slot, metrics)
-        optimizer._observe_short_health(
-            slot,
-            StepMetrics(
-                generation=32,
-                active_cells=1,
-                collision_count=0,
-                collision_pair_evaluations=0,
-                bond_contact_count=0,
-                latent_transmission_count=0,
-                fusion_count=0,
-                fragmentation_count=0,
-                noise_spawn_count=0,
-                generations_per_second=1.0,
-            ),
-        )
+        for _ in range(3):
+            optimizer._record_response_observation(slot, responded=False)
+            self.assertFalse(slot.absolute_failure)
 
-        self.assertEqual(
-            slot.short_health_windows,
-            (
-                short_health_flags(active_cells=1, activity_cost=0),
-                short_health_flags(active_cells=1, activity_cost=0),
-            ),
-        )
-        self.assertEqual(
-            absolute_failure_reason(slot.short_health_windows),
-            None,
-        )
+        optimizer._record_response_observation(slot, responded=True)
         self.assertFalse(slot.absolute_failure)
-        self.assertIsNone(slot.absolute_failure_reason)
+        self.assertEqual(slot.response_windows, (0, 0, 0, 1))
+
+        for _ in range(3):
+            optimizer._record_response_observation(slot, responded=False)
+            self.assertFalse(slot.absolute_failure)
+
+        optimizer._record_response_observation(slot, responded=False)
+        self.assertTrue(slot.absolute_failure)
+        self.assertEqual(slot.absolute_failure_reason, "persistent_non_response")
+        self.assertEqual(slot.response_windows, (0, 0, 0, 0))
+
 
     def test_p5_044_absolute_failure_is_prunable_without_growth_or_maturity(self):
         record = make_slot(index=7, seed=7)
