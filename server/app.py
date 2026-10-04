@@ -1,6 +1,6 @@
-"""Serve the Phase 3 observer surface through the bounded runtime API.
+"""Serve the Phase 5 authoritative optimizer through the bounded runtime API.
 
-The server-owned PopulationRuntime is authoritative; browser rendering only
+The server-owned runtime owns the SteadyStateOptimizer; browser rendering only
 observes state and submits explicit controls.
 """
 
@@ -13,11 +13,23 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from core.experiment import ExperimentConfig, load_experiment_config
+from core.physics import PhysicsConfig
+
 from .runtime import PopulationRuntime
 
 
 ROOT = Path(__file__).resolve().parents[1]
 UI_DIR = ROOT / "ui"
+DEFAULT_CONFIG = ROOT / "config" / "default.json"
+DEFAULT_EXPERIMENT_CONFIG = ROOT / "config" / "experiment_v0_1.json"
+
+
+def _load_physics_config(path: str | Path) -> PhysicsConfig:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("physics config must be an object")
+    return PhysicsConfig.from_mapping(payload)
 
 
 class UniverseGenomeHandler(SimpleHTTPRequestHandler):
@@ -59,8 +71,14 @@ def build_server(
     port: int = 8000,
     runtime: PopulationRuntime | None = None,
     history_length: int = PopulationRuntime.DEFAULT_HISTORY_LENGTH,
+    config: PhysicsConfig | None = None,
+    experiment: ExperimentConfig | None = None,
 ) -> ThreadingHTTPServer:
-    resolved_runtime = runtime or PopulationRuntime(history_length=history_length)
+    resolved_runtime = runtime or PopulationRuntime(
+        history_length=history_length,
+        config=config or _load_physics_config(DEFAULT_CONFIG),
+        experiment=experiment or load_experiment_config(DEFAULT_EXPERIMENT_CONFIG),
+    )
     handler_class = type(
         "ConfiguredUniverseGenomeHandler",
         (UniverseGenomeHandler,),
@@ -77,6 +95,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
     parser.add_argument(
+        "--config",
+        default=str(DEFAULT_CONFIG),
+        help="authoritative base physics config JSON",
+    )
+    parser.add_argument(
+        "--experiment-config",
+        default=str(DEFAULT_EXPERIMENT_CONFIG),
+        help="Phase 4/5 experiment protocol JSON",
+    )
+    parser.add_argument(
         "--history-length",
         type=int,
         choices=(128, 256, 512),
@@ -85,7 +113,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    server = build_server(args.host, args.port, history_length=args.history_length)
+    server = build_server(
+        args.host,
+        args.port,
+        history_length=args.history_length,
+        config=_load_physics_config(args.config),
+        experiment=load_experiment_config(args.experiment_config),
+    )
     print(f"Serving UniverseGenome runtime at http://{args.host}:{args.port}")
     try:
         server.serve_forever()
