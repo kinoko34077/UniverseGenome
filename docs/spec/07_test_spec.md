@@ -709,4 +709,37 @@ Public experiment JSON exposes the declared raw input/output arrays and observed
 event lists, retains the prefix/unmapped controls and reports failed learning
 truthfully when applicable. CI executes real P6.8 experiment and optimizer
 entrypoints and keeps the full P6.1–P6.7 + browser regression suite GREEN.
+---
+
+## Phase 6.9 acceptance tests
+
+### TEST-P69-001 Mixed-length mapping shape and round-trip
+
+One protocol represents 1/2/3-byte mapped inputs with 1/2/3-byte effective
+outputs, round-trips through `ExperimentConfig`, and rejects bounded sequence
+shapes above three bytes.
+
+### TEST-P69-002 Mapping-specific teacher/evaluation event counts
+
+Teacher execution emits one, two and three output bytes for the corresponding
+mappings. Clone evaluation constructs exact mapping-specific expected tuples and
+reports output-event counts 1/2/3.
+
+### TEST-P69-003 Canonical configs, persistence and timeout reconstruction
+
+Canonical and bounded-smoke configs declare the exact P6.9 byte arrays and
+controls. Config round-trip, optimizer snapshot/restore and explicit timeout
+override preserve mixed lengths and inter-event timing.
+
+### TEST-P69-004 Public evidence and real entrypoints
+
+Public experiment/optimizer JSON exposes mapping input lengths, output-event
+counts, declared byte arrays and observed event lists. CI executes real P6.9
+experiment and optimizer entrypoints while prior smokes remain GREEN.
+
+### TEST-P69-005 Prefix-free mapped-input boundary
+
+A mixed protocol rejects a valid mapped input that is a proper prefix of another
+valid mapped input. Prefix-overlap semantics remain deferred to a later explicit
+capability decision.
 
