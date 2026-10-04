@@ -15,7 +15,11 @@
   locked detail mode, and staged Reset parameters;
 - preserves post-initial matched genome/seed comparison where practical by
   preferring a same-genome seed already represented in another category when
-  that seed is free locally, without cross-category selection coupling.
+  that seed is free locally, without cross-category selection coupling;
+- upgrades Phase 5 optimizer snapshots to format v5 with a durable
+  `parent_genome_key` separate from reusable `parent_index`, plus explicit
+  event-level history for targets actually retired/replaced; legacy v4
+  snapshots remain readable and upgrade on the next save.
 
 ## 2026-10-04 — Issue #63 authoritative Phase 5 browser integration
 
