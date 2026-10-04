@@ -144,19 +144,26 @@ replay, and stepping one slot cannot mutate another slot.
 
 ### TEST-P3-003 Bounded rewind and clone isolation
 
-Only 128/256/512 generation histories are accepted; rewind stays bounded and
-observation clones cannot mutate authoritative slots.
+Only 128/256/512 physical-generation observation histories are accepted.
+After Phase 5 integration, rewind and physical 1 Step operate only on an
+observation clone; the selected authoritative optimizer slot remains unchanged.
 
 ### TEST-P3-004 Headless and observer/control surface
 
-Population status/summary runs without the GUI, while the 16×8 overview,
-detail modes, required controls, and external-clock declaration are exposed.
+The headless optimizer remains functional without the GUI. The browser 16×8
+overview and detail payload are sourced from the same 128 authoritative Phase 5
+optimizer slots and expose category/genome/seed, fitness/growth, evidence and
+lineage/allocation metadata. Render polling does not advance authority.
+Run/Pause/Search Step control outer search; clone physical stepping is separate.
+Save/Load round-trips the authoritative optimizer snapshot. Browser E2E must
+show that a real optimizer replacement becomes visible through the observer
+without rebuilding a parallel population.
 
 ### TEST-P3-005 Bounded rewind memory evidence
 
-The 128, 256, and 512 history policies retain at most the selected bounded
-entry count, report a reproducible compact-history memory estimate, and remain
-within the explicit runtime budget.
+The 128, 256, and 512 observation-clone history policies retain at most the
+selected bounded entry count and never become an authoritative search clock or
+rollback mechanism.
 
 ## Phase 4 acceptance tests
 
