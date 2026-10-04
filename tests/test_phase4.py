@@ -298,6 +298,17 @@ class Phase4IOTests(unittest.TestCase):
         self.assertEqual(payload["counterfactual_input_byte"], 66)
         self.assertEqual(ExperimentConfig.from_mapping(payload), protocol)
 
+        canonical = experiment_module.load_experiment_config(
+            ROOT / "config" / "experiment_phase6_multi_event_timing.json"
+        )
+        self.assertEqual(canonical.output_event_count, 2)
+        self.assertEqual(canonical.output_event_interval_generations, 4)
+        self.assertEqual(canonical.evaluation_timeout_generations, 1024)
+        self.assertEqual(
+            [item.input_bytes for item in canonical.mappings],
+            [(65, 65), (65, 67)],
+        )
+
         with self.assertRaises(ValueError):
             ExperimentConfig(
                 mappings=(
@@ -631,6 +642,206 @@ class Phase4IOTests(unittest.TestCase):
         self.assertEqual(config.counterfactual_prefix, (65,))
         self.assertEqual(config.counterfactual_input_sequence, (67, 65))
         self.assertEqual(config.evaluation_timeout_generations, 1024)
+
+
+    def test_p63_001_multi_event_protocol_serializes_count_and_onset_interval(self):
+        base = ExperimentConfig()
+        self.assertEqual(base.output_event_count, 1)
+        self.assertEqual(base.output_event_interval_generations, 0)
+
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=4,
+            mappings=(
+                experiment_module.ByteSequenceMapping((65, 65), 66),
+                experiment_module.ByteSequenceMapping((65, 67), 68),
+            ),
+            inter_input_generations=1,
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=3,
+        )
+
+        payload = protocol.to_dict()
+        self.assertEqual(payload["output_event_count"], 2)
+        self.assertEqual(payload["output_event_interval_generations"], 3)
+        self.assertEqual(ExperimentConfig.from_mapping(payload), protocol)
+
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                output_event_count=2,
+                output_event_interval_generations=0,
+            )
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                output_event_count=2,
+                output_event_interval_generations=1,
+            )
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                output_event_count=3,
+                output_event_interval_generations=1,
+            )
+
+    def test_p63_002_teacher_repeats_output_at_declared_onset_interval(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+            mappings=(experiment_module.ByteSequenceMapping((65, 65), 66),),
+            inter_input_generations=1,
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=3,
+        )
+        state = create_universe(seed=501, config=experiment_physics_config())
+        timeline = []
+
+        class RecordingExperiment(IOExperiment):
+            def drive_input(self, value, *, valid=True):
+                timeline.append(("input", value, self.state.generation))
+                return super().drive_input(value, valid=valid)
+
+            def teacher_output(self, event, **kwargs):
+                timeline.append(("teacher", event, self.state.generation))
+                return super().teacher_output(event, **kwargs)
+
+        record = RecordingExperiment(state, experiment=protocol).train_mappings()[0]
+
+        self.assertEqual(
+            record.teacher_events,
+            (
+                OutputEvent.byte(66),
+                OutputEvent.byte(66),
+                OutputEvent.null(),
+            ),
+        )
+        teacher_timeline = [item for item in timeline if item[0] == "teacher"]
+        self.assertEqual(
+            teacher_timeline,
+            [
+                ("teacher", OutputEvent.byte(66), 3),
+                ("teacher", OutputEvent.byte(66), 6),
+                ("teacher", OutputEvent.null(), 7),
+            ],
+        )
+
+    def test_p63_003_autonomous_repeated_output_requires_exact_event_interval(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            evaluation_timeout_generations=5,
+            inter_input_generations=1,
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+        io = IOExperiment(
+            create_universe(seed=502, config=experiment_physics_config()),
+            experiment=protocol,
+        )
+        expected = (
+            OutputEvent.byte(66),
+            OutputEvent.byte(66),
+            OutputEvent.null(),
+        )
+
+        with patch.object(
+            experiment_module.IOExperiment,
+            "observe_output_state",
+            side_effect=(
+                [],
+                [],
+                [],
+                [OutputEvent.byte(66)],
+                [],
+                [OutputEvent.byte(66)],
+                [OutputEvent.null()],
+                [],
+            ),
+        ):
+            correct = io.evaluate_autonomous_sequence(
+                input_bytes=(65, 65),
+                expected=expected,
+            )
+
+        self.assertEqual(correct.event_generations, (4, 6, 7))
+        self.assertTrue(correct.success)
+        self.assertEqual(correct.wrong_output_count, 0)
+
+        with patch.object(
+            experiment_module.IOExperiment,
+            "observe_output_state",
+            side_effect=(
+                [],
+                [],
+                [],
+                [OutputEvent.byte(66)],
+                [],
+                [],
+                [OutputEvent.byte(66)],
+                [OutputEvent.null()],
+            ),
+        ):
+            wrong_interval = io.evaluate_autonomous_sequence(
+                input_bytes=(65, 65),
+                expected=expected,
+            )
+
+        self.assertEqual(wrong_interval.autonomous_events, expected)
+        self.assertEqual(wrong_interval.event_generations, (4, 7, 8))
+        self.assertFalse(wrong_interval.success)
+        self.assertGreater(wrong_interval.wrong_output_count, 0)
+
+    def test_p63_004_measurement_requires_two_timed_byte_events_before_null(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+            mappings=(
+                experiment_module.ByteSequenceMapping((65, 65), 66),
+                experiment_module.ByteSequenceMapping((65, 67), 68),
+            ),
+            inter_input_generations=0,
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+
+        measurement = compare_baseline_trained(
+            seeds=(503,),
+            config=experiment_physics_config(),
+            experiment=protocol,
+        )
+
+        self.assertEqual(
+            measurement.per_seed[0].mapping_results[0].trained.expected_events,
+            (
+                OutputEvent.byte(66),
+                OutputEvent.byte(66),
+                OutputEvent.null(),
+            ),
+        )
+        self.assertEqual(
+            measurement.per_seed[0].mapping_results[1].trained.expected_events,
+            (
+                OutputEvent.byte(68),
+                OutputEvent.byte(68),
+                OutputEvent.null(),
+            ),
+        )
+        self.assertIn("tim", measurement.criterion.lower())
+        self.assertFalse(measurement.learning_claim)
 
 
 if __name__ == "__main__":

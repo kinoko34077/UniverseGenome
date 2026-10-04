@@ -53,6 +53,22 @@ jobs:
           --experiment-config config/experiment_phase6_temporal_sequence_smoke.json
           --optimizer-timeout-generations 2
           --json
+      - name: Headless Phase 6.3 multi-event timing experiment smoke
+        run: >-
+          python -m core.runner
+          --config config/default.json
+          --experiment
+          --experiment-config config/experiment_phase6_multi_event_timing_smoke.json
+          --json
+      - name: Headless Phase 6.3 optimizer integration smoke
+        run: >-
+          python -m core.runner
+          --config config/default.json
+          --optimizer
+          --optimizer-iterations 0
+          --experiment-config config/experiment_phase6_multi_event_timing_smoke.json
+          --optimizer-timeout-generations 2
+          --json
       - name: Static server entrypoint smoke
         run: python -m server.app --help
 

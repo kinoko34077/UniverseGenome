@@ -679,3 +679,94 @@ Public experiment reporting identifies each mapping by `input_bytes` and
 reports prefix/unmapped-sequence control results without relabeling failed
 learning as success.
 
+---
+
+# 36. Phase 6.3 multi-event output timing
+
+## SPEC-P6TIM-001 — Bounded repeated-output protocol
+**Status: accepted**
+
+P6.3 extends the active experiment protocol with two fields:
+
+- `output_event_count`: expected byte-event count before NULL;
+- `output_event_interval_generations`: physical-generation onset-to-onset
+  interval between repeated expected byte events.
+
+The backwards-compatible default is one byte event with interval zero. The
+initial bounded P6.3 capability permits exactly two repeated byte events with an
+interval of at least two generations, leaving at least one released physical generation between the one-generation teacher pulses. It does not generalize arbitrary distinct
+output-byte sequences.
+
+The initial declared mappings remain the P6.2 input sequences:
+
+- `AA → B, B → NULL`;
+- `AC → D, D → NULL`.
+
+## SPEC-P6TIM-002 — Teacher output timing
+**Status: accepted**
+
+Teacher stimulation begins only after complete input-sequence delivery,
+`byte_gap_generations`, and `teacher_delay_generations`.
+
+Each teacher output event remains one physical-generation external stimulation.
+For two-event P6.3, the first byte event begins at generation `t`, the second
+byte event begins exactly
+`output_event_interval_generations` physical generations later, and NULL is
+then delivered through the existing termination path. Output is released during
+the intervening idle generations.
+
+All declared mappings and all repeated teacher events train one continuing
+authoritative Universe for the seed. No reset is introduced between repeated
+events or mappings, and teacher output remains excluded from autonomous scoring.
+
+## SPEC-P6TIM-003 — Exact timed clone evaluation
+**Status: accepted**
+
+P6.3 uses the existing disposable-clone evaluation boundary. A mapping succeeds
+only when the autonomous event tuple exactly matches the declared repeated byte
+events followed by NULL and the repeated byte-event onsets have the exact
+declared physical-generation interval.
+
+An autonomous byte event with correct content but wrong repeated-event timing is
+an output error, does not consume the timed expected match for error accounting,
+and cannot make the evaluation successful. Early output, cross-target byte,
+wrong count, extra event, missing event, missing NULL and timeout remain ordinary
+failures.
+
+NULL remains required termination but has no new independent timing objective in
+P6.3.
+
+## SPEC-P6TIM-004 — Measurement and learning claim
+**Status: accepted**
+
+Measurements retain the existing per-mapping/per-seed baseline and trained
+results together with observed autonomous event generations. Public reporting
+includes the active output-event count and interval and enough per-seed evidence
+to inspect the timed-event result.
+
+When the P6.2 sequence protocol is active, no-input, prefix-only `A`, and
+unmapped `CA` controls remain unchanged. The aggregate learning claim requires
+all mapping/seed cases to satisfy the exact timed-event criterion, trained
+successes to exceed baseline successes, and all required counterfactuals to
+remain clean.
+
+A failed experiment remains `learning_claim=false`.
+
+## SPEC-P6TIM-005 — Persistence and Phase 5 integration
+**Status: accepted**
+
+`output_event_count` and `output_event_interval_generations` are serialized
+inside the existing `ExperimentConfig`. Optimizer snapshot round-trip and
+explicit timeout reconstruction preserve both fields; no optimizer snapshot
+format increment is required solely for P6.3.
+
+Phase 5 continues to aggregate success, wrong-output, timeout, latency and
+activity over all active mapping evaluations. P6.3 introduces no new fitness
+weight or ordering and does not alter category isolation, pruning, seed
+allocation, matched-seed handling, promising policy, or authoritative-slot
+semantics.
+
+Canonical and bounded-smoke P6.3 experiment configs use this same protocol
+surface. Public and CI entry points report failed learning without
+reinterpretation.
+

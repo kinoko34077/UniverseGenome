@@ -388,3 +388,59 @@ truthful aggregate learning claim. CI executes both a bounded P6.2 experiment
 smoke and a bounded P6.2 optimizer-integration smoke; Phase 0–5/P6.1 regressions
 and browser E2E remain GREEN.
 
+---
+
+## Phase 6.3 acceptance tests
+
+### TEST-P63-001 Repeated-event protocol and serialization
+
+The default protocol remains one expected byte event with interval zero.
+P6.3 serializes and reconstructs a bounded two-event protocol with
+`output_event_interval_generations >= 2`, guaranteeing at least one released
+physical generation between the one-generation teacher pulses. Unsupported
+event counts and intervals below two for two-event mode are rejected.
+
+### TEST-P63-002 Teacher event timing
+
+After complete temporal input delivery, one continuing authoritative training
+Universe receives two identical teacher byte events. Their onsets are separated
+by exactly the declared physical-generation interval and are followed by the
+existing teacher NULL event. No reset occurs between events or mappings.
+
+### TEST-P63-003 Exact autonomous timing rejection
+
+Disposable-clone evaluation accepts an exact repeated-byte→NULL tuple only when
+the repeated byte-event onset interval is exactly the declared value. The same
+event content at the wrong interval remains unsuccessful and contributes to the
+existing wrong-output/error metric. Early, extra, missing and wrong-byte events
+remain failures.
+
+### TEST-P63-004 Timed-event measurement and controls
+
+AA expects B,B,NULL and AC expects D,D,NULL. Per-seed/per-mapping baseline and
+trained results preserve observed event generations. The aggregate criterion
+states the timing requirement, retains no-input/prefix-A/unmapped-CA gates, and
+keeps failed learning as `learning_claim=false`.
+
+### TEST-P63-005 Phase 5 snapshot reconstruction
+
+An optimizer configured with P6.3 round-trips
+`output_event_count` and `output_event_interval_generations` through the
+existing serialized `ExperimentConfig` without changing the optimizer snapshot
+format solely for P6.3.
+
+### TEST-P63-006 Explicit timeout reconstruction
+
+The optimizer CLI explicit timeout override changes only the effective timeout
+and preserves P6.3 count/interval, sequence mappings, inter-input timing and
+counterfactual controls. Protocol reporting exposes the effective repeated-event
+fields.
+
+### TEST-P63-007 Public P6.3 reporting and real smokes
+
+The public experiment result reports active output-event count/interval and
+per-seed/per-mapping baseline/trained success with observed event generations.
+CI executes both a bounded P6.3 experiment smoke and a bounded P6.3 optimizer
+integration smoke. Phase 0–5, P6.1/P6.2 regressions and browser E2E remain
+GREEN.
+

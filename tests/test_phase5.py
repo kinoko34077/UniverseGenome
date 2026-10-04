@@ -15,6 +15,7 @@ from core.experiment import (
     ExperimentConfig,
     LearningMeasurement,
     SeedMeasurement,
+    load_experiment_config,
 )
 from core.io_bus import OutputEvent
 from core.population import run_population_headless
@@ -1803,6 +1804,104 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertFalse(payload["learning_claim"])
 
 
+
+
+    def test_p63_005_optimizer_snapshot_roundtrips_multi_event_timing_protocol(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_multi_event_timing_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=505,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+
+        self.assertEqual(protocol.output_event_count, 2)
+        self.assertEqual(protocol.output_event_interval_generations, 2)
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(payload["experiment"]["output_event_count"], 2)
+        self.assertEqual(
+            payload["experiment"]["output_event_interval_generations"],
+            2,
+        )
+
+    def test_p63_006_optimizer_timeout_override_preserves_multi_event_timing(self):
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_multi_event_timing_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        protocol = captured[-1]
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(protocol.evaluation_timeout_generations, 1)
+        self.assertEqual(protocol.output_event_count, 2)
+        self.assertEqual(protocol.output_event_interval_generations, 2)
+        self.assertEqual(payload["optimizer_protocol"]["output_event_count"], 2)
+        self.assertEqual(
+            payload["optimizer_protocol"]["output_event_interval_generations"],
+            2,
+        )
+
+    def test_p63_007_runner_reports_per_seed_multi_event_timing_results(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_multi_event_timing_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertEqual(payload["mapping_count"], 2)
+        self.assertEqual(payload["evaluation_case_count"], 6)
+        self.assertEqual(payload["output_event_count"], 2)
+        self.assertEqual(payload["output_event_interval_generations"], 2)
+        self.assertEqual(len(payload["per_seed"]), 3)
+        for seed_record in payload["per_seed"]:
+            self.assertEqual(len(seed_record["mappings"]), 2)
+            for mapping_record in seed_record["mappings"]:
+                self.assertIn("baseline_success", mapping_record)
+                self.assertIn("trained_success", mapping_record)
+                self.assertIn("baseline_event_generations", mapping_record)
+                self.assertIn("trained_event_generations", mapping_record)
+                self.assertIsInstance(
+                    mapping_record["baseline_event_generations"],
+                    list,
+                )
+                self.assertIsInstance(
+                    mapping_record["trained_event_generations"],
+                    list,
+                )
+        self.assertFalse(payload["learning_claim"])
 
 
 if __name__ == "__main__":

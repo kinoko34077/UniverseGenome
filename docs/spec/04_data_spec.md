@@ -241,6 +241,15 @@ round-trip through optimizer snapshots and explicit timeout reconstruction.
 They remain protocol data; disposable sequence-evaluation clones are not
 persisted and P6.2 alone does not require a snapshot-format increment.
 
+For Phase 6.3, the persisted `ExperimentConfig` may additionally contain
+`output_event_count` and `output_event_interval_generations`. These values
+describe the bounded repeated-output evaluation protocol rather than evolved
+UniverseGenome state. They round-trip through optimizer snapshots and explicit
+timeout reconstruction. Observed event-generation evidence belongs to
+evaluation results/reporting and does not turn disposable evaluation clones
+into authoritative persisted state. P6.3 alone does not require a snapshot
+format increment.
+
 ---
 
 ---

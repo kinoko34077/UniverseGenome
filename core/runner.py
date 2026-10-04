@@ -231,6 +231,10 @@ def main(argv: list[str] | None = None) -> int:
             "counterfactual_input_sequence": list(
                 measurement.counterfactual_input_sequence
             ),
+            "output_event_count": measurement.output_event_count,
+            "output_event_interval_generations": (
+                measurement.output_event_interval_generations
+            ),
             "baseline_successes": measurement.baseline_successes,
             "trained_successes": measurement.trained_successes,
             "baseline_no_input_clean": measurement.baseline_no_input_clean,
@@ -258,6 +262,27 @@ def main(argv: list[str] | None = None) -> int:
                     "trained_successes": item.trained_successes,
                 }
                 for item in measurement.per_mapping
+            ],
+            "per_seed": [
+                {
+                    "seed": item.seed,
+                    "mappings": [
+                        {
+                            "input_bytes": list(record.mapping.input_bytes),
+                            "output_byte": record.mapping.output_byte,
+                            "baseline_success": record.baseline.success,
+                            "trained_success": record.trained.success,
+                            "baseline_event_generations": list(
+                                record.baseline.event_generations
+                            ),
+                            "trained_event_generations": list(
+                                record.trained.event_generations
+                            ),
+                        }
+                        for record in item.mapping_results
+                    ],
+                }
+                for item in measurement.per_seed
             ],
             "criterion": measurement.criterion,
             "learning_claim": measurement.learning_claim,
@@ -289,6 +314,10 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "counterfactual_input_sequence": list(
                 optimizer_experiment.counterfactual_input_sequence
+            ),
+            "output_event_count": optimizer_experiment.output_event_count,
+            "output_event_interval_generations": (
+                optimizer_experiment.output_event_interval_generations
             ),
             "experiment_config": args.experiment_config,
         }

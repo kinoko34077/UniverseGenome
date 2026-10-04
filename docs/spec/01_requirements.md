@@ -900,6 +900,86 @@ Failure remains `learning_claim=false`.
 
 ---
 
+## REQ-220 — Bounded repeated-output event protocol
+**Status: accepted**
+
+Phase 6.3 shall extend an active mapping with a bounded expected autonomous
+output-event count while preserving the existing input mapping representation.
+The initial P6.3 capability is exactly two repeated byte events followed by
+NULL:
+
+- `AA → B, B → NULL`;
+- `AC → D, D → NULL`.
+
+The repeated-event count and timing remain experiment/protocol data outside
+UniverseGenome. The existing one-byte and P6.2 one-output-event protocols remain
+valid with one expected byte event.
+
+---
+
+## REQ-221 — Explicit output-event timing and authoritative training
+**Status: accepted**
+
+P6.3 shall expose an explicit physical-generation interval between the onsets of
+the repeated expected byte events. For the bounded two-event protocol, the
+interval shall be at least two generations so the one-generation teacher pulses are separated by at least one released physical generation.
+
+Teacher stimulation shall begin only after the complete input sequence and
+teacher delay. Both repeated teacher byte events and the terminating NULL shall
+act on the same continuing authoritative training Universe without reset.
+Teacher-generated events shall not count as autonomous success.
+
+---
+
+## REQ-222 — Exact multi-event clone evaluation
+**Status: accepted**
+
+Each P6.3 mapping shall continue to be evaluated on an isolated disposable
+clone. Success requires the exact declared byte-event content, order, count and
+byte-event onset interval followed by NULL.
+
+Early output, wrong byte, wrong repeated-event interval, wrong event count,
+extra output, missing NULL, or timeout cannot count as success. A timing-mismatched
+otherwise-correct byte event shall remain observable through the existing output
+error surface used by Phase 5.
+
+P6.3 does not introduce an independent NULL-timing objective.
+
+---
+
+## REQ-223 — Truthful timed-event measurement and controls
+**Status: accepted**
+
+Baseline and trained results shall retain per-mapping/per-seed event-generation
+evidence sufficient to inspect the repeated-event timing criterion.
+
+The existing P6.2 no-input, prefix-only `A`, and predeclared unmapped `CA`
+controls remain independent learning-claim gates. A P6.3 learning claim may be
+true only when every declared mapping across every evaluated seed satisfies the
+exact timed-event criterion, trained performance exceeds the corresponding
+baseline, and all required counterfactuals remain clean.
+
+Failure remains `learning_claim=false`. Implementing P6.3 measurement capability
+does not itself establish that timed-output learning succeeded.
+
+---
+
+## REQ-224 — Phase 5 compatibility and bounded capability boundary
+**Status: accepted**
+
+Phase 5 shall consume active P6.3 mapping evaluations through the existing
+success, wrong-output, timeout, latency and activity fitness surfaces without
+changing category isolation, seed evolution, fitness ordering, pruning,
+promising allocation, matched-seed rules, or authoritative-slot semantics merely
+to enable P6.3.
+
+Snapshot/config reconstruction and explicit timeout override shall preserve the
+P6.3 event-count/timing protocol. P6.3 is limited to the bounded repeated
+same-byte event capability; arbitrary distinct output-byte sequences remain a
+later capability.
+
+---
+
 # 23. Traceability
 
 Historical rationale: #2  
