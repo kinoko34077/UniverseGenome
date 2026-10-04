@@ -19,7 +19,11 @@
 - upgrades Phase 5 optimizer snapshots to format v5 with a durable
   `parent_genome_key` separate from reusable `parent_index`, plus explicit
   event-level history for targets actually retired/replaced; legacy v4
-  snapshots remain readable and upgrade on the next save.
+  snapshots remain readable and upgrade on the next save;
+- records the existing fixed-length Python-list authoritative state as an
+  explicit SPEC-IMPL-001 implementation-default deviation; NumPy/Numba
+  migration is deferred until profiling or a concrete performance target shows
+  benefit, without changing upper-level state/physics contracts.
 
 ## 2026-10-04 — Issue #63 authoritative Phase 5 browser integration
 
