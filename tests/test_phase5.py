@@ -606,6 +606,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(result["mutation_fields"], [])
         self.assertEqual(result["authoritative_slot_count"], 128)
         self.assertTrue(result["group_counts"])
+        self.assertEqual(result["promising_policy"], "tiered_category_rank")
 
     def test_p5_014_integrated_loop_does_not_prune_before_physical_window(self):
         protocol = ExperimentConfig(
@@ -720,7 +721,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         group_key = f"{parent.category}:{parent.genome_key}"
         self.assertEqual(optimizer.group_counts()[group_key], 5)
         restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
-        self.assertIsNone(restored.promising_policy)
+        self.assertEqual(restored.promising_policy, "tiered_category_rank")
         self.assertEqual(restored.group_counts()[group_key], 5)
 
     def test_p5_030_snapshot_rejects_metadata_config_mismatch(self):
