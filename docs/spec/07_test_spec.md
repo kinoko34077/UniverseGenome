@@ -237,7 +237,14 @@ eligibility. It also exercises multiple genome mutation fields and directly
 covers the real growth sequence `0 → 128 → 256 → 384 → 512`. Integrated
 mutation uses both directions of the adjacent binary grid, falls back from an
 invalid bound direction, and never creates a no-op or an `initial_density`
-value above effective `PhysicsConfig.max_cells`.
+value above effective `PhysicsConfig.max_cells`. Short-health tests retire
+all-active-cell loss at the 16-generation cadence. Task-response tests record
+one response/no-response observation at each 128-generation growth boundary
+and retire `persistent_non_response` only after four consecutive no-output
+observations (512 physical generations) while active cells remain; a wrong
+autonomous output still counts as a response for this failure rule. Integrated
+v0.1 measurement keeps retention/noise-robustness fields zero, so growth bits
+5/6 cannot be driven by the separate counterfactual-clean observables.
 
 ### TEST-P5-005 Integrated persistence
 
