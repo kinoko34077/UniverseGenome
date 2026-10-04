@@ -993,6 +993,18 @@ class SteadyStateOptimizer:
         raw_slots = payload.get("slots")
         if not isinstance(raw_slots, list) or len(raw_slots) != OPTIMIZER_POPULATION_SIZE:
             raise ValueError("authoritative optimizer snapshot must contain 128 slots")
+        if format_version >= 5:
+            for record in raw_slots:
+                if not isinstance(record, Mapping):
+                    raise ValueError("authoritative slot records must be objects")
+                allocation_reason = str(record.get("allocation_reason", "initial"))
+                if (
+                    allocation_reason in ("seed_evidence", "mutation_child")
+                    and not record.get("parent_genome_key")
+                ):
+                    raise ValueError(
+                        "v5 allocated child requires durable parent_genome_key"
+                    )
         base_config = PhysicsConfig.from_mapping(payload["base_config"])
         slots = [
             UniverseSlot.from_dict(record, base_config=base_config)
