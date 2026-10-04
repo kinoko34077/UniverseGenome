@@ -13,11 +13,9 @@ physics, the server-owned runtime/API, browser observer/control surface,
 physical I/O measurement, and the persistent authoritative Phase 5 optimizer.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
-P1 remediation tracks. Status-truth reconciliation #66 is complete via PR #69,
-and Phase 5 search-semantics remediation #65 is complete via PR #70. The
-remaining P1 owner is #63 (GUI / authoritative-search integration). Readiness
-audit #60 is the later rerun
-owner, and its previous PASS is not current evidence. The current Phase 4
+P1 remediation tracks #66, #65, and #63 are complete. No unresolved P1 owner
+remains. Post-v0.1 residual reconciliation is tracked in #61, followed by the
+#60 readiness rerun; its previous PASS is not current evidence. The current Phase 4
 measurement remains baseline 0 / trained 0 with no learning claim. See the
 [Phase 6+ handoff](docs/PHASE6_HANDOFF.md) for the blocked boundary.
 
@@ -59,9 +57,11 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   deterministic optimizer persistence.
 - Current status remediation #66 is complete via PR #69; its blocked-state
   projection is accepted on current main.
-- Phase 5 search-semantic remediation #65 is complete via PR #70 on main
-  `3e8c8f31...`; GUI/search integration #63 remains the open P1 owner.
-  Residuals are tracked in #61.
+- Phase 5 search-semantic remediation #65 is complete via PR #70.
+- GUI/search integration #63 is complete via PR #73: the browser/server surface
+  now observes and controls the authoritative Phase 5 optimizer rather than a
+  parallel Phase 3 population.
+- Remaining Phase 0–5 residuals are tracked in #61.
 - Readiness audit #60 must be rerun from repaired current `main` before any
   Phase 6+ capability work.
 
@@ -74,10 +74,10 @@ python -m unittest discover -s tests -v
 python -m server.app --help
 ```
 
-The current GUI remains the Phase 3 server-owned runtime observer and does not
-drive that local simulation clock. Phase 5 authoritative-search integration
-remains unresolved under #63, so the GUI is not current evidence that the
-browser observes the optimizer's authoritative population.
+The browser observer now reads the server-owned authoritative Phase 5
+`SteadyStateOptimizer`. The 16×8 overview projects its 128 real search slots;
+selected physical inspection uses an isolated clone, and render polling does
+not drive search or physical time.
 
 ## Reuse lineage
 
