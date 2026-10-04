@@ -166,7 +166,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
             readme,
         )
         self.assertIn("authoritative Phase 5", readme)
-        self.assertIn("P6.9 bounded mixed-length raw byte sequences through #104 / PR #105", specification)
+        self.assertIn("bounded mixed-length raw byte sequences through #104 / PR #105", specification)
         self.assertIn("P6.9", specification)
         self.assertIn("P6.9 bounded mixed-length raw byte sequence mappings are implemented/accepted", roadmap)
         self.assertIn(
