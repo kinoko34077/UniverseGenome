@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-04 — Issue #65 Phase 5 search-semantics remediation candidate
+## 2026-10-04 — Issue #65 Phase 5 search-semantics remediation accepted (#65 / PR #70)
 
 - executes the accepted 16-generation short-health cadence on authoritative
   physical time and retires explicit all-active-cell loss as an absolute
@@ -20,7 +20,11 @@
   without no-op children and constrains effective `initial_density` mutation
   to `PhysicsConfig.max_cells`;
 - preserves the 128 authoritative-slot, category-isolation, real-seed evidence,
-  free/prune-target-only replacement, and deterministic snapshot boundaries.
+  free/prune-target-only replacement, and deterministic snapshot boundaries;
+- exact reviewed head `c6c32af9151f7c591b54df1787b9be39026fdd79`
+  passed CI #93 (`37177555446`) with 142 tests / OK and browser E2E SUCCESS,
+  then squash-merged to main as
+  `3e8c8f31a1d87d3f2a7e88de731392b4f3202bd2`.
 
 ## 2026-10-04 — Issue #65 Phase 5 search-liveness remediation (historical checkpoint)
 
