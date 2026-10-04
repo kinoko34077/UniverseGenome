@@ -105,6 +105,15 @@ class ByteSequenceMapping:
 ProtocolMapping = ByteMapping | ByteSequenceMapping
 
 
+def _mapping_output_bytes(
+    mapping: ProtocolMapping,
+    output_event_count: int,
+) -> tuple[int, ...]:
+    if isinstance(mapping, ByteSequenceMapping) and mapping.output_bytes:
+        return mapping.output_bytes
+    return (mapping.output_byte,) * int(output_event_count)
+
+
 DEFAULT_BYTE_MAPPINGS = (ByteMapping(65, 66),)
 
 
@@ -815,17 +824,21 @@ class IOExperiment:
         for _ in range(self.experiment.teacher_delay_generations):
             self.release_input()
             advance(())
-        byte_event = OutputEvent.byte(mapping.output_byte)
+        output_bytes = _mapping_output_bytes(
+            mapping,
+            self.experiment.output_event_count,
+        )
         null_event = OutputEvent.null()
         teacher_events: list[OutputEvent] = []
-        for output_index in range(self.experiment.output_event_count):
+        for output_index, output_byte in enumerate(output_bytes):
+            byte_event = OutputEvent.byte(output_byte)
             self.teacher_output(
                 byte_event,
                 on_generation=on_generation,
                 on_step=on_step,
             )
             teacher_events.append(byte_event)
-            if output_index < self.experiment.output_event_count - 1:
+            if output_index < len(output_bytes) - 1:
                 for _ in range(
                     self.experiment.output_event_interval_generations - 1
                 ):
@@ -1101,7 +1114,13 @@ def _seed_measurement(
 
     for mapping in protocol.mappings:
         expected = (
-            *(OutputEvent.byte(mapping.output_byte),) * protocol.output_event_count,
+            *(
+                OutputEvent.byte(value)
+                for value in _mapping_output_bytes(
+                    mapping,
+                    protocol.output_event_count,
+                )
+            ),
             OutputEvent.null(),
         )
         baseline_result = evaluate(baseline, mapping, expected)
@@ -1175,8 +1194,13 @@ def _seed_measurement(
     trained_held_out = None
     if protocol.held_out_mapping is not None:
         held_out_expected = (
-            *(OutputEvent.byte(protocol.held_out_mapping.output_byte),)
-            * protocol.output_event_count,
+            *(
+                OutputEvent.byte(value)
+                for value in _mapping_output_bytes(
+                    protocol.held_out_mapping,
+                    protocol.output_event_count,
+                )
+            ),
             OutputEvent.null(),
         )
         baseline_held_out = evaluate(
