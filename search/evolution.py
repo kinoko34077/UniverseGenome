@@ -468,7 +468,7 @@ class SteadyStateOptimizer:
             self._record_short_health_step(slot, generation, metrics)
 
         trainer = IOExperiment(slot.state, experiment=self.experiment)
-        trainer.train_a_to_b_null(on_generation=on_generation, on_step=on_step)
+        trainer.train_mappings(on_generation=on_generation, on_step=on_step)
         measurement, slot.fitness = self._measure_slot(slot)
         return measurement
 
