@@ -612,5 +612,25 @@ class Phase4IOTests(unittest.TestCase):
         self.assertFalse(measurement.learning_claim)
 
 
+    def test_p62_005_temporal_sequence_config_is_explicit_and_loadable(self):
+        loader = getattr(experiment_module, "load_experiment_config")
+        ByteSequenceMapping = getattr(experiment_module, "ByteSequenceMapping")
+        config = loader(
+            ROOT / "config" / "experiment_phase6_temporal_sequence.json"
+        )
+
+        self.assertEqual(
+            config.mappings,
+            (
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+        )
+        self.assertEqual(config.inter_input_generations, 4)
+        self.assertEqual(config.counterfactual_prefix, (65,))
+        self.assertEqual(config.counterfactual_input_sequence, (67, 65))
+        self.assertEqual(config.evaluation_timeout_generations, 1024)
+
+
 if __name__ == "__main__":
     unittest.main()
