@@ -13,9 +13,10 @@ physics, the server-owned runtime/API, browser observer/control surface,
 physical I/O measurement, and the persistent authoritative Phase 5 optimizer.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
-P1 remediation tracks. Status-truth reconciliation #66 is complete via PR #69;
-the active P1 owners are #65 (Phase 5 search semantics) and #63 (GUI /
-authoritative-search integration). Readiness audit #60 is the later rerun
+P1 remediation tracks. Status-truth reconciliation #66 is complete via PR #69,
+and Phase 5 search-semantics remediation #65 is complete via PR #70. The
+remaining P1 owner is #63 (GUI / authoritative-search integration). Readiness
+audit #60 is the later rerun
 owner, and its previous PASS is not current evidence. The current Phase 4
 measurement remains baseline 0 / trained 0 with no learning claim. See the
 [Phase 6+ handoff](docs/PHASE6_HANDOFF.md) for the blocked boundary.
@@ -58,8 +59,9 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   deterministic optimizer persistence.
 - Current status remediation #66 is complete via PR #69; its blocked-state
   projection is accepted on current main.
-- Phase 5 search-semantic remediation #65 and GUI/search integration #63 remain
-  open P1 owners; residuals are tracked in #61.
+- Phase 5 search-semantic remediation #65 is complete via PR #70 on main
+  `3e8c8f31...`; GUI/search integration #63 remains the open P1 owner.
+  Residuals are tracked in #61.
 - Readiness audit #60 must be rerun from repaired current `main` before any
   Phase 6+ capability work.
 
