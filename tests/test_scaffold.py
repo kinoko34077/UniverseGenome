@@ -122,9 +122,9 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertTrue(status["phase5_optimizer_implemented"])
         self.assertEqual(status["acceptance_state"], "remediation_in_progress")
         self.assertFalse(status["phase6_ready"])
-        self.assertEqual(status["blocking_owners"], ["#65", "#63"])
+        self.assertEqual(status["blocking_owners"], ["#63"])
         self.assertEqual(status["readiness_owner"], "#60")
-        self.assertIn("Phase 5 acceptance remediation", status["next_phase"])
+        self.assertIn("GUI/search integration remediation", status["next_phase"])
         self.assertNotIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
 
     def test_post_audit_documentation_routes_to_blocked_remediation(self):
@@ -149,7 +149,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("Phase 0 through Phase 5 implementation is present", readme)
         self.assertIn("Phase 6+ is blocked", readme)
         self.assertIn("#63", readme)
-        self.assertIn("#65", readme)
+        self.assertIn("Phase 5 search-semantic remediation #65 is complete via PR #70", readme)
         self.assertNotIn("Phase 1 through Phase 5 are accepted on `main`", readme)
         self.assertIn("remains unresolved under #63", readme)
         self.assertNotIn(
@@ -159,10 +159,10 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("acceptance remediation is active", specification)
         self.assertIn("Phase 6+ is blocked", specification)
         self.assertIn(
-            "Phase 6+ — Capability ladder (blocked pending #65/#63; readiness rerun #60)",
+            "Phase 6+ — Capability ladder (blocked pending #63; readiness rerun #60)",
             roadmap,
         )
-        self.assertIn("Status: **blocked pending remediation #65/#63; readiness rerun #60**", handoff)
+        self.assertIn("Status: **blocked pending remediation #63; readiness rerun #60**", handoff)
         self.assertIn("historical v0.1 physics/search contract", handoff)
         self.assertIn("Status is a single base term", overview)
         self.assertNotIn("Status: open / policy hook only", functional)
