@@ -97,12 +97,18 @@ class ExperimentConfig:
     counterfactual_input_sequence: tuple[int, ...] = ()
     output_event_count: int = 1
     output_event_interval_generations: int = 0
+    retention_delay_generations: int = 0
+    retention_interference_repetitions: int = 0
+    relearning_teacher_repetitions: int = 0
 
     def __post_init__(self) -> None:
         for name in (
             "byte_hold_generations", "byte_gap_generations", "teacher_delay_generations",
             "teacher_repetitions", "evaluation_timeout_generations",
             "inter_input_generations", "output_event_interval_generations",
+            "retention_delay_generations",
+            "retention_interference_repetitions",
+            "relearning_teacher_repetitions",
         ):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
@@ -184,6 +190,18 @@ class ExperimentConfig:
                 self.output_event_interval_generations
             )
         if (
+            self.retention_delay_generations
+            or self.retention_interference_repetitions
+            or self.relearning_teacher_repetitions
+        ):
+            payload["retention_delay_generations"] = self.retention_delay_generations
+            payload["retention_interference_repetitions"] = (
+                self.retention_interference_repetitions
+            )
+            payload["relearning_teacher_repetitions"] = (
+                self.relearning_teacher_repetitions
+            )
+        if (
             self.mappings != DEFAULT_BYTE_MAPPINGS
             or self.counterfactual_input_byte != 66
         ):
@@ -241,6 +259,13 @@ class ExperimentConfig:
             values["output_event_interval_generations"] = int(
                 mapping["output_event_interval_generations"]
             )
+        for name in (
+            "retention_delay_generations",
+            "retention_interference_repetitions",
+            "relearning_teacher_repetitions",
+        ):
+            if mapping.get(name) is not None:
+                values[name] = int(mapping[name])
         return cls(**values)
 
 
@@ -398,6 +423,23 @@ class LearningMeasurement:
     trained_sequence_counterfactual_clean: int = 0
     output_event_count: int = 1
     output_event_interval_generations: int = 0
+    retention_eligible_count: int = 0
+    retained_count: int = 0
+    forgotten_count: int = 0
+    relearning_eligible_count: int = 0
+    relearned_count: int = 0
+
+    @property
+    def retention_rate(self) -> float | None:
+        if self.retention_eligible_count <= 0:
+            return None
+        return self.retained_count / self.retention_eligible_count
+
+    @property
+    def relearning_rate(self) -> float | None:
+        if self.relearning_eligible_count <= 0:
+            return None
+        return self.relearned_count / self.relearning_eligible_count
 
     @property
     def no_input_clean(self) -> int:
