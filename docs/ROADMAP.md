@@ -3,11 +3,11 @@
 ## Current repository state
 
 Phase 0 through Phase 5 are readiness-accepted on `main`. Current State
-reconciliation #66 is complete via PR #69 and Phase 5 search-semantic
-remediation #65 is complete via PR #70 and GUI/authoritative-search
-integration #63 is complete via PR #73. Post-v0.1 residual reconciliation #61
-is complete via PR #74. No remediation owner remains; readiness rerun #60 has
-passed on repaired `main`.
+reconciliation #66, Phase 5 remediation #65, GUI/search integration #63, and
+post-v0.1 residual reconciliation #61 are complete; readiness rerun #60 passed.
+Phase 6 roadmap #78 is active. P6.1 multiple independent byte mappings are
+accepted through #79 / PR #80 on main; the next bounded frontier is P6.2
+temporal sequence discrimination.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -70,10 +70,15 @@ cross-phase GUI/authoritative-search remediation #63 is complete via PR #73.
 Earlier implementation/remediation history: #24 / PR #25, #30 / PR #34,
 #36 / PR #39, #37 / PR #40, #38 / PR #41, #44 / PR #50, #56 / PR #57.
 
-## Phase 6+ — Capability ladder (ready for one new bounded child Issue after #60)
-No Phase 6 capability is implemented yet. Candidate work includes multiple
-mappings, sequence discrimination, multi-event output, forgetting/relearning,
-robustness, generalization, multi-byte sequences and raw UTF-8 experiments.
-Phase 0–5 residual reconciliation is complete through #61 / PR #74 and #60
-readiness has passed. Phase 6 capability work must still begin as one new
-bounded child Issue; this readiness result does not implement any Phase 6 item.
+## Phase 6+ — Capability ladder (#78)
+
+P6.1 multiple independent byte mappings is implemented/accepted through #79 /
+PR #80. The capability can train one authoritative state with A→B and C→D,
+evaluate each mapping on isolated clones, preserve explicit counterfactuals, and
+report mapping-level plus aggregate results. The accepted public smoke observed
+0→0 for both mappings and therefore keeps `learning_claim=false`.
+
+Next frontier: **P6.2 temporal sequence discrimination** as one new bounded
+child Issue. Candidate targets are `AA→B` and `AC→D`. P6.3+ remains deferred:
+multi-event output timing, forgetting/relearning, noise robustness,
+generalization, multi-byte sequences, and raw UTF-8 experiments.
