@@ -8,14 +8,19 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+from core import experiment as experiment_module
 from core.experiment import (
     ByteMapping,
     ByteSequenceMapping,
     EvaluationResult,
     ExperimentConfig,
+    IOExperiment,
     LearningMeasurement,
+    MappingSeedMeasurement,
     SeedMeasurement,
+    compare_baseline_trained,
     load_experiment_config,
+    measure_trained_state,
 )
 from core.io_bus import OutputEvent
 from core.population import run_population_headless
@@ -2072,6 +2077,152 @@ class Phase5OptimizerTests(unittest.TestCase):
                 retention_evidence_count=0,
             ).sort_key(),
         )
+
+
+    def test_p64_005_retention_protocol_records_t0_t1_t2_on_one_continuing_state(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+        )
+
+        measurement = compare_baseline_trained(
+            seeds=(701,),
+            config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        seed_record = measurement.per_seed[0]
+
+        self.assertEqual(len(seed_record.mapping_results), 2)
+        self.assertEqual(len(seed_record.retention_checkpoint_generations), 3)
+        t0_generation, t1_generation, t2_generation = (
+            seed_record.retention_checkpoint_generations
+        )
+        self.assertLess(t0_generation, t1_generation)
+        self.assertGreaterEqual(
+            t1_generation - t0_generation,
+            protocol.retention_delay_generations,
+        )
+        self.assertLess(t1_generation, t2_generation)
+
+        for mapping_record in seed_record.mapping_results:
+            self.assertIs(mapping_record.t0, mapping_record.trained)
+            self.assertIsNotNone(mapping_record.t1)
+            self.assertIsNotNone(mapping_record.t2)
+
+        self.assertEqual(measurement.retention_eligible_count, 0)
+        self.assertIsNone(measurement.retention_rate)
+        self.assertIsNone(measurement.relearning_rate)
+        self.assertFalse(measurement.learning_claim)
+
+    def test_p64_006_retention_classification_uses_t0_t1_t2_eligibility(self):
+        expected = (OutputEvent.byte(66), OutputEvent.null())
+
+        def result(success: bool) -> EvaluationResult:
+            return EvaluationResult(
+                expected_events=expected,
+                autonomous_events=expected if success else (),
+                success=success,
+                clone_generation=4,
+                evaluation_generations=4,
+                timed_out=not success,
+            )
+
+        mappings = (
+            ByteMapping(65, 66),
+            ByteMapping(67, 68),
+            ByteMapping(69, 70),
+        )
+        mapping_results = (
+            MappingSeedMeasurement(
+                mapping=mappings[0],
+                baseline=result(False),
+                trained=result(True),
+                t1=result(True),
+                t2=result(True),
+            ),
+            MappingSeedMeasurement(
+                mapping=mappings[1],
+                baseline=result(False),
+                trained=result(True),
+                t1=result(False),
+                t2=result(True),
+            ),
+            MappingSeedMeasurement(
+                mapping=mappings[2],
+                baseline=result(False),
+                trained=result(False),
+                t1=result(False),
+                t2=result(True),
+            ),
+        )
+        seed_record = SeedMeasurement(
+            seed=1,
+            baseline=mapping_results[0].baseline,
+            trained=mapping_results[0].trained,
+            baseline_no_input=result(True),
+            trained_no_input=result(True),
+            baseline_alternate=result(True),
+            trained_alternate=result(True),
+            mapping_results=mapping_results,
+        )
+
+        measurement = experiment_module._assemble_learning_measurement(
+            (seed_record,),
+            mappings=mappings,
+        )
+
+        self.assertEqual(measurement.retention_eligible_count, 2)
+        self.assertEqual(measurement.retained_count, 1)
+        self.assertEqual(measurement.forgotten_count, 1)
+        self.assertEqual(measurement.relearning_eligible_count, 1)
+        self.assertEqual(measurement.relearned_count, 1)
+        self.assertEqual(measurement.retention_rate, 0.5)
+        self.assertEqual(measurement.relearning_rate, 1.0)
+
+    def test_p64_007_phase5_retention_probe_does_not_mutate_authoritative_state(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+        )
+        state = create_universe(seed=702, config=PhysicsConfig(max_cells=8))
+        IOExperiment(state, experiment=protocol).train_mappings()
+        before = state.to_snapshot()
+
+        measurement = measure_trained_state(state, experiment=protocol)
+
+        self.assertEqual(state.to_snapshot(), before)
+        self.assertEqual(len(measurement.per_seed), 1)
+        for mapping_record in measurement.per_seed[0].mapping_results:
+            self.assertIsNotNone(mapping_record.t1)
+            self.assertIsNotNone(mapping_record.t2)
 
 
 if __name__ == "__main__":
