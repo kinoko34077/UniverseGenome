@@ -1517,5 +1517,27 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(restored.to_snapshot()["format_version"], 5)
 
 
+    def test_p5_056_snapshot_v5_rejects_missing_durable_parent_genome_key_for_child(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=204)
+        parent = optimizer.slots[0]
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=1,
+            field="hp_decay",
+        )
+        optimizer.slots[31] = child
+        optimizer._refresh_evidence_maturity(child.evidence_group)
+
+        payload = optimizer.to_snapshot()
+        self.assertEqual(payload["format_version"], 5)
+        child_payload = payload["slots"][31]
+        self.assertEqual(child_payload["allocation_reason"], "mutation_child")
+        child_payload.pop("parent_genome_key")
+
+        with self.assertRaises(ValueError):
+            SteadyStateOptimizer.from_snapshot(payload)
+
+
 if __name__ == "__main__":
     unittest.main()
