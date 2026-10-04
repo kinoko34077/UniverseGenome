@@ -100,6 +100,7 @@ class ExperimentConfig:
     retention_delay_generations: int = 0
     retention_interference_repetitions: int = 0
     relearning_teacher_repetitions: int = 0
+    noise_robustness_rate_delta: int = 0
 
     def __post_init__(self) -> None:
         for name in (
@@ -109,11 +110,14 @@ class ExperimentConfig:
             "retention_delay_generations",
             "retention_interference_repetitions",
             "relearning_teacher_repetitions",
+            "noise_robustness_rate_delta",
         ):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
         if self.teacher_repetitions < 1:
             raise ValueError("teacher_repetitions must be positive")
+        if self.noise_robustness_rate_delta > 0xFFFF:
+            raise ValueError("noise_robustness_rate_delta must fit uint16")
         if self.output_event_count not in (1, 2):
             raise ValueError("bounded P6.3 output_event_count must be 1 or 2")
         if self.output_event_count == 1 and self.output_event_interval_generations != 0:
@@ -186,6 +190,10 @@ class ExperimentConfig:
             or self.relearning_teacher_repetitions
         )
 
+    @property
+    def noise_robustness_enabled(self) -> bool:
+        return self.noise_robustness_rate_delta > 0
+
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "byte_hold_generations": self.byte_hold_generations,
@@ -219,6 +227,8 @@ class ExperimentConfig:
             payload["relearning_teacher_repetitions"] = (
                 self.relearning_teacher_repetitions
             )
+        if self.noise_robustness_rate_delta:
+            payload["noise_robustness_rate_delta"] = self.noise_robustness_rate_delta
         if (
             self.mappings != DEFAULT_BYTE_MAPPINGS
             or self.counterfactual_input_byte != 66
@@ -281,6 +291,7 @@ class ExperimentConfig:
             "retention_delay_generations",
             "retention_interference_repetitions",
             "relearning_teacher_repetitions",
+            "noise_robustness_rate_delta",
         ):
             if mapping.get(name) is not None:
                 values[name] = int(mapping[name])
@@ -453,6 +464,9 @@ class LearningMeasurement:
     forgotten_count: int = 0
     relearning_eligible_count: int = 0
     relearned_count: int = 0
+    noise_robustness_eligible_count: int = 0
+    noise_robust_count: int = 0
+    noise_failed_count: int = 0
 
     @property
     def retention_rate(self) -> float | None:
@@ -465,6 +479,12 @@ class LearningMeasurement:
         if self.relearning_eligible_count <= 0:
             return None
         return self.relearned_count / self.relearning_eligible_count
+
+    @property
+    def noise_robustness_rate(self) -> float | None:
+        if self.noise_robustness_eligible_count <= 0:
+            return None
+        return self.noise_robust_count / self.noise_robustness_eligible_count
 
     @property
     def no_input_clean(self) -> int:
