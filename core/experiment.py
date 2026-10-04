@@ -509,6 +509,48 @@ class SeedMeasurement:
         return eligible, robust, bool(eligible and not robust)
 
     @property
+    def generalization_controls_clean(self) -> bool:
+        if self.trained_prefix is not None or self.trained_sequence_counterfactual is not None:
+            return bool(
+                self.trained_no_input.success
+                and self.trained_prefix is not None
+                and self.trained_prefix.success
+                and self.trained_sequence_counterfactual is not None
+                and self.trained_sequence_counterfactual.success
+            )
+        return bool(
+            self.trained_no_input.success
+            and self.trained_alternate.success
+        )
+
+    def generalization_classification(self) -> tuple[bool, bool, bool, bool]:
+        training_qualified = bool(
+            self.mapping_results
+            and all(
+                record.trained.success and not record.baseline.success
+                for record in self.mapping_results
+            )
+            and self.generalization_controls_clean
+        )
+        eligible = bool(
+            training_qualified
+            and self.baseline_held_out is not None
+            and self.trained_held_out is not None
+            and not self.baseline_held_out.success
+        )
+        generalized = bool(
+            eligible
+            and self.trained_held_out is not None
+            and self.trained_held_out.success
+        )
+        return (
+            training_qualified,
+            eligible,
+            generalized,
+            bool(eligible and not generalized),
+        )
+
+    @property
     def baseline_evaluations(self) -> tuple[EvaluationResult, ...]:
         if self.mapping_results:
             return tuple(item.baseline for item in self.mapping_results)
@@ -552,6 +594,11 @@ class LearningMeasurement:
     noise_robustness_eligible_count: int = 0
     noise_robust_count: int = 0
     noise_failed_count: int = 0
+    held_out_mapping: ByteSequenceMapping | None = None
+    training_qualified_count: int = 0
+    generalization_eligible_count: int = 0
+    generalized_count: int = 0
+    generalization_failed_count: int = 0
 
     @property
     def retention_rate(self) -> float | None:
@@ -570,6 +617,12 @@ class LearningMeasurement:
         if self.noise_robustness_eligible_count <= 0:
             return None
         return self.noise_robust_count / self.noise_robustness_eligible_count
+
+    @property
+    def generalization_rate(self) -> float | None:
+        if self.generalization_eligible_count <= 0:
+            return None
+        return self.generalized_count / self.generalization_eligible_count
 
     @property
     def no_input_clean(self) -> int:
@@ -1162,6 +1215,7 @@ def _assemble_learning_measurement(
     counterfactual_input_sequence: tuple[int, ...] = (),
     output_event_count: int = 1,
     output_event_interval_generations: int = 0,
+    held_out_mapping: ByteSequenceMapping | None = None,
 ) -> LearningMeasurement:
     records = tuple(measurements)
     if not records:
@@ -1249,6 +1303,28 @@ def _assemble_learning_measurement(
         failed for _, _, failed in noise_classifications
     )
 
+    generalization_classifications = tuple(
+        item.generalization_classification()
+        for item in records
+        if held_out_mapping is not None
+    )
+    training_qualified_count = sum(
+        qualified
+        for qualified, _, _, _ in generalization_classifications
+    )
+    generalization_eligible_count = sum(
+        eligible
+        for _, eligible, _, _ in generalization_classifications
+    )
+    generalized_count = sum(
+        generalized
+        for _, _, generalized, _ in generalization_classifications
+    )
+    generalization_failed_count = sum(
+        failed
+        for _, _, _, failed in generalization_classifications
+    )
+
     per_mapping = tuple(
         MappingMeasurement(
             mapping=mapping,
@@ -1328,6 +1404,11 @@ def _assemble_learning_measurement(
         noise_robustness_eligible_count=noise_robustness_eligible_count,
         noise_robust_count=noise_robust_count,
         noise_failed_count=noise_failed_count,
+        held_out_mapping=held_out_mapping,
+        training_qualified_count=training_qualified_count,
+        generalization_eligible_count=generalization_eligible_count,
+        generalized_count=generalized_count,
+        generalization_failed_count=generalization_failed_count,
     )
 
 
@@ -1430,6 +1511,7 @@ def measure_trained_state(
         counterfactual_input_sequence=protocol.counterfactual_input_sequence,
         output_event_count=protocol.output_event_count,
         output_event_interval_generations=protocol.output_event_interval_generations,
+        held_out_mapping=protocol.held_out_mapping,
     )
 
 
@@ -1503,4 +1585,5 @@ def compare_baseline_trained(
         counterfactual_input_sequence=protocol.counterfactual_input_sequence,
         output_event_count=protocol.output_event_count,
         output_event_interval_generations=protocol.output_event_interval_generations,
+        held_out_mapping=protocol.held_out_mapping,
     )
