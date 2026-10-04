@@ -368,15 +368,17 @@ class SteadyStateOptimizer:
             response_latency=sum(result.response_latency for result in trained) / evaluation_denominator,
             activity_cost=sum(result.activity_cost for result in trained) / evaluation_denominator,
             retention=(
-                measurement.retention_rate
-                if measurement.retention_rate is not None
+                getattr(measurement, "retention_rate", None)
+                if getattr(measurement, "retention_rate", None) is not None
                 else 0.0
             ),
             counterfactual_no_input_clean=measurement.trained_no_input_clean / seed_denominator,
             counterfactual_alternate_input_clean=(
                 measurement.trained_alternate_input_clean / seed_denominator
             ),
-            retention_evidence_count=float(measurement.retention_eligible_count),
+            retention_evidence_count=float(
+                getattr(measurement, "retention_eligible_count", 0)
+            ),
         )
 
     def _measure_slot(self, slot: UniverseSlot) -> tuple[LearningMeasurement, Fitness]:
