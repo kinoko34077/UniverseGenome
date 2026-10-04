@@ -122,7 +122,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertTrue(status["phase5_optimizer_implemented"])
         self.assertEqual(status["acceptance_state"], "remediation_in_progress")
         self.assertFalse(status["phase6_ready"])
-        self.assertEqual(status["blocking_owners"], ["#63", "#65", "#66"])
+        self.assertEqual(status["blocking_owners"], ["#65", "#63"])
         self.assertEqual(status["readiness_owner"], "#60")
         self.assertIn("Phase 5 acceptance remediation", status["next_phase"])
         self.assertNotIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
@@ -159,10 +159,10 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("acceptance remediation is active", specification)
         self.assertIn("Phase 6+ is blocked", specification)
         self.assertIn(
-            "Phase 6+ — Capability ladder (blocked pending #63/#65/#66; readiness rerun #60)",
+            "Phase 6+ — Capability ladder (blocked pending #65/#63; readiness rerun #60)",
             roadmap,
         )
-        self.assertIn("Status: **blocked pending remediation #63/#65/#66; readiness rerun #60**", handoff)
+        self.assertIn("Status: **blocked pending remediation #65/#63; readiness rerun #60**", handoff)
         self.assertIn("historical v0.1 physics/search contract", handoff)
         self.assertIn("Status is a single base term", overview)
         self.assertNotIn("Status: open / policy hook only", functional)
