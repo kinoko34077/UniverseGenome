@@ -6,18 +6,17 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current state
 
-**Phase 0 through Phase 5 implementation is present on `main`; post-v0.1
-residual reconciliation is complete, but readiness rerun #60 is still pending
-and Phase 6+ is blocked.** The repository
+**Phase 0 through Phase 5 are accepted on `main`; readiness rerun #60 passed,
+and the repository is ready for one new bounded Phase 6 child Issue. No Phase 6+
+capability has been implemented yet.** The repository
 contains the canonical v0.1 requirements/specification, deterministic local
 physics, the server-owned runtime/API, browser observer/control surface,
 physical I/O measurement, and the persistent authoritative Phase 5 optimizer.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
-reconciliation #61 is complete via PR #74. No unresolved remediation owner
-remains; #60 must rerun readiness from repaired current `main`, and its
-previous PASS is not current evidence. The current Phase 4
+reconciliation #61 is complete via PR #74. No unresolved remediation owner remains. The fresh #60 rerun passed on repaired
+current `main`; the earlier invalidated PASS remains historical evidence only. The current Phase 4
 measurement remains baseline 0 / trained 0 with no learning claim. See the
 [Phase 6+ handoff](docs/PHASE6_HANDOFF.md) for the blocked boundary.
 
@@ -64,8 +63,8 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   now observes and controls the authoritative Phase 5 optimizer rather than a
   parallel Phase 3 population.
 - Post-v0.1 residual reconciliation #61 is complete via PR #74.
-- Readiness audit #60 must be rerun from repaired current `main` before any
-  Phase 6+ capability work.
+- Readiness audit #60 has passed on repaired current `main`; a new bounded
+  Phase 6 child Issue may now be created before any Phase 6 capability mutation.
 
 ## Headless verification commands
 
