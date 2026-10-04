@@ -149,6 +149,22 @@ jobs:
           --experiment-config config/experiment_phase6_raw_utf8_smoke.json
           --optimizer-timeout-generations 1
           --json
+      - name: Headless Phase 6.9 mixed-length sequence experiment smoke
+        run: >-
+          python -m core.runner
+          --config config/default.json
+          --experiment
+          --experiment-config config/experiment_phase6_mixed_length_sequences_smoke.json
+          --json
+      - name: Headless Phase 6.9 optimizer integration smoke
+        run: >-
+          python -m core.runner
+          --config config/default.json
+          --optimizer
+          --optimizer-iterations 0
+          --experiment-config config/experiment_phase6_mixed_length_sequences_smoke.json
+          --optimizer-timeout-generations 1
+          --json
       - name: Static server entrypoint smoke
         run: python -m server.app --help
 
