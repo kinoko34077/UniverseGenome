@@ -23,7 +23,27 @@ def load_config(path: str | Path) -> dict[str, Any]:
     return data
 
 
+def _current_state(config: dict[str, Any]) -> dict[str, Any]:
+    """Return explicit acceptance/readiness state, failing closed when absent."""
+    configured = config.get("current_state", {})
+    if not isinstance(configured, dict):
+        raise ValueError("current_state must be an object")
+    owners = configured.get("blocking_owners", ["#63", "#65", "#66"])
+    if not isinstance(owners, list) or not all(isinstance(owner, str) for owner in owners):
+        raise ValueError("current_state.blocking_owners must be a list of strings")
+    return {
+        "acceptance_state": str(configured.get("acceptance_state", "remediation_in_progress")),
+        "phase6_ready": bool(configured.get("phase6_ready", False)),
+        "blocking_owners": list(owners),
+        "readiness_owner": str(configured.get("readiness_owner", "#60")),
+        "next_phase": str(
+            configured.get("next_phase", "Phase 5 acceptance remediation (Phase 6+ blocked)")
+        ),
+    }
+
+
 def build_status(config: dict[str, Any]) -> dict[str, Any]:
+    current_state = _current_state(config)
     phase1 = bool(config.get("features", {}).get("phase1_physics", False))
     phase2a = bool(config.get("features", {}).get("phase2a_bond_physics", False))
     phase2b = bool(config.get("features", {}).get("phase2b_latent_operators", False))
@@ -58,6 +78,11 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
         "phase3_runtime_implemented": phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase4_io_learning_implemented": phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase5_optimizer_implemented": phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
+        "acceptance_state": current_state["acceptance_state"],
+        "phase6_ready": current_state["phase6_ready"],
+        "phase6_blocked": not current_state["phase6_ready"],
+        "blocking_owners": current_state["blocking_owners"],
+        "readiness_owner": current_state["readiness_owner"],
         "logical_size": config["world"]["logical_size"],
         "subdivisions_per_tile": config["world"]["subdivisions_per_tile"],
         "fixed_point_size": config["world"]["fixed_point_size"],
@@ -68,7 +93,7 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
             "hp": HP_BITS,
         },
         "next_phase": (
-            "Phase 6+ capability ladder (handoff only)"
+            current_state["next_phase"]
             if phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1
             else "Phase 5 UniverseGenome optimizer"
             if phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1

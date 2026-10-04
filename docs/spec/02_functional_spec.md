@@ -146,7 +146,9 @@ Teacher-forced output activity must be excluded from autonomous score.
 ---
 
 ## SPEC-TRAIN-003 — Byte timing
-**Status: accepted-default / parameterized**
+**Status: accepted-default**
+
+**Parameterization:** byte timing values remain externally parameterized.
 
 Initial defaults:
 
@@ -189,7 +191,9 @@ The authoritative training universe is unchanged by evaluation.
 # 26. Universe parameters
 
 ## SPEC-PARAM-001 — Universe genome fields
-**Status: accepted / parameterized values**
+**Status: accepted**
+
+**Parameterization:** the listed genome fields have bounded/searchable values.
 
 Candidate v0.1 genome/search fields include:
 
@@ -410,7 +414,9 @@ newly allocated evidence or mutation slot owns one fresh UniverseState at
 generation 0.
 
 ## SPEC-EVOL-002 — Promising allocation policy
-**Status: open / policy hook only**
+**Status: candidate**
+
+This is a policy hook only; no concrete allocation rule is accepted by v0.1.
 
 The v0.1 specification does not yet approve a concrete promising-allocation
 threshold or selection rule. The implementation keeps an isolated policy hook
@@ -437,7 +443,9 @@ the normalized absolute-fitness fields while retaining growth-only fields for
 growth and pruning decisions.
 
 ## SPEC-EVOL-003 — Minimum evidence eligibility
-**Status: accepted invariant**
+**Status: accepted**
+
+**Invariant:** the minimum-evidence gate below is required for selection safety.
 
 A category/genome group must have at least four currently allocated real seed
 Universes before any of its slots may participate in parent selection or

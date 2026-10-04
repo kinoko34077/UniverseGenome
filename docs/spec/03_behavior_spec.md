@@ -622,7 +622,10 @@ generation. `noise_attempts` remains a readable legacy configuration field for
 snapshot/config compatibility, but it does not multiply event decisions.
 
 ## SPEC-INIT-001 — Generated substrate excitation
-**Status: accepted-default / parameterized**
+**Status: accepted-default**
+
+**Parameterization:** experiments may select other bounded values through
+`PhysicsConfig`.
 
 Generated initial and background-noise cells use explicit configuration values
 for latent excitation and speed. The current default is `initial_latent = 1`,

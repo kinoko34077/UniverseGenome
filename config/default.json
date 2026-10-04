@@ -2,6 +2,13 @@
   "schema_version": 1,
   "project": "UniverseGenome",
   "phase": 5,
+  "current_state": {
+    "acceptance_state": "remediation_in_progress",
+    "phase6_ready": false,
+    "blocking_owners": ["#63", "#65", "#66"],
+    "readiness_owner": "#60",
+    "next_phase": "Phase 5 acceptance remediation (Phase 6+ blocked)"
+  },
   "world": {
     "logical_size": 32,
     "subdivisions_per_tile": 8,

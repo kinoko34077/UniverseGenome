@@ -4,20 +4,20 @@ UniverseGenome is a local-physics artificial-universe research project descended
 
 The inner system is intended to learn through deterministic time evolution of anonymous local cells. A separate outer layer will later search universe-level physical parameters (the universe genome).
 
-## Current accepted state
+## Current state
 
-**Phase 1 through Phase 5 are accepted on `main`; Phase 6+ remains a separate
-handoff boundary with no Phase 6 capability implemented yet.** The repository
+**Phase 0 through Phase 5 implementation is present on `main`, but current
+acceptance remediation is active and Phase 6+ is blocked.** The repository
 contains the canonical v0.1 requirements/specification, deterministic local
-physics, the server-owned 128-universe runtime/API, browser observer/control
-surface, physical I/O measurement, and the persistent authoritative Phase 5
-optimizer.
+physics, the server-owned runtime/API, browser observer/control surface,
+physical I/O measurement, and the persistent authoritative Phase 5 optimizer.
 
-The Phase 6 readiness audit (#60) found no unresolved P0/P1 in the accepted
-Phase 0–5 runtime path after PR #59. The current Phase 4 measurement remains
-baseline 0 / trained 0 with no learning claim. Non-blocking follow-up work is
-tracked separately in #61. See the [Phase 6+ handoff](docs/PHASE6_HANDOFF.md)
-before opening a new bounded Phase 6 work unit.
+The full traceability audit (#64) and its handoff (#67/#68) identified active
+P1 owners #66 (status truth), #65 (Phase 5 search semantics), and #63 (GUI /
+authoritative-search integration). Readiness audit #60 is the later rerun
+owner, and its previous PASS is not current evidence. The current Phase 4
+measurement remains baseline 0 / trained 0 with no learning claim. See the
+[Phase 6+ handoff](docs/PHASE6_HANDOFF.md) for the blocked boundary.
 
 ## Canonical entry points
 
@@ -55,8 +55,11 @@ before opening a new bounded Phase 6 work unit.
   128 persistent authoritative Universe slots, real seed evidence groups,
   real 128/512-generation growth windows, free-slot-only replacement, and
   deterministic optimizer persistence.
-- Readiness audit #60 establishes the Phase 6 handoff boundary; non-blocking
-  residuals are tracked in #61.
+- Current status remediation #66 owns completion/roadmap/handoff truth.
+- Phase 5 search-semantic remediation #65 and GUI/search integration #63 remain
+  open P1 owners; residuals are tracked in #61.
+- Readiness audit #60 must be rerun from repaired current `main` before any
+  Phase 6+ capability work.
 
 ## Headless verification commands
 
@@ -67,8 +70,10 @@ python -m unittest discover -s tests -v
 python -m server.app --help
 ```
 
-The GUI observes the server-owned runtime API and does not drive the
-authoritative simulation clock.
+The current GUI remains the Phase 3 server-owned runtime observer and does not
+drive that local simulation clock. Phase 5 authoritative-search integration
+remains unresolved under #63, so the GUI is not current evidence that the
+browser observes the optimizer's authoritative population.
 
 ## Reuse lineage
 

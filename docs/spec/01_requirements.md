@@ -12,6 +12,13 @@ Parent work: #1
 Design record: #2  
 Control: kinoko34077/devflow#314
 
+## Traceability correction
+
+The canonical requirements in this file end at `REQ-082`. Historical Issue #8
+contains an old related-canon range mentioning nonexistent `REQ-083`; that
+reference is retained as history and corrected additively in the changelog.
+No `REQ-083` requirement is introduced by this note.
+
 Specification details are maintained separately from this requirements layer.
 
 ---

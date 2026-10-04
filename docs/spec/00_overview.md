@@ -14,6 +14,13 @@ Status terms:
 - `candidate`
 - `implemented`
 - `tested`
+- `deprecated`
+- `removed`
+- `rejected`
+
+Status is a single base term. Qualifiers such as invariant, parameterization,
+or policy-hook-only behavior belong in the explanatory text after the status
+line; they are not compound status values.
 
 Implementation must not silently promote a default/parameter into a permanent rule.
 

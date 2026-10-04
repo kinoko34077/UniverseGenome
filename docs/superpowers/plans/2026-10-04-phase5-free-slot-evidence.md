@@ -1,5 +1,9 @@
 # Phase 5 Free-Slot Evidence Gating Implementation Plan
 
+> Historical execution record; not Current State authority. Its checkboxes and
+> handoff describe the original implementation checkpoint. Use live Devflow
+> Control and the owning Issues for current status.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make Phase 5 replace authoritative Universe slots only after a real free/prune-eligible slot exists, and prevent mutation genomes from influencing selection before four real seed Universes establish minimum evidence.
