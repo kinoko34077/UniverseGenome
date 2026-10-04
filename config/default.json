@@ -7,7 +7,7 @@
     "phase6_ready": true,
     "blocking_owners": [],
     "readiness_owner": "#60",
-    "next_phase": "Phase 6.2 temporal sequence discrimination (bounded child Issue required)"
+    "next_phase": "Phase 6.3 multi-event output timing (bounded child Issue required)"
   },
   "world": {
     "logical_size": 32,
@@ -69,6 +69,7 @@
     "evolution": true,
     "phase6_capabilities": true,
     "phase6_multi_mapping": true,
+    "phase6_temporal_sequence": true,
     "aging": true
   }
 }
