@@ -271,9 +271,10 @@ fitness/growth references, short-health/failure state, physical cadence state,
 lineage, explicit prune history, and scheduler policy state. A child persists a
 stable parent-genome key independently of its reusable parent slot index.
 Prune history contains actual retired/replaced targets and round-trips through
-the optimizer snapshot. Current format version 5 must restore exactly, while
-legacy version 4 remains readable with absent new lineage/history fields
-defaulted safely. It does not retain disposable evaluation clones.
+the optimizer snapshot. Current format version 5 must restore exactly; a v5 seed-evidence or mutation
+child missing its durable `parent_genome_key` is malformed and must be
+rejected. Legacy version 4 remains readable with absent new lineage/history
+fields defaulted safely. It does not retain disposable evaluation clones.
 Restore/resume produces the same bounded slot population as uninterrupted
 continuation.
 
