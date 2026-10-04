@@ -25,6 +25,7 @@ class Fitness:
     counterfactual_no_input_clean: float = 0.0
     counterfactual_alternate_input_clean: float = 0.0
     retention_evidence_count: float = 0.0
+    noise_robustness_evidence_count: float = 0.0
 
     def __post_init__(self) -> None:
         if any(value < 0 for value in (
@@ -33,6 +34,7 @@ class Fitness:
             self.counterfactual_no_input_clean,
             self.counterfactual_alternate_input_clean,
             self.retention_evidence_count,
+            self.noise_robustness_evidence_count,
         )):
             raise ValueError("fitness values must be non-negative")
 
@@ -57,6 +59,7 @@ class Fitness:
             "counterfactual_no_input_clean": self.counterfactual_no_input_clean,
             "counterfactual_alternate_input_clean": self.counterfactual_alternate_input_clean,
             "retention_evidence_count": self.retention_evidence_count,
+            "noise_robustness_evidence_count": self.noise_robustness_evidence_count,
         }
 
     @classmethod
@@ -65,7 +68,7 @@ class Fitness:
             "success", "wrong_outputs", "timeouts", "response_latency",
             "activity_cost", "retention", "noise_robustness",
             "counterfactual_no_input_clean", "counterfactual_alternate_input_clean",
-            "retention_evidence_count",
+            "retention_evidence_count", "noise_robustness_evidence_count",
         )})
 
 
