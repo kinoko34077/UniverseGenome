@@ -980,6 +980,88 @@ later capability.
 
 ---
 
+# 22.4 Phase 6.4 forgetting / relearning requirements
+
+## REQ-230 — Explicit retention / relearning protocol
+**Status: accepted**
+
+Phase 6.4 shall retain the accepted P6.3 timed mappings and add explicit
+experiment/protocol parameters for:
+
+- retention delay in physical generations;
+- deterministic interference repetitions;
+- relearning teacher-curriculum repetitions.
+
+The initial canonical protocol uses a 128-generation no-teacher delay, one
+predeclared unmapped `CA` interference episode without desired teacher output,
+and one relearning curriculum pass. These settings are experiment data, not
+UniverseGenome fields. P6.5 stochastic/noise robustness remains separate.
+
+---
+
+## REQ-231 — Continuing-state T0 / T1 / T2 evaluation
+**Status: accepted**
+
+For each seed, one authoritative trained Universe shall continue without reset
+through:
+
+1. T0 disposable-clone evaluation immediately after initial training;
+2. the declared no-teacher retention delay and deterministic interference;
+3. T1 disposable-clone evaluation;
+4. the declared relearning curriculum on that same authoritative Universe;
+5. T2 disposable-clone evaluation.
+
+Evaluation clones shall not mutate the authoritative training state. Snapshot
+rollback, hidden restoration, or reset shall not count as relearning.
+
+---
+
+## REQ-232 — Explicit retention / forgetting / relearning evaluability
+**Status: accepted**
+
+A mapping/seed result is retention-eligible only when T0 succeeds. A
+retention-eligible case is retained when T1 succeeds and forgotten when T1
+fails. Only forgotten cases are relearning-eligible; a forgotten case is
+relearned when T2 succeeds.
+
+Aggregate reporting shall expose eligibility and result counts. Retention rate
+is defined only when retention-eligible count is non-zero. Relearning rate is
+defined only when relearning-eligible count is non-zero. Zero eligible cases
+shall be reported as non-evaluable/null rather than as successful or failed
+retention.
+
+---
+
+## REQ-233 — Retention is growth-only Phase 5 evidence
+**Status: accepted**
+
+P6.4 is the first accepted protocol allowed to populate the canonical Phase 5
+retention growth observable. Growth bit 5 may compare retention only when both
+compared measurements carry explicit evaluable retention evidence.
+
+Retention and retention-evidence metadata shall not alter the canonical
+absolute-fitness ordering. Relearning remains research evidence in this bounded
+capability and shall not become an absolute-fitness weight. Category isolation,
+seed handling, pruning thresholds, promising allocation and authoritative-slot
+semantics remain unchanged.
+
+---
+
+## REQ-234 — P6.4 persistence and public evidence
+**Status: accepted**
+
+Experiment serialization, optimizer snapshot/restore and explicit timeout
+reconstruction shall preserve the P6.4 protocol. Public experiment reporting
+shall expose per-seed/per-mapping T0/T1/T2 success and event generations,
+checkpoint generations, aggregate retention/relearning eligibility and rates,
+and truthful non-evaluable states.
+
+Canonical and bounded-smoke P6.4 configs shall use the same protocol surface.
+Implementing this capability shall not be interpreted as evidence that the
+current universe learned, retained or relearned a mapping.
+
+---
+
 # 23. Traceability
 
 Historical rationale: #2  
