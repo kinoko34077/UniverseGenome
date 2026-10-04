@@ -658,16 +658,19 @@ class SteadyStateOptimizer:
         *,
         excluded_group: tuple[str, str] | None = None,
     ) -> UniverseSlot | None:
-        promising = self._promising_group_keys(local)
-        if excluded_group is not None:
-            promising.discard(excluded_group)
+        candidates = [
+            slot
+            for slot in local
+            if excluded_group is None or slot.evidence_group != excluded_group
+        ]
+        promising = self._promising_group_keys(candidates)
         if not promising:
             return None
 
-        counts = self._evidence_group_counts(local)
-        aggregates = self.group_fitnesses(local)
+        counts = self._evidence_group_counts(candidates)
+        aggregates = self.group_fitnesses(candidates)
         representatives: dict[tuple[str, str], UniverseSlot] = {}
-        for slot in local:
+        for slot in candidates:
             if slot.evidence_group not in promising:
                 continue
             current = representatives.get(slot.evidence_group)
