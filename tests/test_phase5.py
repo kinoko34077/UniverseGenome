@@ -4,6 +4,7 @@ import json
 from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -1537,6 +1538,52 @@ class Phase5OptimizerTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             SteadyStateOptimizer.from_snapshot(payload)
+
+
+    def test_p6_005_phase5_fitness_consumes_all_mapping_evaluations(self):
+        clean = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(),
+            success=False,
+            clone_generation=0,
+            event_generations=(),
+            evaluation_generations=1,
+            activity_cost=2,
+            timed_out=True,
+        )
+        wrong = EvaluationResult(
+            expected_events=(OutputEvent.byte(68), OutputEvent.null()),
+            autonomous_events=(OutputEvent.byte(66),),
+            success=False,
+            clone_generation=0,
+            event_generations=(1,),
+            evaluation_generations=1,
+            activity_cost=6,
+            timed_out=True,
+        )
+        seed_record = SimpleNamespace(
+            trained=clean,
+            mapping_results=(
+                SimpleNamespace(trained=clean),
+                SimpleNamespace(trained=wrong),
+            ),
+        )
+        measurement = SimpleNamespace(
+            seed_count=1,
+            mapping_count=2,
+            evaluation_case_count=2,
+            trained_successes=0,
+            no_input_clean=1,
+            alternate_input_clean=1,
+            per_seed=(seed_record,),
+        )
+
+        fitness = SteadyStateOptimizer._fitness_from_measurement(measurement)
+
+        self.assertEqual(fitness.success, 0.0)
+        self.assertEqual(fitness.wrong_outputs, 0.5)
+        self.assertEqual(fitness.timeouts, 1.0)
+        self.assertEqual(fitness.activity_cost, 4.0)
 
 
 if __name__ == "__main__":
