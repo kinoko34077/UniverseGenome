@@ -8,9 +8,10 @@ post-v0.1 residual reconciliation #61 are complete; readiness rerun #60 passed.
 Phase 6 roadmap #78 is active. P6.1 multiple independent byte mappings are
 accepted through #79 / PR #80, P6.2 temporal sequence discrimination through
 #82 / PR #83, P6.3 multi-event output timing through #85 / PR #86, P6.4
-forgetting/relearning retention through #88 / PR #89, and P6.5 controlled
-physical-noise robustness through #91 / PR #92 on main; the next bounded
-frontier is P6.6 generalization.
+forgetting/relearning retention through #88 / PR #89, P6.5 controlled
+physical-noise robustness through #91 / PR #92, and P6.6 predeclared held-out
+relation generalization through #95 / PR #96 on main; the next bounded frontier
+is P6.7 multi-byte sequences.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -102,5 +103,11 @@ Noise robustness was therefore explicitly non-evaluable (`null`) and
 `learning_claim=false`; capability acceptance is not a robustness-success
 claim.
 
-Next frontier: **P6.6 generalization** as one new bounded child Issue.
-P6.7+ remains deferred: multi-byte sequences and raw UTF-8 experiments.
+P6.6 predeclared held-out relation generalization is implemented/accepted
+through #95 / PR #96. The bounded smoke produced teacher success 0→0,
+`training_qualified_count=0`, `generalization_eligible_count=0`, and
+`generalization_rate=null`; `learning_claim=false`. Capability acceptance is
+therefore not a successful-generalization claim.
+
+Next frontier: **P6.7 multi-byte sequences** as one new bounded child Issue.
+P6.8 remains deferred: raw UTF-8 experiments.
