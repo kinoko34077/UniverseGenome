@@ -5,8 +5,8 @@ No Phase 6+ capability has been implemented.
 
 ## Current v0.1 boundary
 
-Phase 0 through Phase 5 implementation is present on `main`, but full current
-acceptance/readiness remains invalidated. Status-truth remediation #66 is
+Phase 0 through Phase 5 are readiness-accepted on `main` after the fresh
+#60 rerun. Status-truth remediation #66 is
 complete via PR #69 and Phase 5 search-semantics remediation #65 is complete
 via PR #70, merged to main as `3e8c8f31a1d87d3f2a7e88de731392b4f3202bd2`.
 GUI/authoritative-search integration #63 is complete via PR #73, and
