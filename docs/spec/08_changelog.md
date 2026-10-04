@@ -1,5 +1,27 @@
 # Specification Changelog
 
+## 2026-10-04 — Issue #65 Phase 5 search-semantics remediation candidate
+
+- executes the accepted 16-generation short-health cadence on authoritative
+  physical time and retires explicit all-active-cell loss as an absolute
+  failure;
+- defines persistent non-response through task-level autonomous output evidence:
+  four consecutive no-output observations at real 128-generation boundaries
+  while active cells remain, covering the 512-generation stagnation horizon;
+- preserves canonical growth bit 5/6 semantics as retention/noise robustness,
+  keeps Phase 4 no-input/alternate-input cleanliness as separate observables,
+  and leaves integrated v0.1 retention/noise fields inactive until an explicit
+  later measurement protocol is accepted;
+- accepts and implements the Human-approved `tiered_category_rank` policy for
+  real-slot evidence escalation: category-local aggregate canonical fitness,
+  4→8 top 1/2, 8→16 top 1/4, 16→32 top 1/8, with deterministic per-category
+  1:1 evidence/mutation scheduling after provisional groups reach four seeds;
+- repairs integrated mutation to explore valid adjacent binary-grid directions
+  without no-op children and constrains effective `initial_density` mutation
+  to `PhysicsConfig.max_cells`;
+- preserves the 128 authoritative-slot, category-isolation, real-seed evidence,
+  free/prune-target-only replacement, and deterministic snapshot boundaries.
+
 ## 2026-10-04 — Issue #65 Phase 5 search-liveness remediation
 
 - connected the accepted 16-generation short-health cadence to authoritative
