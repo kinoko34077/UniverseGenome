@@ -345,7 +345,10 @@ class ExperimentConfig:
             payload["counterfactual_input_sequence"] = list(
                 self.counterfactual_input_sequence
             )
-        if self.output_event_count != 1:
+        if (
+            self.output_event_count != 1
+            or self.output_event_interval_generations != 0
+        ):
             payload["output_event_count"] = self.output_event_count
             payload["output_event_interval_generations"] = (
                 self.output_event_interval_generations
