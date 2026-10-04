@@ -10,9 +10,10 @@ accepted through #79 / PR #80, P6.2 temporal sequence discrimination through
 #82 / PR #83, P6.3 multi-event output timing through #85 / PR #86, P6.4
 forgetting/relearning retention through #88 / PR #89, P6.5 controlled
 physical-noise robustness through #91 / PR #92, P6.6 predeclared held-out
-relation generalization through #95 / PR #96, and P6.7 bounded distinct
-multi-byte output sequences through #98 / PR #99 on main; the next bounded
-frontier is P6.8 raw UTF-8 experiments.
+relation generalization through #95 / PR #96, P6.7 bounded distinct
+multi-byte output sequences through #98 / PR #99, and P6.8 bounded raw UTF-8
+byte experiments through #101 / PR #102 on main. No later capability is
+currently selected; the next frontier is an explicit roadmap/research decision.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -117,4 +118,13 @@ preserving legacy protocol behavior and Phase 5 search semantics. The bounded
 smoke produced zero trained mapped successes and `learning_claim=false`;
 capability acceptance is not a sequence-learning-success claim.
 
-Next frontier: **P6.8 raw UTF-8 experiments** as one new bounded child Issue.
+P6.8 bounded raw UTF-8 byte experiments are implemented/accepted through #101 /
+PR #102. They reuse the P6.7 byte-sequence runtime with externally documented
+valid UTF-8 byte arrays only; no tokenizer, Unicode semantic state or Phase 5
+search change is introduced. The bounded smoke produced zero trained mapped
+successes and `learning_claim=false`; capability acceptance is not a
+UTF-8-learning-success claim.
+
+Next frontier: **explicit Phase 6+ roadmap/research decision**. No P6.9 or later
+capability is automatically authorized. Any continuation requires #78 to select
+one bounded capability and a new child Issue with explicit acceptance criteria.

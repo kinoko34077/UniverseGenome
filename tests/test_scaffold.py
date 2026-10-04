@@ -128,13 +128,14 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertTrue(status["phase6_noise_robustness_implemented"])
         self.assertTrue(status["phase6_generalization_implemented"])
         self.assertTrue(status["phase6_multi_byte_sequences_implemented"])
+        self.assertTrue(status["phase6_raw_utf8_implemented"])
         self.assertEqual(status["phase"], 6)
         self.assertEqual(status["acceptance_state"], "accepted")
         self.assertTrue(status["phase6_ready"])
         self.assertEqual(status["blocking_owners"], [])
         self.assertEqual(status["readiness_owner"], "#60")
-        self.assertEqual(status["next_phase"], "Phase 6.8 raw UTF-8 experiments (bounded child Issue required)")
-        self.assertIn("Phase 6.8 raw UTF-8 experiments (bounded child Issue required)", status["next_phase"])
+        self.assertEqual(status["next_phase"], "Phase 6+ roadmap review (explicit next capability decision required)")
+        self.assertIn("explicit next capability decision required", status["next_phase"])
 
     def test_post_audit_documentation_routes_to_phase6_handoff(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -160,17 +161,18 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("GUI/search integration #63 is complete via PR #73", readme)
         self.assertIn("Phase 5 search-semantic remediation #65 is complete via PR #70", readme)
         self.assertIn(
-            "P6.1 through P6.7 are accepted on main through",
+            "P6.1 through P6.8 are accepted on main through",
             readme,
         )
         self.assertIn("authoritative Phase 5", readme)
-        self.assertIn("P6.7 bounded distinct multi-byte output sequences through #98 / PR #99", specification)
-        self.assertIn("P6.7", specification)
-        self.assertIn("P6.7 bounded distinct multi-byte output sequences are implemented/accepted", roadmap)
+        self.assertIn("P6.8 bounded raw UTF-8 byte experiments through #101 / PR #102", specification)
+        self.assertIn("P6.8", specification)
+        self.assertIn("P6.8 bounded raw UTF-8 byte experiments are implemented/accepted", roadmap)
         self.assertIn(
-            "Status: **P6.1 through P6.7 accepted; P6.8 raw UTF-8 experiments is the next bounded child frontier**",
+            "Status: **P6.1 through P6.8 accepted; no later capability is currently selected**",
             handoff,
         )
+        self.assertIn("No automatic P6.9 is authorized", handoff)
         self.assertIn("historical v0.1 physics/search contract", handoff)
         self.assertIn("Status is a single base term", overview)
         self.assertNotIn("Status: open / policy hook only", functional)

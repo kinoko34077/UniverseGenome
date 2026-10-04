@@ -350,7 +350,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
         self.assertTrue(status["phase5_optimizer_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 6.8 raw UTF-8 experiments (bounded child Issue required)")
+        self.assertEqual(status["next_phase"], "Phase 6+ roadmap review (explicit next capability decision required)")
         self.assertTrue(raw["features"]["multi_universe_search"])
         self.assertTrue(raw["features"]["evolution"])
         self.assertTrue(raw["features"]["phase6_capabilities"])
@@ -359,11 +359,14 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(raw["features"]["phase6_noise_robustness"])
         self.assertTrue(raw["features"]["phase6_generalization"])
         self.assertTrue(raw["features"]["phase6_multi_byte_sequences"])
+        self.assertTrue(raw["features"]["phase6_raw_utf8"])
+        self.assertTrue(status["phase6_raw_utf8_implemented"])
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             experiment = json.load(handle)
         self.assertEqual(experiment["learning_claim"], False)
         handoff = (ROOT / "docs" / "PHASE6_HANDOFF.md").read_text(encoding="utf-8")
-        self.assertIn("No P6.8 capability has been implemented", handoff)
+        self.assertIn("P6.1 through P6.8 accepted", handoff)
+        self.assertIn("No automatic P6.9 is authorized", handoff)
 
     def test_p5_007_genome_maps_every_field_to_effective_physics(self):
         genome = UniverseGenome(

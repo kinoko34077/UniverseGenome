@@ -7,17 +7,18 @@ The inner system is intended to learn through deterministic time evolution of an
 ## Current state
 
 **Phase 0 through Phase 5 are readiness-accepted on `main`; Phase 6.1
-through Phase 6.7 are implemented/accepted through #79 / PR #80, #82 / PR #83,
-#85 / PR #86, #88 / PR #89, #91 / PR #92, #95 / PR #96, and #98 / PR #99.**
+through Phase 6.8 are implemented/accepted through #79 / PR #80, #82 / PR #83,
+#85 / PR #86, #88 / PR #89, #91 / PR #92, #95 / PR #96, #98 / PR #99,
+and #101 / PR #102.**
 The repository contains the canonical v0.1 foundation, server-owned runtime/API,
 browser observer/control surface, authoritative Phase 5 optimizer, and the first
-seven bounded Phase 6 experimental capabilities.
+eight bounded Phase 6 experimental capabilities.
 
-P6.7 adds exact distinct multi-byte output sequences
-`AA→B,C→NULL` and `AC→D,E→NULL` while preserving legacy protocols and
-Phase 5 search semantics. The bounded P6.7 smoke still produced zero trained
-mapped successes and `learning_claim=false`; capability acceptance does not
-relabel that result as successful sequence learning.
+P6.8 reuses the accepted byte-sequence path for externally documented raw
+UTF-8 byte traffic without adding tokenizer or Unicode semantic state. The
+bounded P6.8 smoke produced zero trained mapped successes and
+`learning_claim=false`; capability acceptance does not relabel that result as
+successful UTF-8 learning. No later Phase 6 capability is currently selected.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
@@ -52,8 +53,9 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   output timing, P6.4 #88 / PR #89 implements forgetting/relearning
   retention measurement, P6.5 #91 / PR #92 implements controlled
   physical-noise robustness measurement, P6.6 #95 / PR #96 implements
-  predeclared held-out relation generalization measurement, and P6.7 #98 /
-  PR #99 implements bounded distinct multi-byte output sequences.
+  predeclared held-out relation generalization measurement, P6.7 #98 /
+  PR #99 implements bounded distinct multi-byte output sequences, and P6.8
+  #101 / PR #102 implements bounded raw UTF-8 byte experiments.
 - Issue #24 owns the original Phase 5 optimizer mechanics; audit remediation
   #30 / PR #34 integrates genome mapping and real Phase 4 candidate evaluation.
 - Audit remediation #29 / PR #33 connects the Phase 3 GUI to the runtime API.
@@ -78,10 +80,11 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   parallel Phase 3 population.
 - Post-v0.1 residual reconciliation #61 is complete via PR #74.
 - Readiness audit #60 passed on the repaired Phase 0–5 boundary.
-- Phase 6 roadmap #78 is active; P6.1 through P6.7 are accepted on main through
-  #79/#80, #82/#83, #85/#86, #88/#89, #91/#92, #95/#96, and #98/#99.
-- The next permitted capability is one bounded P6.8 raw UTF-8 experiment child
-  Issue. P6.8 is not implemented yet.
+- Phase 6 roadmap #78 is active; P6.1 through P6.8 are accepted on main through
+  #79/#80, #82/#83, #85/#86, #88/#89, #91/#92, #95/#96, #98/#99, and #101/#102.
+- No later capability is automatically authorized. The next step is an explicit
+  roadmap/research decision in #78 followed by a new bounded child Issue if a
+  further capability is selected.
 
 ## Headless verification commands
 

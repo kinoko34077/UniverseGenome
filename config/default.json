@@ -7,7 +7,7 @@
     "phase6_ready": true,
     "blocking_owners": [],
     "readiness_owner": "#60",
-    "next_phase": "Phase 6.8 raw UTF-8 experiments (bounded child Issue required)"
+    "next_phase": "Phase 6+ roadmap review (explicit next capability decision required)"
   },
   "world": {
     "logical_size": 32,
@@ -75,6 +75,7 @@
     "phase6_noise_robustness": true,
     "phase6_generalization": true,
     "phase6_multi_byte_sequences": true,
+    "phase6_raw_utf8": true,
     "aging": true
   }
 }
