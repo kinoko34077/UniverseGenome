@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-04 — Phase 6.2 temporal sequence discrimination candidate (#82 / PR #83)
+## 2026-10-04 — Phase 6.2 temporal sequence discrimination accepted (#82 / PR #83)
 
 - extends protocol mappings with bounded ordered two-byte inputs, beginning with
   AA→B and AC→D while preserving P6.1 one-byte compatibility;
@@ -15,8 +15,16 @@
   explicit timeout reconstruction without changing Phase 5 search policy;
 - adds canonical and bounded-smoke P6.2 configs plus sequence-aware public
   reporting and CI experiment/optimizer smoke coverage;
-- capability implementation is not a learning-success claim; bounded observed
-  results remain to be recorded at exact-head acceptance.
+- exact reviewed head `349e4761eb0524904257415b1a93c475f7788332`
+  passed CI #186 (`37192574567`) with 166 tests / OK, the real P6.2
+  experiment smoke, P6.2 optimizer integration smoke, and browser E2E SUCCESS;
+- squash-merged implementation main:
+  `c6920bb9c8227c57ce0358d10353ebf7e489a7c4`;
+- bounded public smoke: 3 seeds × 2 sequences, AA→B 0→0 and AC→D 0→0;
+  no-input, prefix-A and unmapped-CA counterfactuals clean,
+  `learning_claim=false`;
+- capability acceptance is therefore not a learning-success claim; the next
+  bounded frontier is P6.3 multi-event output timing.
 
 ## 2026-10-04 — Phase 6.1 multiple independent byte mappings accepted (#79 / PR #80)
 
