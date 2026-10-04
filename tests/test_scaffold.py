@@ -129,8 +129,8 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertTrue(status["phase6_ready"])
         self.assertEqual(status["blocking_owners"], [])
         self.assertEqual(status["readiness_owner"], "#60")
-        self.assertEqual(status["next_phase"], "Phase 6.4 forgetting / relearning (bounded child Issue required)")
-        self.assertIn("Phase 6.4 forgetting / relearning (bounded child Issue required)", status["next_phase"])
+        self.assertEqual(status["next_phase"], "Phase 6.4 forgetting/relearning (bounded child Issue required)")
+        self.assertIn("Phase 6.4 forgetting/relearning (bounded child Issue required)", status["next_phase"])
 
     def test_post_audit_documentation_routes_to_phase6_handoff(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
