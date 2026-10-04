@@ -2,12 +2,11 @@
 
 ## Current repository state
 
-Phase 0 through Phase 5 are readiness-accepted on `main`. Current State
-reconciliation #66 is complete via PR #69 and Phase 5 search-semantic
-remediation #65 is complete via PR #70 and GUI/authoritative-search
-integration #63 is complete via PR #73. Post-v0.1 residual reconciliation #61
-is complete via PR #74. No remediation owner remains; readiness rerun #60 has
-passed on repaired `main`.
+Phase 0 through Phase 5 are readiness-accepted on `main`. Remediation and
+residual reconciliation are complete and readiness rerun #60 passed. Phase 6
+roadmap #78 is active. P6.1 multiple independent byte mappings is implemented
+and accepted via #79 / PR #80. The current frontier is P6.2 temporal sequence
+discrimination, which must begin as a separate bounded child Issue.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -70,10 +69,26 @@ cross-phase GUI/authoritative-search remediation #63 is complete via PR #73.
 Earlier implementation/remediation history: #24 / PR #25, #30 / PR #34,
 #36 / PR #39, #37 / PR #40, #38 / PR #41, #44 / PR #50, #56 / PR #57.
 
-## Phase 6+ — Capability ladder (ready for one new bounded child Issue after #60)
-No Phase 6 capability is implemented yet. Candidate work includes multiple
-mappings, sequence discrimination, multi-event output, forgetting/relearning,
-robustness, generalization, multi-byte sequences and raw UTF-8 experiments.
-Phase 0–5 residual reconciliation is complete through #61 / PR #74 and #60
-readiness has passed. Phase 6 capability work must still begin as one new
-bounded child Issue; this readiness result does not implement any Phase 6 item.
+## Phase 6+ — Capability ladder (#78)
+
+### P6.1 — Multiple independent byte mappings — COMPLETE
+#79 / PR #80 implements ordered A→B and C→D protocol mappings on one
+authoritative training history with isolated per-mapping evaluation. The
+accepted smoke result remains 0 trained successes for both mappings and
+`learning_claim=false`.
+
+### P6.2 — Temporal sequence discrimination — CURRENT FRONTIER
+Next candidate targets are `AA→B→NULL` and `AC→D→NULL`. This capability must
+be specified and implemented in one new bounded child Issue; it is not included
+in P6.1.
+
+Later ladder items remain:
+3. multi-event output timing;
+4. forgetting/relearning;
+5. noise robustness;
+6. generalization;
+7. multi-byte sequences;
+8. raw UTF-8 experiments.
+
+Each step advances only after its own acceptance, exact-head verification,
+merged-main verification and Current State reconciliation.
