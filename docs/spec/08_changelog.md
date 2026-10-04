@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-05 — Phase 6.9 mixed-length raw byte sequence implementation candidate (#104)
+## 2026-10-05 — Phase 6.9 mixed-length raw byte sequence mappings accepted (#104 / PR #105)
 
 - extends the accepted raw-byte protocol so one experiment can coexist with
   one-, two- and three-byte mappings without padding or truncation;
@@ -13,7 +13,18 @@
 - adds canonical/smoke configs, snapshot/timeout preservation, truthful public
   length/evidence fields and real P6.9 experiment/optimizer CI entrypoints;
 - preserves Phase 5 search/growth semantics, byte-only protocol authority and
-  the honest-learning-claim boundary.
+  the honest-learning-claim boundary;
+- exact reviewed implementation head
+  `4f8adc07439764ee5de436053f8ff4dd12b32974` passed CI #333
+  (`37239378797`) with 222 tests / OK, P6.1–P6.9 real smokes and browser E2E;
+- exact-head review `5408525554` had no blocking finding;
+- squash-merged implementation main
+  `0cc2866f29c0c4ad01950bff9f8209bee85265c1`; all 11 implementation-changed
+  files are blob-identical to the reviewed head;
+- bounded P6.9 smoke produced zero trained mapped successes and
+  `learning_claim=false`; capability acceptance does not claim successful
+  mixed-length learning;
+- no automatic P6.10 is authorized; any continuation returns to roadmap #78.
 
 ## 2026-10-05 — Phase 6.8 bounded raw UTF-8 byte experiments accepted (#101 / PR #102)
 

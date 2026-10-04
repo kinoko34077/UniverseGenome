@@ -11,8 +11,9 @@ accepted through #79 / PR #80, P6.2 temporal sequence discrimination through
 forgetting/relearning retention through #88 / PR #89, P6.5 controlled
 physical-noise robustness through #91 / PR #92, P6.6 predeclared held-out
 relation generalization through #95 / PR #96, P6.7 bounded distinct
-multi-byte output sequences through #98 / PR #99, and P6.8 bounded raw UTF-8
-byte experiments through #101 / PR #102 on main. No later capability is
+multi-byte output sequences through #98 / PR #99, P6.8 bounded raw UTF-8
+byte experiments through #101 / PR #102, and P6.9 bounded mixed-length raw
+byte sequences through #104 / PR #105 on main. No later capability is
 currently selected; the next frontier is an explicit roadmap/research decision.
 
 ## Gate 0 — Specification basis
@@ -125,6 +126,13 @@ search change is introduced. The bounded smoke produced zero trained mapped
 successes and `learning_claim=false`; capability acceptance is not a
 UTF-8-learning-success claim.
 
-Next frontier: **explicit Phase 6+ roadmap/research decision**. No P6.9 or later
+P6.9 bounded mixed-length raw byte sequence mappings are implemented/accepted
+through #104 / PR #105. One protocol can coexist with 1/2/3-byte mappings and
+mapping-specific 1/2/3-byte outputs while retaining prefix-free mapped inputs in
+this bounded step. The bounded smoke produced zero trained mapped successes and
+`learning_claim=false`; capability acceptance is not a mixed-length-learning
+success claim.
+
+Next frontier: **explicit Phase 6+ roadmap/research decision**. No P6.10 or later
 capability is automatically authorized. Any continuation requires #78 to select
 one bounded capability and a new child Issue with explicit acceptance criteria.

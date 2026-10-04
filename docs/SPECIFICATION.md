@@ -1,6 +1,6 @@
 # UniverseGenome v0.1 Canonical Specification Index
 
-Status: accepted v0.1 specification basis; Phase 0–5 readiness accepted; P6.1 through P6.8 accepted through #79/#80, #82/#83, #85/#86, #88/#89, #91/#92, #95/#96, #98/#99, and #101/#102
+Status: accepted v0.1 specification basis; Phase 0–5 readiness accepted; P6.1 through P6.9 accepted through #79/#80, #82/#83, #85/#86, #88/#89, #91/#92, #95/#96, #98/#99, #101/#102, and #104/#105
 Requirements source: #3  
 Detailed specification source/review history: #4  
 Historical rationale: #2  
@@ -30,9 +30,10 @@ sequence discrimination through #82 / PR #83, P6.3 multi-event output timing
 through #85 / PR #86, P6.4 forgetting/relearning retention through #88 /
 PR #89, P6.5 controlled physical-noise robustness through #91 / PR #92,
 P6.6 predeclared held-out relation generalization through #95 / PR #96,
-P6.7 bounded distinct multi-byte output sequences through #98 / PR #99, and
-P6.8 bounded raw UTF-8 byte experiments through #101 / PR #102.
-The accepted P6.8 bounded smoke produced zero trained mapped successes and
+P6.7 bounded distinct multi-byte output sequences through #98 / PR #99,
+P6.8 bounded raw UTF-8 byte experiments through #101 / PR #102, and P6.9
+bounded mixed-length raw byte sequences through #104 / PR #105.
+The accepted P6.9 bounded smoke produced zero trained mapped successes and
 `learning_claim=false`. No later capability is selected automatically; the
 next step is an explicit roadmap/research decision under #78. This state
 statement is separate from historical acceptance records preserved in the
@@ -60,10 +61,10 @@ not promote `accepted-default` or `parameterized` into an immutable rule.
 Phase 0 through Phase 5 are readiness-accepted on `main`; #60 has passed and
 P6.1 is implemented/accepted through #79 / PR #80, P6.2 through #82 / PR #83,
 P6.3 through #85 / PR #86, P6.4 through #88 / PR #89, P6.5 through
-#91 / PR #92, P6.6 through #95 / PR #96, P6.7 through #98 / PR #99, and
-P6.8 through #101 / PR #102. Phase 6 remains a bounded capability ladder, but
-no P6.9 or later capability is currently selected. The current P6.8 raw-byte
-measurement remains `learning_claim=false` rather than being asserted as
-successful. See `docs/PHASE6_HANDOFF.md`.
+#91 / PR #92, P6.6 through #95 / PR #96, P6.7 through #98 / PR #99,
+P6.8 through #101 / PR #102, and P6.9 through #104 / PR #105. Phase 6 remains
+a bounded capability ladder, but no P6.10 or later capability is currently
+selected. The current P6.9 mixed-length measurement remains
+`learning_claim=false` rather than being asserted as successful. See `docs/PHASE6_HANDOFF.md`.
 
 See `docs/ROADMAP.md`.
