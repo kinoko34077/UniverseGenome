@@ -24,8 +24,9 @@ Issue #3 and #4 remain durable review/history surfaces and must link to future a
 ## Current repository state
 
 The checked-in Phase 0–5 implementation is present, but full current
-acceptance/readiness is not complete. Remediation owners #66, #65, and #63
-remain active, and readiness owner #60 must rerun the audit from repaired
+acceptance/readiness is not complete. Status reconciliation #66 is complete;
+remediation owners #65 and #63 remain active, and readiness owner #60 must
+rerun the audit from repaired
 current `main`. Phase 6+ is blocked until that sequence is complete. This
 state statement is separate from the historical acceptance records preserved
 in the changelog and Issues.
@@ -50,8 +51,8 @@ not promote `accepted-default` or `parameterized` into an immutable rule.
 ## Current implementation frontier
 
 Phase 0 through Phase 5 implementation is present on `main`; current
-acceptance remediation is active and Phase 6+ is blocked pending #66, #65,
-#63, and the #60 readiness rerun.
+acceptance remediation is active and Phase 6+ is blocked pending #65, #63,
+and the #60 readiness rerun.
 Phase 4 recorded no learning claim, and Phase 5 consumes that explicit
 measurement rather than asserting success. See `docs/PHASE6_HANDOFF.md`.
 
