@@ -259,9 +259,10 @@ all-active-cell loss at the 16-generation cadence. Task-response tests record
 one response/no-response observation at each 128-generation growth boundary
 and retire `persistent_non_response` only after four consecutive no-output
 observations (512 physical generations) while active cells remain; a wrong
-autonomous output still counts as a response for this failure rule. Integrated
-v0.1 measurement keeps retention/noise-robustness fields zero, so growth bits
-5/6 cannot be driven by the separate counterfactual-clean observables.
+autonomous output still counts as a response for this failure rule. The v0.1 baseline keeps retention/noise-robustness inactive rather than
+driving bits 5/6 from counterfactual-clean proxies. When later accepted P6.4 or
+P6.5 protocols are active, bits 5/6 require their own explicit evaluable
+evidence and remain growth-only.
 
 ### TEST-P5-005 Integrated persistence
 
@@ -506,4 +507,67 @@ Optimizer snapshot round-trip preserves all P6.4 protocol fields. Explicit
 timeout override changes only the evaluation timeout and preserves retention
 delay/interference/relearning values. CI executes a bounded P6.4 optimizer
 integration smoke.
+
+---
+
+## Phase 6.5 acceptance tests
+
+### TEST-P65-001 Protocol serialization and legacy compatibility
+
+P6.1–P6.4 defaults leave P6.5 disabled with zero delta. An enabled P6.5
+protocol round-trips the declared additive noise-rate delta.
+
+### TEST-P65-002 Null-aware robustness rate
+
+Zero clean-success eligibility produces null/non-evaluable robustness.
+Positive eligible counts produce robust/eligible normalized rate and keep
+numeric zero distinct from null.
+
+### TEST-P65-003 Growth bit 6 evidence gate
+
+Becoming newly noise-evaluable does not set bit6. Both compared Fitness values
+must carry positive noise-robustness evidence, and robustness metadata does not
+change absolute fitness ordering.
+
+### TEST-P65-004 Phase 5 robustness projection and aggregation
+
+Only an evaluable P6.5 robustness rate is projected into growth-only Fitness
+with explicit evidence count. Same-genome aggregate robustness is evidence-
+weighted.
+
+### TEST-P65-005 Matched T0 clean/noisy physical evaluation
+
+Clean and noisy measurement start from the same trained T0 state. The noisy
+effective rate is saturated clean+delta and evaluation uses the existing
+physical background-noise engine.
+
+### TEST-P65-006 Eligibility, noisy success and control cleanliness
+
+Synthetic cases prove that clean success is required for eligibility and that
+robust classification additionally requires noisy mapped success plus the
+required noisy counterfactual controls. Dirty/noisy-failed eligible cases are
+counted as failures.
+
+### TEST-P65-007 Phase 5 probe isolation
+
+P6.5 measurement through Phase 5 does not mutate authoritative slot state and
+still exposes clean/noisy rates and noisy mapping evidence.
+
+### TEST-P65-008 Canonical and bounded-smoke configs
+
+Canonical P6.5 config uses additive delta 256. The bounded smoke config uses an
+explicit stronger delta 65535 while retaining the same protocol semantics.
+
+### TEST-P65-009 Public reporting and real experiment smoke
+
+Public JSON exposes P6.5 protocol state, aggregate eligibility/result counts and
+nullable rate, per-seed effective rates/noisy controls, and per-mapping
+noise-eligible / noise-robust / noise-failed classification together with noisy
+success/event generations. CI executes the real bounded P6.5 experiment path.
+
+### TEST-P65-010 Snapshot / timeout reconstruction and optimizer smoke
+
+Optimizer snapshot round-trip preserves the P6.5 protocol field. Explicit
+timeout override changes only evaluation timeout and preserves the noise delta.
+CI executes the bounded P6.5 optimizer integration path.
 

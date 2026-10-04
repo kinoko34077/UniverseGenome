@@ -467,6 +467,7 @@ class Phase5OptimizerTests(unittest.TestCase):
             retention=0,
             noise_robustness=0,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
         after = Fitness(
             success=1,
@@ -477,6 +478,7 @@ class Phase5OptimizerTests(unittest.TestCase):
             retention=1,
             noise_robustness=1,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
         self.assertEqual(growth_flags(before, after) & 0b1111111, 0b1111111)
 
@@ -1068,16 +1070,19 @@ class Phase5OptimizerTests(unittest.TestCase):
             retention=0,
             noise_robustness=0,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
         no_input_after = Fitness(
             retention=1,
             noise_robustness=0,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
         alternate_after = Fitness(
             retention=0,
             noise_robustness=1,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
 
         self.assertFalse(hasattr(before, "trained_no_input_clean"))
@@ -2336,6 +2341,428 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(optimizer_payload["retention_delay_generations"], 2)
         self.assertEqual(optimizer_payload["retention_interference_repetitions"], 1)
         self.assertEqual(optimizer_payload["relearning_teacher_repetitions"], 1)
+
+
+    def test_p65_001_noise_robustness_protocol_field_roundtrips_without_changing_legacy_defaults(self):
+        legacy = ExperimentConfig()
+        self.assertEqual(legacy.noise_robustness_rate_delta, 0)
+        self.assertFalse(legacy.noise_robustness_enabled)
+
+        protocol = ExperimentConfig(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+            noise_robustness_rate_delta=256,
+        )
+        restored = ExperimentConfig.from_mapping(protocol.to_dict())
+
+        self.assertTrue(protocol.noise_robustness_enabled)
+        self.assertEqual(restored, protocol)
+        self.assertEqual(restored.noise_robustness_rate_delta, 256)
+
+    def test_p65_002_noise_robustness_rate_is_none_without_clean_success_evidence(self):
+        base = dict(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(),
+        )
+        unavailable = LearningMeasurement(
+            **base,
+            noise_robustness_eligible_count=0,
+            noise_robust_count=0,
+            noise_failed_count=0,
+        )
+        self.assertIsNone(unavailable.noise_robustness_rate)
+
+        measured = LearningMeasurement(
+            **base,
+            noise_robustness_eligible_count=4,
+            noise_robust_count=3,
+            noise_failed_count=1,
+        )
+        self.assertEqual(measured.noise_robustness_rate, 0.75)
+
+    def test_p65_003_growth_bit6_requires_comparable_noise_robustness_evidence(self):
+        unavailable_before = Fitness(
+            noise_robustness=0.0,
+            noise_robustness_evidence_count=0,
+        )
+        newly_evaluable = Fitness(
+            noise_robustness=1.0,
+            noise_robustness_evidence_count=2,
+        )
+        self.assertEqual(
+            growth_flags(unavailable_before, newly_evaluable)
+            & (1 << GROWTH_BIT_NOISE_ROBUSTNESS),
+            0,
+        )
+
+        comparable_before = Fitness(
+            noise_robustness=0.25,
+            noise_robustness_evidence_count=2,
+        )
+        comparable_after = Fitness(
+            noise_robustness=0.5,
+            noise_robustness_evidence_count=2,
+        )
+        self.assertEqual(
+            growth_flags(comparable_before, comparable_after)
+            & (1 << GROWTH_BIT_NOISE_ROBUSTNESS),
+            1 << GROWTH_BIT_NOISE_ROBUSTNESS,
+        )
+        self.assertEqual(
+            comparable_before.sort_key(),
+            Fitness(
+                noise_robustness=1.0,
+                noise_robustness_evidence_count=99,
+            ).sort_key(),
+        )
+
+    def test_p65_004_phase5_projects_only_evaluable_noise_robustness_evidence(self):
+        result = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(),
+            success=False,
+            clone_generation=1,
+            evaluation_generations=1,
+            timed_out=True,
+        )
+        seed_record = SeedMeasurement(
+            seed=1,
+            baseline=result,
+            trained=result,
+            baseline_no_input=result,
+            trained_no_input=result,
+            baseline_alternate=result,
+            trained_alternate=result,
+        )
+        measurement = LearningMeasurement(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(seed_record,),
+            noise_robustness_eligible_count=4,
+            noise_robust_count=3,
+            noise_failed_count=1,
+        )
+
+        fitness = SteadyStateOptimizer._fitness_from_measurement(measurement)
+
+        self.assertEqual(fitness.noise_robustness, 0.75)
+        self.assertEqual(fitness.noise_robustness_evidence_count, 4)
+
+
+    def test_p65_005_noise_measurement_uses_matched_t0_clones_and_additive_physical_rate(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+            noise_robustness_rate_delta=256,
+        )
+        measurement = compare_baseline_trained(
+            seeds=(801,),
+            config=PhysicsConfig(max_cells=8, noise_rate=64),
+            experiment=protocol,
+        )
+        seed_record = measurement.per_seed[0]
+
+        self.assertEqual(seed_record.clean_noise_rate, 64)
+        self.assertEqual(seed_record.noisy_noise_rate, 320)
+        self.assertEqual(len(seed_record.mapping_results), 2)
+        for mapping_record in seed_record.mapping_results:
+            self.assertIsNotNone(mapping_record.noisy)
+        self.assertIsNotNone(seed_record.noisy_no_input)
+        self.assertIsNotNone(seed_record.noisy_prefix)
+        self.assertIsNotNone(seed_record.noisy_sequence_counterfactual)
+
+    def test_p65_006_noise_classification_requires_clean_success_and_noisy_controls(self):
+        expected = (OutputEvent.byte(66), OutputEvent.null())
+
+        def result(success: bool) -> EvaluationResult:
+            return EvaluationResult(
+                expected_events=expected,
+                autonomous_events=expected if success else (),
+                success=success,
+                clone_generation=4,
+                evaluation_generations=4,
+                timed_out=not success,
+            )
+
+        mappings = (
+            ByteMapping(65, 66),
+            ByteMapping(67, 68),
+            ByteMapping(69, 70),
+        )
+        mapping_results = (
+            MappingSeedMeasurement(
+                mapping=mappings[0],
+                baseline=result(False),
+                trained=result(True),
+                noisy=result(True),
+            ),
+            MappingSeedMeasurement(
+                mapping=mappings[1],
+                baseline=result(False),
+                trained=result(True),
+                noisy=result(False),
+            ),
+            MappingSeedMeasurement(
+                mapping=mappings[2],
+                baseline=result(False),
+                trained=result(False),
+                noisy=result(True),
+            ),
+        )
+        clean_control = EvaluationResult(
+            expected_events=(),
+            autonomous_events=(),
+            success=True,
+            clone_generation=4,
+            evaluation_generations=4,
+            timed_out=False,
+        )
+        seed_record = SeedMeasurement(
+            seed=1,
+            baseline=mapping_results[0].baseline,
+            trained=mapping_results[0].trained,
+            baseline_no_input=clean_control,
+            trained_no_input=clean_control,
+            baseline_alternate=clean_control,
+            trained_alternate=clean_control,
+            mapping_results=mapping_results,
+            noisy_no_input=clean_control,
+            noisy_alternate=clean_control,
+            clean_noise_rate=0,
+            noisy_noise_rate=256,
+        )
+        measurement = experiment_module._assemble_learning_measurement(
+            (seed_record,),
+            mappings=mappings,
+        )
+
+        self.assertEqual(measurement.noise_robustness_eligible_count, 2)
+        self.assertEqual(measurement.noise_robust_count, 1)
+        self.assertEqual(measurement.noise_failed_count, 1)
+        self.assertEqual(measurement.noise_robustness_rate, 0.5)
+
+        dirty_control = EvaluationResult(
+            expected_events=(),
+            autonomous_events=(OutputEvent.byte(66),),
+            success=False,
+            clone_generation=4,
+            evaluation_generations=4,
+            timed_out=False,
+        )
+        dirty_seed = SeedMeasurement(
+            seed=2,
+            baseline=mapping_results[0].baseline,
+            trained=mapping_results[0].trained,
+            baseline_no_input=clean_control,
+            trained_no_input=clean_control,
+            baseline_alternate=clean_control,
+            trained_alternate=clean_control,
+            mapping_results=(mapping_results[0],),
+            noisy_no_input=dirty_control,
+            noisy_alternate=clean_control,
+            clean_noise_rate=0,
+            noisy_noise_rate=256,
+        )
+        dirty = experiment_module._assemble_learning_measurement(
+            (dirty_seed,),
+            mappings=(mappings[0],),
+        )
+        self.assertEqual(dirty.noise_robustness_eligible_count, 1)
+        self.assertEqual(dirty.noise_robust_count, 0)
+        self.assertEqual(dirty.noise_failed_count, 1)
+        self.assertEqual(dirty.noise_robustness_rate, 0.0)
+
+    def test_p65_007_phase5_noise_probe_does_not_mutate_authoritative_state(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+            noise_robustness_rate_delta=256,
+        )
+        state = create_universe(
+            seed=802,
+            config=PhysicsConfig(max_cells=8, noise_rate=64),
+        )
+        IOExperiment(state, experiment=protocol).train_mappings()
+        before = state.to_snapshot()
+
+        measurement = measure_trained_state(state, experiment=protocol)
+
+        self.assertEqual(state.to_snapshot(), before)
+        seed_record = measurement.per_seed[0]
+        self.assertEqual(seed_record.clean_noise_rate, 64)
+        self.assertEqual(seed_record.noisy_noise_rate, 320)
+        self.assertTrue(all(item.noisy is not None for item in seed_record.mapping_results))
+
+
+    def test_p65_008_canonical_and_smoke_noise_configs_are_explicit(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_noise_robustness.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_noise_robustness_smoke.json"
+        )
+
+        self.assertTrue(canonical.noise_robustness_enabled)
+        self.assertEqual(canonical.noise_robustness_rate_delta, 256)
+        self.assertEqual(canonical.retention_delay_generations, 128)
+        self.assertEqual(canonical.output_event_count, 2)
+
+        self.assertTrue(smoke.noise_robustness_enabled)
+        self.assertEqual(smoke.noise_robustness_rate_delta, 65535)
+        self.assertEqual(smoke.retention_delay_generations, 2)
+        self.assertEqual(smoke.output_event_count, 2)
+
+    def test_p65_009_runner_reports_public_noise_robustness_evidence(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_noise_robustness_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertTrue(payload["noise_robustness_enabled"])
+        self.assertEqual(payload["noise_robustness_rate_delta"], 65535)
+        self.assertIn("noise_robustness_eligible_count", payload)
+        self.assertIn("noise_robust_count", payload)
+        self.assertIn("noise_failed_count", payload)
+        self.assertIn("noise_robustness_rate", payload)
+        self.assertEqual(len(payload["per_seed"]), 3)
+        for seed_record in payload["per_seed"]:
+            self.assertIn("clean_noise_rate", seed_record)
+            self.assertIn("noisy_noise_rate", seed_record)
+            self.assertGreater(
+                seed_record["noisy_noise_rate"],
+                seed_record["clean_noise_rate"],
+            )
+            self.assertIn("noisy_no_input_clean", seed_record)
+            self.assertIn("noisy_sequence_counterfactual_clean", seed_record)
+            for mapping_record in seed_record["mappings"]:
+                self.assertIn("noisy_success", mapping_record)
+                self.assertIn("noisy_event_generations", mapping_record)
+                self.assertIn("noise_eligible", mapping_record)
+                self.assertIn("noise_robust", mapping_record)
+                self.assertIn("noise_failed", mapping_record)
+                self.assertEqual(
+                    mapping_record["noise_failed"],
+                    bool(
+                        mapping_record["noise_eligible"]
+                        and not mapping_record["noise_robust"]
+                    ),
+                )
+                self.assertIsInstance(
+                    mapping_record["noisy_event_generations"],
+                    list,
+                )
+
+    def test_p65_010_snapshot_and_timeout_override_preserve_noise_protocol(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_noise_robustness_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=803,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(
+            payload["experiment"]["noise_robustness_rate_delta"],
+            65535,
+        )
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_noise_robustness_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        overridden = captured[-1]
+        optimizer_payload = json.loads(stdout.getvalue())["optimizer_protocol"]
+        self.assertEqual(overridden.evaluation_timeout_generations, 1)
+        self.assertEqual(overridden.noise_robustness_rate_delta, 65535)
+        self.assertTrue(overridden.noise_robustness_enabled)
+        self.assertEqual(optimizer_payload["noise_robustness_rate_delta"], 65535)
+        self.assertTrue(optimizer_payload["noise_robustness_enabled"])
 
 
 if __name__ == "__main__":

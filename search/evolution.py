@@ -379,6 +379,14 @@ class SteadyStateOptimizer:
             retention_evidence_count=float(
                 getattr(measurement, "retention_eligible_count", 0)
             ),
+            noise_robustness=(
+                getattr(measurement, "noise_robustness_rate", None)
+                if getattr(measurement, "noise_robustness_rate", None) is not None
+                else 0.0
+            ),
+            noise_robustness_evidence_count=float(
+                getattr(measurement, "noise_robustness_eligible_count", 0)
+            ),
         )
 
     def _measure_slot(self, slot: UniverseSlot) -> tuple[LearningMeasurement, Fitness]:
@@ -611,6 +619,19 @@ class SteadyStateOptimizer:
             if retention_evidence_count > 0
             else 0.0
         )
+        noise_robustness_evidence_count = sum(
+            slot.fitness.noise_robustness_evidence_count for slot in values
+        )
+        noise_robustness = (
+            sum(
+                slot.fitness.noise_robustness
+                * slot.fitness.noise_robustness_evidence_count
+                for slot in values
+            )
+            / noise_robustness_evidence_count
+            if noise_robustness_evidence_count > 0
+            else 0.0
+        )
         return Fitness(
             success=sum(slot.fitness.success for slot in values) / denominator,
             wrong_outputs=sum(slot.fitness.wrong_outputs for slot in values) / denominator,
@@ -618,7 +639,7 @@ class SteadyStateOptimizer:
             response_latency=sum(slot.fitness.response_latency for slot in values) / denominator,
             activity_cost=sum(slot.fitness.activity_cost for slot in values) / denominator,
             retention=retention,
-            noise_robustness=sum(slot.fitness.noise_robustness for slot in values) / denominator,
+            noise_robustness=noise_robustness,
             counterfactual_no_input_clean=(
                 sum(slot.fitness.counterfactual_no_input_clean for slot in values)
                 / denominator
@@ -628,6 +649,7 @@ class SteadyStateOptimizer:
                 / denominator
             ),
             retention_evidence_count=retention_evidence_count,
+            noise_robustness_evidence_count=noise_robustness_evidence_count,
         )
 
     def group_fitnesses(

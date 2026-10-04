@@ -1,5 +1,25 @@
 # Specification Changelog
 
+## 2026-10-04 — Phase 6.5 controlled physical-noise robustness candidate (#91 / PR #92)
+
+- adds explicit experiment-level `noise_robustness_rate_delta`, with canonical
+  delta 256 and a separate bounded-smoke delta 65535;
+- evaluates clean and noisy conditions from matched trained T0 disposable
+  clones, changing only noisy-clone physical `noise_rate`;
+- uses the existing deterministic background-noise physics rather than a
+  synthetic robustness shortcut;
+- requires clean mapped success for eligibility and noisy mapped success plus
+  noisy no-input/prefix-A/unmapped-CA cleanliness for robust classification;
+- records explicit eligible/robust/failed counts and null robustness when no
+  clean-success evidence exists;
+- activates canonical growth bit 6 only from comparable explicit P6.5 evidence,
+  leaving absolute fitness and P6.4 retention/bit5 unchanged;
+- preserves the protocol through ExperimentConfig, optimizer snapshot and
+  explicit timeout reconstruction;
+- adds canonical/smoke configs, public clean/noisy evidence reporting, and real
+  P6.5 experiment/optimizer CI entrypoints.
+- acceptance evidence and merge SHA remain pending until exact-head review.
+
 ## 2026-10-04 — Phase 6.4 forgetting/relearning accepted (#88 / PR #89)
 
 - extends the accepted P6.3 timed mappings with explicit T0 immediate,

@@ -1062,6 +1062,86 @@ current universe learned, retained or relearned a mapping.
 
 ---
 
+# 22.5 Phase 6.5 controlled physical-noise robustness requirements
+
+## REQ-240 — Explicit physical-noise robustness protocol
+**Status: accepted**
+
+Phase 6.5 shall measure robustness using the existing deterministic physical
+background-noise mechanism. The experiment protocol adds
+`noise_robustness_rate_delta`, separate from UniverseGenome.
+
+The initial canonical delta is 256 in the uint16 probability domain
+(additional 1/256 event probability per physical generation). The noisy
+effective rate is `min(65535, clean_noise_rate + delta)`. A smoke protocol may
+use a stronger explicit delta but shall not redefine the canonical protocol.
+
+---
+
+## REQ-241 — Matched clean/noisy T0 evaluation and authority isolation
+**Status: accepted**
+
+For each seed/mapping, clean and noisy evaluations shall originate from the
+same trained T0 state on disposable clones. The noisy clone changes only the
+effective physical `noise_rate`; the authoritative training Universe and clean
+clone remain unchanged.
+
+P6.4 retention/interference/relearning remains a separate continuing-state
+capability. P6.5 evaluation shall not advance or mutate authoritative Phase 5
+slot state.
+
+---
+
+## REQ-242 — Explicit noise-robustness evaluability
+**Status: accepted**
+
+A mapping/seed case is noise-eligible only when its clean T0 mapped evaluation
+succeeds and the noisy effective rate is strictly greater than the clean rate.
+An eligible case is robust only when the noisy mapped evaluation succeeds and
+the required noisy counterfactual controls remain output-clean.
+
+For the active temporal protocol those controls are no-input, prefix-only A and
+unmapped CA. Eligible cases that do not satisfy the robust condition are noise
+failures.
+
+Aggregate reporting shall expose eligible/robust/failed counts. The robustness
+rate is defined only when eligible count is non-zero; zero eligible cases are
+non-evaluable/null. Clean failure followed by noisy failure or accidental noisy
+success is not evidence of robustness.
+
+---
+
+## REQ-243 — Noise robustness is growth-only Phase 5 evidence
+**Status: accepted**
+
+P6.5 is the first accepted protocol allowed to populate the canonical Phase 5
+noise-robustness growth observable. Growth bit 6 may compare robustness only
+when both compared Fitness values carry explicit evaluable noise-robustness
+evidence.
+
+Noise robustness and its evidence count shall not change the canonical
+absolute-fitness ordering. P6.4 retention/bit5 remains independent. Category
+isolation, pruning thresholds, promising allocation, seed handling and
+authoritative-slot semantics remain unchanged.
+
+---
+
+## REQ-244 — P6.5 persistence and public evidence
+**Status: accepted**
+
+Experiment serialization, optimizer snapshot/restore and explicit timeout
+reconstruction shall preserve the P6.5 protocol field. Public reporting shall
+expose effective clean/noisy rates, per-seed/per-mapping clean/noisy results,
+noisy control results, eligibility/result counts and null-aware robustness
+rate.
+
+Canonical and bounded-smoke configs shall use the same protocol surface. CI
+shall execute real P6.5 experiment and optimizer entrypoints. Implementing the
+capability does not itself constitute evidence that the current universe
+learned or is noise-robust.
+
+---
+
 # 23. Traceability
 
 Historical rationale: #2  

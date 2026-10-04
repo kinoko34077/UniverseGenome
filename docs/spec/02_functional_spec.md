@@ -337,11 +337,13 @@ counterfactual measurements such as no-input-clean and alternate-input-clean
 are recorded as separate observables; this specification does not equate
 either observable with retention or noise robustness.
 
-The integrated v0.1 Phase 5 protocol does not yet define a retention or
-noise-robustness measurement procedure. Its authoritative measurement path
-therefore leaves those two Fitness fields at zero and bits 5/6 remain unset in
-integrated v0.1 growth history. Their semantic bit positions are reserved; they
-may become active only under a later explicitly accepted measurement protocol.
+The readiness-accepted v0.1 Phase 5 baseline did not itself define measurement
+procedures for retention or noise robustness, so those dimensions stayed
+inactive rather than using counterfactual proxies. Later bounded capabilities
+activate them only through explicit evaluable evidence: P6.4 may populate
+retention/bit5 and P6.5 may populate noise robustness/bit6. For either bit,
+becoming newly evaluable is not itself improvement; both compared measurements
+must carry evidence for that dimension.
 
 ---
 
@@ -842,4 +844,79 @@ retention/relearning counts and nullable rates, per-seed checkpoint generations,
 and per-mapping T0/T1/T2 success plus event generations. Canonical and bounded
 smoke configs use the same semantics. CI executes both the real bounded P6.4
 experiment entrypoint and the optimizer reconstruction entrypoint.
+
+---
+
+# 38. Phase 6.5 controlled physical-noise robustness
+
+## SPEC-P6NOISE-001 — Protocol field and effective rate
+**Status: accepted**
+
+`ExperimentConfig.noise_robustness_rate_delta` is a non-negative uint16-domain
+protocol field with legacy default zero. A positive value enables P6.5.
+
+The canonical delta is 256. For one clean trained T0 state with effective
+`clean_noise_rate`, the noisy evaluation config uses:
+
+`noisy_noise_rate = min(65535, clean_noise_rate + noise_robustness_rate_delta)`
+
+Only the disposable noisy evaluation state receives this config change. The
+field is not part of UniverseGenome.
+
+## SPEC-P6NOISE-002 — Matched clone execution and controls
+**Status: accepted**
+
+Clean and noisy mapping evaluations begin from snapshot-identical trained T0
+state. Each evaluator remains disposable. The noisy state uses the existing
+SPEC-NOISE physical event path under its increased rate.
+
+P6.5 also evaluates noisy no-input and the active protocol's alternate/prefix/
+unmapped-sequence controls. For the accepted temporal sequence protocol, robust
+classification requires noisy no-input, prefix-only A and unmapped CA controls
+to remain output-clean.
+
+Phase 5 `measure_trained_state` performs this probe without advancing the
+authoritative slot state.
+
+## SPEC-P6NOISE-003 — Eligibility and null-aware classification
+**Status: accepted**
+
+A mapping record is noise-eligible only when:
+- its clean T0 evaluation succeeds; and
+- the seed's noisy effective rate is strictly greater than its clean rate.
+
+An eligible record is robust only when its noisy mapped evaluation succeeds and
+the required noisy counterfactual controls are clean. Otherwise it is
+noise-failed.
+
+Measurement exposes `noise_robustness_eligible_count`,
+`noise_robust_count`, `noise_failed_count`, and a robustness rate. The rate
+is null when eligibility is zero and otherwise equals robust/eligible.
+
+## SPEC-P6NOISE-004 — Phase 5 growth boundary
+**Status: accepted**
+
+An evaluable P6.5 rate is projected to growth-only
+`Fitness.noise_robustness` with explicit
+`noise_robustness_evidence_count`. Same-genome evidence aggregation weights
+robustness by that evidence count.
+
+Growth bit 6 is set for an improvement only when both previous and current
+Fitness values carry positive noise-robustness evidence. The absolute
+`Fitness.sort_key()` remains unchanged. P6.4 retention and bit5 remain
+independent.
+
+## SPEC-P6NOISE-005 — Persistence, reporting, configs and CI
+**Status: accepted**
+
+The P6.5 protocol field round-trips through ExperimentConfig, optimizer
+snapshot/restore and explicit timeout reconstruction without requiring a new
+snapshot format solely for P6.5.
+
+Public experiment JSON reports protocol state, aggregate null-aware robustness,
+per-seed clean/noisy effective rates and controls, and per-mapping explicit
+noise-eligible / noise-robust / noise-failed classification together with noisy
+success and event generations. Canonical config uses delta 256; the bounded smoke config
+uses an explicitly stronger delta 65535 while preserving the same semantics.
+CI executes both P6.5 experiment and optimizer entrypoints.
 

@@ -100,6 +100,7 @@ class ExperimentConfig:
     retention_delay_generations: int = 0
     retention_interference_repetitions: int = 0
     relearning_teacher_repetitions: int = 0
+    noise_robustness_rate_delta: int = 0
 
     def __post_init__(self) -> None:
         for name in (
@@ -109,11 +110,14 @@ class ExperimentConfig:
             "retention_delay_generations",
             "retention_interference_repetitions",
             "relearning_teacher_repetitions",
+            "noise_robustness_rate_delta",
         ):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
         if self.teacher_repetitions < 1:
             raise ValueError("teacher_repetitions must be positive")
+        if self.noise_robustness_rate_delta > 0xFFFF:
+            raise ValueError("noise_robustness_rate_delta must fit uint16")
         if self.output_event_count not in (1, 2):
             raise ValueError("bounded P6.3 output_event_count must be 1 or 2")
         if self.output_event_count == 1 and self.output_event_interval_generations != 0:
@@ -186,6 +190,10 @@ class ExperimentConfig:
             or self.relearning_teacher_repetitions
         )
 
+    @property
+    def noise_robustness_enabled(self) -> bool:
+        return self.noise_robustness_rate_delta > 0
+
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "byte_hold_generations": self.byte_hold_generations,
@@ -219,6 +227,8 @@ class ExperimentConfig:
             payload["relearning_teacher_repetitions"] = (
                 self.relearning_teacher_repetitions
             )
+        if self.noise_robustness_rate_delta:
+            payload["noise_robustness_rate_delta"] = self.noise_robustness_rate_delta
         if (
             self.mappings != DEFAULT_BYTE_MAPPINGS
             or self.counterfactual_input_byte != 66
@@ -281,6 +291,7 @@ class ExperimentConfig:
             "retention_delay_generations",
             "retention_interference_repetitions",
             "relearning_teacher_repetitions",
+            "noise_robustness_rate_delta",
         ):
             if mapping.get(name) is not None:
                 values[name] = int(mapping[name])
@@ -383,6 +394,7 @@ class MappingSeedMeasurement:
     trained: EvaluationResult
     t1: EvaluationResult | None = None
     t2: EvaluationResult | None = None
+    noisy: EvaluationResult | None = None
 
     @property
     def t0(self) -> EvaluationResult:
@@ -411,6 +423,45 @@ class SeedMeasurement:
     baseline_sequence_counterfactual: EvaluationResult | None = None
     trained_sequence_counterfactual: EvaluationResult | None = None
     retention_checkpoint_generations: tuple[int, int, int] = ()
+    noisy_no_input: EvaluationResult | None = None
+    noisy_alternate: EvaluationResult | None = None
+    noisy_prefix: EvaluationResult | None = None
+    noisy_sequence_counterfactual: EvaluationResult | None = None
+    clean_noise_rate: int = 0
+    noisy_noise_rate: int = 0
+
+    @property
+    def noisy_controls_clean(self) -> bool:
+        if self.noisy_no_input is None or not self.noisy_no_input.success:
+            return False
+        if self.noisy_prefix is not None or self.noisy_sequence_counterfactual is not None:
+            return bool(
+                self.noisy_prefix is not None
+                and self.noisy_prefix.success
+                and self.noisy_sequence_counterfactual is not None
+                and self.noisy_sequence_counterfactual.success
+            )
+        return bool(
+            self.noisy_alternate is not None
+            and self.noisy_alternate.success
+        )
+
+    def noise_classification(
+        self,
+        mapping: MappingSeedMeasurement,
+    ) -> tuple[bool, bool, bool]:
+        eligible = bool(
+            mapping.noisy is not None
+            and mapping.trained.success
+            and self.noisy_noise_rate > self.clean_noise_rate
+        )
+        robust = bool(
+            eligible
+            and mapping.noisy is not None
+            and mapping.noisy.success
+            and self.noisy_controls_clean
+        )
+        return eligible, robust, bool(eligible and not robust)
 
     @property
     def baseline_evaluations(self) -> tuple[EvaluationResult, ...]:
@@ -453,6 +504,9 @@ class LearningMeasurement:
     forgotten_count: int = 0
     relearning_eligible_count: int = 0
     relearned_count: int = 0
+    noise_robustness_eligible_count: int = 0
+    noise_robust_count: int = 0
+    noise_failed_count: int = 0
 
     @property
     def retention_rate(self) -> float | None:
@@ -465,6 +519,12 @@ class LearningMeasurement:
         if self.relearning_eligible_count <= 0:
             return None
         return self.relearned_count / self.relearning_eligible_count
+
+    @property
+    def noise_robustness_rate(self) -> float | None:
+        if self.noise_robustness_eligible_count <= 0:
+            return None
+        return self.noise_robust_count / self.noise_robustness_eligible_count
 
     @property
     def no_input_clean(self) -> int:
@@ -492,6 +552,26 @@ class LearningMeasurement:
 
 def _clone_state(state: UniverseState) -> UniverseState:
     return UniverseState.from_snapshot(state.to_snapshot(), config=state.config)
+
+
+def _noise_robustness_state(
+    state: UniverseState,
+    *,
+    protocol: ExperimentConfig,
+) -> tuple[UniverseState, int, int]:
+    if not protocol.noise_robustness_enabled:
+        raise ValueError("P6.5 noise robustness protocol is not enabled")
+    clean_config = state.config or PhysicsConfig()
+    clean_rate = int(clean_config.noise_rate)
+    noisy_rate = min(0xFFFF, clean_rate + protocol.noise_robustness_rate_delta)
+    values = clean_config.to_dict()
+    values["noise_rate"] = noisy_rate
+    noisy_config = PhysicsConfig(**values)
+    noisy_state = UniverseState.from_snapshot(
+        state.to_snapshot(),
+        config=noisy_config,
+    )
+    return noisy_state, clean_rate, noisy_rate
 
 
 def _torus_distance(first: int, second: int, size: int = 32) -> int:
@@ -849,6 +929,9 @@ def _seed_measurement(
     retention_state: UniverseState | None = None,
     relearned_state: UniverseState | None = None,
     retention_checkpoint_generations: tuple[int, int, int] = (),
+    noisy_state: UniverseState | None = None,
+    clean_noise_rate: int = 0,
+    noisy_noise_rate: int = 0,
 ) -> SeedMeasurement:
     baseline = IOExperiment(baseline_state, experiment=protocol)
     trained = IOExperiment(trained_state, experiment=protocol)
@@ -860,6 +943,11 @@ def _seed_measurement(
     relearned = (
         IOExperiment(relearned_state, experiment=protocol)
         if relearned_state is not None
+        else None
+    )
+    noisy = (
+        IOExperiment(noisy_state, experiment=protocol)
+        if noisy_state is not None
         else None
     )
     mapping_results: list[MappingSeedMeasurement] = []
@@ -899,6 +987,11 @@ def _seed_measurement(
                 t2=(
                     evaluate(relearned, mapping, expected)
                     if relearned is not None
+                    else None
+                ),
+                noisy=(
+                    evaluate(noisy, mapping, expected)
+                    if noisy is not None
                     else None
                 ),
             )
@@ -945,6 +1038,32 @@ def _seed_measurement(
             input_bytes=protocol.counterfactual_input_sequence,
             expected=(),
         )
+
+    noisy_no_input = None
+    noisy_alternate = None
+    noisy_prefix = None
+    noisy_sequence_counterfactual = None
+    if noisy is not None:
+        noisy_no_input = noisy.evaluate_autonomous(
+            input_byte=protocol.mappings[0].input_bytes[0],
+            input_valid=False,
+            expected=(),
+        )
+        noisy_alternate = noisy.evaluate_autonomous(
+            input_byte=protocol.counterfactual_input_byte,
+            expected=(),
+        )
+        if protocol.counterfactual_prefix:
+            noisy_prefix = noisy.evaluate_autonomous_sequence(
+                input_bytes=protocol.counterfactual_prefix,
+                expected=(),
+            )
+        if protocol.counterfactual_input_sequence:
+            noisy_sequence_counterfactual = noisy.evaluate_autonomous_sequence(
+                input_bytes=protocol.counterfactual_input_sequence,
+                expected=(),
+            )
+
     return SeedMeasurement(
         seed=seed,
         baseline=first.baseline,
@@ -959,6 +1078,12 @@ def _seed_measurement(
         baseline_sequence_counterfactual=baseline_sequence_counterfactual,
         trained_sequence_counterfactual=trained_sequence_counterfactual,
         retention_checkpoint_generations=retention_checkpoint_generations,
+        noisy_no_input=noisy_no_input,
+        noisy_alternate=noisy_alternate,
+        noisy_prefix=noisy_prefix,
+        noisy_sequence_counterfactual=noisy_sequence_counterfactual,
+        clean_noise_rate=clean_noise_rate,
+        noisy_noise_rate=noisy_noise_rate,
     )
 
 
@@ -1042,6 +1167,22 @@ def _assemble_learning_measurement(
         for mapping in retention_records
     )
 
+    noise_classifications = tuple(
+        item.noise_classification(mapping)
+        for item in records
+        for mapping in item.mapping_results
+        if mapping.noisy is not None
+    )
+    noise_robustness_eligible_count = sum(
+        eligible for eligible, _, _ in noise_classifications
+    )
+    noise_robust_count = sum(
+        robust for _, robust, _ in noise_classifications
+    )
+    noise_failed_count = sum(
+        failed for _, _, failed in noise_classifications
+    )
+
     per_mapping = tuple(
         MappingMeasurement(
             mapping=mapping,
@@ -1118,6 +1259,9 @@ def _assemble_learning_measurement(
         forgotten_count=forgotten_count,
         relearning_eligible_count=relearning_eligible_count,
         relearned_count=relearned_count,
+        noise_robustness_eligible_count=noise_robustness_eligible_count,
+        noise_robust_count=noise_robust_count,
+        noise_failed_count=noise_failed_count,
     )
 
 
@@ -1174,6 +1318,14 @@ def measure_trained_state(
                 isolate_authority=True,
             )
         )
+        noisy_state = None
+        clean_noise_rate = int((t0_state.config or resolved).noise_rate)
+        noisy_noise_rate = clean_noise_rate
+        if protocol.noise_robustness_enabled:
+            noisy_state, clean_noise_rate, noisy_noise_rate = _noise_robustness_state(
+                t0_state,
+                protocol=protocol,
+            )
         measurement = _seed_measurement(
             seed=state.seed,
             baseline_state=create_universe(seed=state.seed, config=resolved),
@@ -1181,13 +1333,27 @@ def measure_trained_state(
             retention_state=t1_state,
             relearned_state=t2_state,
             retention_checkpoint_generations=checkpoint_generations,
+            noisy_state=noisy_state,
+            clean_noise_rate=clean_noise_rate,
+            noisy_noise_rate=noisy_noise_rate,
             protocol=protocol,
         )
     else:
+        noisy_state = None
+        clean_noise_rate = int((state.config or resolved).noise_rate)
+        noisy_noise_rate = clean_noise_rate
+        if protocol.noise_robustness_enabled:
+            noisy_state, clean_noise_rate, noisy_noise_rate = _noise_robustness_state(
+                state,
+                protocol=protocol,
+            )
         measurement = _seed_measurement(
             seed=state.seed,
             baseline_state=create_universe(seed=state.seed, config=resolved),
             trained_state=state,
+            noisy_state=noisy_state,
+            clean_noise_rate=clean_noise_rate,
+            noisy_noise_rate=noisy_noise_rate,
             protocol=protocol,
         )
     return _assemble_learning_measurement(
@@ -1221,6 +1387,14 @@ def compare_baseline_trained(
             t0_state, t1_state, t2_state, checkpoint_generations = (
                 _retention_checkpoint_states(trained_state, protocol=protocol)
             )
+            noisy_state = None
+            clean_noise_rate = int((t0_state.config or resolved).noise_rate)
+            noisy_noise_rate = clean_noise_rate
+            if protocol.noise_robustness_enabled:
+                noisy_state, clean_noise_rate, noisy_noise_rate = _noise_robustness_state(
+                    t0_state,
+                    protocol=protocol,
+                )
             measurements.append(
                 _seed_measurement(
                     seed=seed,
@@ -1229,15 +1403,29 @@ def compare_baseline_trained(
                     retention_state=t1_state,
                     relearned_state=t2_state,
                     retention_checkpoint_generations=checkpoint_generations,
+                    noisy_state=noisy_state,
+                    clean_noise_rate=clean_noise_rate,
+                    noisy_noise_rate=noisy_noise_rate,
                     protocol=protocol,
                 )
             )
         else:
+            noisy_state = None
+            clean_noise_rate = int((trained_state.config or resolved).noise_rate)
+            noisy_noise_rate = clean_noise_rate
+            if protocol.noise_robustness_enabled:
+                noisy_state, clean_noise_rate, noisy_noise_rate = _noise_robustness_state(
+                    trained_state,
+                    protocol=protocol,
+                )
             measurements.append(
                 _seed_measurement(
                     seed=seed,
                     baseline_state=baseline_state,
                     trained_state=trained_state,
+                    noisy_state=noisy_state,
+                    clean_noise_rate=clean_noise_rate,
+                    noisy_noise_rate=noisy_noise_rate,
                     protocol=protocol,
                 )
             )
