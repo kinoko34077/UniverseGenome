@@ -105,7 +105,7 @@ class Phase4IOTests(unittest.TestCase):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
         self.assertTrue(status["phase4_io_learning_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 6.5 noise robustness (bounded child Issue required)")
+        self.assertEqual(status["next_phase"], "Phase 6.6 generalization (bounded child Issue required)")
         self.assertTrue(raw["features"]["io_learning"])
         self.assertTrue(raw["features"]["evolution"])
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:

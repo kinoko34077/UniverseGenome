@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-04 — Phase 6.5 controlled physical-noise robustness candidate (#91 / PR #92)
+## 2026-10-04 — Phase 6.5 controlled physical-noise robustness accepted (#91 / PR #92)
 
 - adds explicit experiment-level `noise_robustness_rate_delta`, with canonical
   delta 256 and a separate bounded-smoke delta 65535;
@@ -17,8 +17,18 @@
 - preserves the protocol through ExperimentConfig, optimizer snapshot and
   explicit timeout reconstruction;
 - adds canonical/smoke configs, public clean/noisy evidence reporting, and real
-  P6.5 experiment/optimizer CI entrypoints.
-- acceptance evidence and merge SHA remain pending until exact-head review.
+  P6.5 experiment/optimizer CI entrypoints;
+- exact reviewed implementation head
+  `88529c1b1fc93f0f8a6a0214647600ff03558c0c` passed CI #258
+  (`37208735557`) with 193 tests / OK, P6.1–P6.5 experiment/optimizer smokes
+  and browser E2E SUCCESS;
+- squash-merged implementation main
+  `cb19ba9467e9a1ccb9586e00445d049d4b700cd7`, with all 14 changed files
+  verified blob-identical to the reviewed head;
+- bounded public P6.5 smoke produced zero clean-success eligible cases, so
+  robustness remained null/non-evaluable and `learning_claim=false`;
+- capability acceptance is not a robustness-success claim; the next bounded
+  frontier is P6.6 generalization.
 
 ## 2026-10-04 — Phase 6.4 forgetting/relearning accepted (#88 / PR #89)
 
