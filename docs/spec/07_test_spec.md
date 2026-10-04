@@ -237,9 +237,12 @@ same-genome seed group, advances growth only at real 128-generation boundaries,
 applies the accepted category-local `tiered_category_rank` policy: aggregate
 canonical fitness ranks evidence groups, 4→8 uses the top 1/2, 8→16 the top
 1/4, and 16→32 the top 1/8; fractional cutoffs use floor division with a
-minimum of one group. Never-matured mutation groups still complete to four
-real seeds first; otherwise each category persistently alternates promising
-evidence and mutation 1:1 when both are available, preferring lower evidence
+minimum of one group. Post-initial allocation preserves REQ-122 matched
+comparisons where practical by reusing a same-genome seed already present in
+another category when that seed is free locally; this does not couple category
+selection. Never-matured mutation groups still complete to four real seeds
+first; otherwise each category persistently alternates promising evidence and
+mutation 1:1 when both are available, preferring lower evidence
 count then better aggregate fitness then stable genome key. It
 does not replace a live slot without a real free/prune-eligible target, keeps
 groups below four real seed slots out of parent/protection selection, completes
@@ -274,6 +277,12 @@ slots, replacements, mutation fields, actual same-genome slot-group counts,
 and throughput. Promising-allocation state reports the accepted persisted
 policy name and only reports evidence growth represented by corresponding real
 authoritative slots.
+
+The public optimizer CLI preserves the loaded experiment protocol unchanged by
+default. A reduced evaluation timeout is permitted only through an explicit
+`--optimizer-timeout-generations` override, and JSON output identifies whether
+the effective protocol is canonical or explicitly overridden. CI exercises a
+real optimizer CLI smoke with the shortened timeout supplied explicitly.
 
 ### TEST-P5-006 Phase 6+ handoff boundary
 
