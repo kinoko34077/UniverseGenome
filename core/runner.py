@@ -78,6 +78,9 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
     phase6_raw_utf8 = bool(
         config.get("features", {}).get("phase6_raw_utf8", False)
     )
+    phase6_mixed_length_sequences = bool(
+        config.get("features", {}).get("phase6_mixed_length_sequences", False)
+    )
     return {
         "project": "UniverseGenome",
         "phase": (
@@ -114,6 +117,7 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
         "phase6_generalization_implemented": phase6_generalization and phase6_noise_robustness and phase6_retention_relearning and phase6_multi_event_timing and phase6_temporal_sequence and phase6_multi_mapping and phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase6_multi_byte_sequences_implemented": phase6_multi_byte_sequences and phase6_generalization and phase6_noise_robustness and phase6_retention_relearning and phase6_multi_event_timing and phase6_temporal_sequence and phase6_multi_mapping and phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase6_raw_utf8_implemented": phase6_raw_utf8 and phase6_multi_byte_sequences and phase6_generalization and phase6_noise_robustness and phase6_retention_relearning and phase6_multi_event_timing and phase6_temporal_sequence and phase6_multi_mapping and phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
+        "phase6_mixed_length_sequences_implemented": phase6_mixed_length_sequences and phase6_raw_utf8 and phase6_multi_byte_sequences and phase6_generalization and phase6_noise_robustness and phase6_retention_relearning and phase6_multi_event_timing and phase6_temporal_sequence and phase6_multi_mapping and phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "acceptance_state": current_state["acceptance_state"],
         "phase6_ready": current_state["phase6_ready"],
         "phase6_blocked": not current_state["phase6_ready"],
