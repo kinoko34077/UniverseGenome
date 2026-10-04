@@ -278,6 +278,14 @@ generalization classifications are measurement/reporting evidence only; they
 are not authoritative clone state and are not new Phase 5 Fitness fields.
 P6.6 alone does not require a snapshot-format increment.
 
+For Phase 6.7, persisted `ByteSequenceMapping` may additionally carry an
+explicit ordered `output_bytes` tuple. The tuple is experiment protocol data,
+not UniverseGenome state. It round-trips through `ExperimentConfig`,
+optimizer snapshots and explicit timeout reconstruction. Observed autonomous
+event content/generations remain disposable measurement/reporting evidence and
+are not persisted evaluation-clone state. P6.7 alone does not require a
+snapshot-format increment.
+
 ---
 
 ---

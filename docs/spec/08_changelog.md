@@ -1,5 +1,22 @@
 # Specification Changelog
 
+## 2026-10-05 — Phase 6.7 bounded distinct multi-byte sequence candidate (#98 / PR #99)
+
+- extends two-event temporal mappings from repeated identical output bytes to
+  explicit ordered distinct byte tuples;
+- bounded mappings are AA→B,C→NULL and AC→D,E→NULL;
+- preserves legacy P6.1–P6.6 mapping serialization and repeated-byte behavior
+  when no explicit `output_bytes` tuple exists;
+- teacher execution and disposable-clone evaluation use one resolved output
+  sequence, requiring exact content, order, count, inter-event timing and NULL;
+- adds canonical/smoke P6.7 configs, snapshot/timeout preservation, public
+  declared/observed sequence evidence and real experiment/optimizer CI lanes;
+- keeps baseline-relative/counterfactual-gated learning claims, Phase 5
+  absolute fitness/search policy and reserved growth bit7 unchanged;
+- P6.8 raw UTF-8 remains explicitly deferred;
+- capability acceptance will report observed learning honestly and does not
+  require successful sequence learning.
+
 ## 2026-10-05 — Phase 6.6 held-out relation generalization accepted (#95 / PR #96)
 
 - adds one predeclared held-out relation, AE→F,F→NULL, while teacher training

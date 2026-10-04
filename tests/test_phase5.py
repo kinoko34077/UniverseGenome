@@ -22,7 +22,7 @@ from core.experiment import (
     load_experiment_config,
     measure_trained_state,
 )
-from core.io_bus import OutputEvent
+from core.io_bus import OutputEvent, OutputSignal
 from core.population import run_population_headless
 from core.physics import PhysicsConfig, StepMetrics, create_universe
 from core.runner import build_status, load_config, main as runner_main
@@ -3194,6 +3194,393 @@ class Phase5OptimizerTests(unittest.TestCase):
         after = SteadyStateOptimizer._fitness_from_measurement(with_generalization)
         self.assertEqual(after, before)
         self.assertEqual(growth_flags(before, after) & (1 << 7), 0)
+
+
+    def test_p67_001_explicit_output_sequence_roundtrips_without_changing_legacy_shape(self):
+        legacy = ByteSequenceMapping((65, 65), 66)
+        self.assertEqual(legacy.output_bytes, ())
+        self.assertEqual(
+            legacy.to_dict(),
+            {"input_bytes": [65, 65], "output_byte": 66},
+        )
+        self.assertEqual(
+            ByteSequenceMapping.from_mapping(legacy.to_dict()),
+            legacy,
+        )
+
+        explicit = ByteSequenceMapping(
+            (65, 65),
+            66,
+            output_bytes=(66, 67),
+        )
+        self.assertEqual(explicit.output_bytes, (66, 67))
+        self.assertEqual(
+            explicit.to_dict(),
+            {
+                "input_bytes": [65, 65],
+                "output_byte": 66,
+                "output_bytes": [66, 67],
+            },
+        )
+        self.assertEqual(
+            ByteSequenceMapping.from_mapping(explicit.to_dict()),
+            explicit,
+        )
+
+    def test_p67_002_explicit_output_sequence_is_bounded_distinct_and_matches_event_count(self):
+        with self.assertRaises(ValueError):
+            ByteSequenceMapping(
+                (65, 65),
+                66,
+                output_bytes=(66,),
+            )
+        with self.assertRaises(ValueError):
+            ByteSequenceMapping(
+                (65, 65),
+                66,
+                output_bytes=(66, 66),
+            )
+
+        protocol = ExperimentConfig(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=4,
+        )
+        self.assertEqual(
+            tuple(item.output_bytes for item in protocol.mappings),
+            ((66, 67), (68, 69)),
+        )
+
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                mappings=(
+                    ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                    ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+                ),
+                counterfactual_prefix=(65,),
+                counterfactual_input_sequence=(67, 65),
+                output_event_count=1,
+                output_event_interval_generations=0,
+            )
+
+
+    def test_p67_003_teacher_emits_distinct_output_sequence_in_declared_order(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            inter_input_generations=1,
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+        state = create_universe(seed=1401, config=PhysicsConfig(max_cells=8))
+        records = IOExperiment(state, experiment=protocol).train_mappings()
+
+        self.assertEqual(
+            records[0].teacher_events,
+            (
+                OutputEvent.byte(66),
+                OutputEvent.byte(67),
+                OutputEvent.null(),
+            ),
+        )
+        self.assertEqual(
+            records[1].teacher_events,
+            (
+                OutputEvent.byte(68),
+                OutputEvent.byte(69),
+                OutputEvent.null(),
+            ),
+        )
+
+    def test_p67_004_mapping_evaluation_expects_distinct_sequence_content(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            inter_input_generations=1,
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+        baseline = create_universe(seed=1402, config=PhysicsConfig(max_cells=8))
+        trained = create_universe(seed=1402, config=PhysicsConfig(max_cells=8))
+        measurement = experiment_module._seed_measurement(
+            seed=1402,
+            baseline_state=baseline,
+            trained_state=trained,
+            protocol=protocol,
+        )
+
+        self.assertEqual(
+            measurement.mapping_results[0].trained.expected_events,
+            (
+                OutputEvent.byte(66),
+                OutputEvent.byte(67),
+                OutputEvent.null(),
+            ),
+        )
+        self.assertEqual(
+            measurement.mapping_results[1].trained.expected_events,
+            (
+                OutputEvent.byte(68),
+                OutputEvent.byte(69),
+                OutputEvent.null(),
+            ),
+        )
+
+
+    def test_p67_003_teacher_emits_declared_distinct_bytes_in_order(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping(
+                    (65, 65),
+                    66,
+                    output_bytes=(66, 67),
+                ),
+                ByteSequenceMapping(
+                    (65, 67),
+                    68,
+                    output_bytes=(68, 69),
+                ),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+        state = create_universe(seed=1001, config=PhysicsConfig(max_cells=8))
+        experiment = IOExperiment(state, experiment=protocol)
+
+        records = experiment.train_mappings()
+
+        self.assertEqual(
+            [event.value for event in experiment.teacher_events if event.kind == "byte"],
+            [66, 67, 68, 69],
+        )
+        self.assertEqual(
+            [
+                tuple(event.value for event in record.teacher_events if event.kind == "byte")
+                for record in records
+            ],
+            [(66, 67), (68, 69)],
+        )
+
+
+    def test_p67_005_distinct_sequence_evaluation_rejects_content_order_timing_and_termination_errors(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=5,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+        state = create_universe(seed=1403, config=PhysicsConfig(max_cells=8))
+        experiment = IOExperiment(state, experiment=protocol)
+        expected = (
+            OutputEvent.byte(66),
+            OutputEvent.byte(67),
+            OutputEvent.null(),
+        )
+
+        def evaluate_with(signals):
+            values = iter(signals)
+
+            def next_signal(_state):
+                return next(values, OutputSignal())
+
+            with patch("core.experiment.read_output_signal", side_effect=next_signal):
+                return experiment.evaluate_autonomous_sequence(
+                    input_bytes=(65, 65),
+                    expected=expected,
+                )
+
+        quiet = OutputSignal()
+        byte_b = OutputSignal(value=66, valid=True)
+        byte_c = OutputSignal(value=67, valid=True)
+        byte_x = OutputSignal(value=88, valid=True)
+        null = OutputSignal(valid=True, null=True)
+
+        correct = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, byte_c, quiet, null)
+        )
+        reversed_order = evaluate_with(
+            (quiet, quiet, quiet, byte_c, quiet, byte_b, quiet, null)
+        )
+        repeated = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, byte_b, quiet, null)
+        )
+        wrong_timing = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, quiet, byte_c, null)
+        )
+        extra = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, byte_c, quiet, byte_x)
+        )
+        missing_null = evaluate_with(
+            (quiet, quiet, quiet, byte_b, quiet, byte_c, quiet, quiet)
+        )
+
+        self.assertTrue(correct.success)
+        self.assertEqual(correct.autonomous_events, expected)
+        self.assertEqual(correct.event_generations[:2], (3, 5))
+        for failure in (
+            reversed_order,
+            repeated,
+            wrong_timing,
+            extra,
+            missing_null,
+        ):
+            self.assertFalse(failure.success)
+
+
+    def test_p67_006_canonical_and_smoke_configs_declare_distinct_sequences(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_multi_byte_sequences.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_multi_byte_sequences_smoke.json"
+        )
+
+        self.assertEqual(
+            tuple(item.output_bytes for item in canonical.mappings),
+            ((66, 67), (68, 69)),
+        )
+        self.assertEqual(canonical.output_event_count, 2)
+        self.assertEqual(canonical.output_event_interval_generations, 4)
+        self.assertEqual(canonical.evaluation_timeout_generations, 1024)
+
+        self.assertEqual(
+            tuple(item.output_bytes for item in smoke.mappings),
+            ((66, 67), (68, 69)),
+        )
+        self.assertEqual(smoke.output_event_count, 2)
+        self.assertEqual(smoke.output_event_interval_generations, 2)
+        self.assertEqual(smoke.evaluation_timeout_generations, 2)
+
+    def test_p67_007_snapshot_and_timeout_override_preserve_distinct_sequences(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_multi_byte_sequences_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=1404,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(
+            tuple(item.output_bytes for item in restored.experiment.mappings),
+            ((66, 67), (68, 69)),
+        )
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--experiment-config",
+                        "config/experiment_phase6_multi_byte_sequences_smoke.json",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(captured[-1].evaluation_timeout_generations, 1)
+        self.assertEqual(
+            tuple(item.output_bytes for item in captured[-1].mappings),
+            ((66, 67), (68, 69)),
+        )
+        self.assertEqual(
+            [item["output_bytes"] for item in payload["optimizer_protocol"]["mappings"]],
+            [[66, 67], [68, 69]],
+        )
+
+    def test_p67_008_runner_reports_declared_and_observed_sequence_evidence(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_multi_byte_sequences_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertEqual(
+            [item["output_bytes"] for item in payload["per_mapping"]],
+            [[66, 67], [68, 69]],
+        )
+        self.assertEqual(len(payload["per_seed"]), 3)
+        for seed_record in payload["per_seed"]:
+            self.assertEqual(len(seed_record["mappings"]), 2)
+            for mapping_record in seed_record["mappings"]:
+                self.assertIn(mapping_record["output_bytes"], ([66, 67], [68, 69]))
+                self.assertIsInstance(mapping_record["baseline_events"], list)
+                self.assertIsInstance(mapping_record["trained_events"], list)
+                for event in (
+                    mapping_record["baseline_events"]
+                    + mapping_record["trained_events"]
+                ):
+                    self.assertIn(event["kind"], ("byte", "null"))
+                    self.assertIn("value", event)
+                    self.assertIsInstance(event["generation"], int)
+        self.assertFalse(payload["learning_claim"])
+        self.assertIn(
+            "declared ordered output-byte sequence",
+            payload["criterion"],
+        )
+        self.assertNotIn("output byte 2 times", payload["criterion"])
 
 
 if __name__ == "__main__":

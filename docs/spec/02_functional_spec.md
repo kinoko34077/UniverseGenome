@@ -986,3 +986,56 @@ classification and aggregate null-aware evidence. Canonical and bounded-smoke
 P6.6 configs use the same relation. CI executes both P6.6 experiment and
 optimizer entrypoints.
 
+---
+
+# 40. Phase 6.7 bounded distinct multi-byte outputs
+
+## SPEC-P6BYTE-001 — Explicit output-byte tuple and legacy compatibility
+**Status: accepted**
+
+`ByteSequenceMapping.output_bytes` is an optional ordered byte tuple. Legacy
+mappings omit it and retain the pre-P6.7 serialized shape and repeated
+`output_byte` semantics. An explicit P6.7 tuple must contain exactly two
+distinct bytes, its first byte must equal `output_byte`, and its length must
+match `ExperimentConfig.output_event_count`.
+
+## SPEC-P6BYTE-002 — Teacher execution
+**Status: accepted**
+
+Training resolves the effective output sequence per mapping. Explicit P6.7
+mappings teacher-stimulate each declared byte in order. Legacy mappings expand
+`output_byte` to the configured event count. Consecutive teacher byte onsets
+use the accepted `output_event_interval_generations`; NULL follows the final
+byte through the existing teacher-NULL path.
+
+## SPEC-P6BYTE-003 — Exact autonomous evaluation
+**Status: accepted**
+
+The expected autonomous event tuple is the resolved ordered byte sequence
+followed by NULL. Success requires exact tuple equality, no early output before
+complete input, and the declared interval between byte events. Repetition,
+reversal, wrong timing, missing/extra events or termination failure cannot be
+accepted through subsequence matching.
+
+## SPEC-P6BYTE-004 — Phase 5 and learning-claim boundary
+**Status: accepted**
+
+P6.7 retains the existing baseline-relative all-mappings/all-seeds learning
+criterion and no-input/prefix/unmapped-sequence controls. It introduces no new
+absolute-fitness term and leaves reserved growth bit 7 unused. P6.4 retention,
+P6.5 noise robustness, P6.6 generalization and all Phase 5 search policy remain
+separate.
+
+## SPEC-P6BYTE-005 — Persistence, reporting, configs and CI
+**Status: accepted**
+
+Explicit output tuples serialize through `ExperimentConfig`, optimizer
+snapshots and explicit timeout reconstruction without a snapshot-format change
+solely for P6.7. Canonical and bounded-smoke configs declare AA→[B,C] and
+AC→[D,E].
+
+Public experiment JSON exposes declared output bytes and observed event
+kind/value/generation per mapping/seed. Optimizer protocol diagnostics expose
+the serialized mapping protocol. CI executes real bounded P6.7 experiment and
+optimizer entrypoints. Raw UTF-8 remains outside this specification.
+

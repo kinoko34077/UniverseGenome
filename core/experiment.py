@@ -50,34 +50,68 @@ class ByteMapping:
 class ByteSequenceMapping:
     input_bytes: tuple[int, ...]
     output_byte: int
+    output_bytes: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         values = tuple(int(value) for value in self.input_bytes)
+        explicit_outputs = tuple(int(value) for value in self.output_bytes)
         object.__setattr__(self, "input_bytes", values)
+        object.__setattr__(self, "output_bytes", explicit_outputs)
         if len(values) != 2:
             raise ValueError("P6.2 sequence mappings require exactly two input bytes")
         for value in values:
             validate_byte(value)
         validate_byte(self.output_byte)
+        for value in explicit_outputs:
+            validate_byte(value)
+        if explicit_outputs:
+            if len(explicit_outputs) != 2:
+                raise ValueError(
+                    "bounded P6.7 explicit output sequences require exactly two bytes"
+                )
+            if len(set(explicit_outputs)) != len(explicit_outputs):
+                raise ValueError(
+                    "bounded P6.7 explicit output sequence bytes must be distinct"
+                )
+            if explicit_outputs[0] != self.output_byte:
+                raise ValueError(
+                    "output_byte must equal the first explicit output sequence byte"
+                )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "input_bytes": [int(value) for value in self.input_bytes],
             "output_byte": int(self.output_byte),
         }
+        if self.output_bytes:
+            payload["output_bytes"] = [int(value) for value in self.output_bytes]
+        return payload
 
     @classmethod
     def from_mapping(cls, mapping: Mapping[str, Any]) -> "ByteSequenceMapping":
         raw = mapping["input_bytes"]
         if not isinstance(raw, (list, tuple)):
             raise ValueError("input_bytes must be an array")
+        raw_outputs = mapping.get("output_bytes", ())
+        if not isinstance(raw_outputs, (list, tuple)):
+            raise ValueError("output_bytes must be an array")
         return cls(
             input_bytes=tuple(int(value) for value in raw),
             output_byte=int(mapping["output_byte"]),
+            output_bytes=tuple(int(value) for value in raw_outputs),
         )
 
 
 ProtocolMapping = ByteMapping | ByteSequenceMapping
+
+
+def _mapping_output_bytes(
+    mapping: ProtocolMapping,
+    output_event_count: int,
+) -> tuple[int, ...]:
+    if isinstance(mapping, ByteSequenceMapping) and mapping.output_bytes:
+        return mapping.output_bytes
+    return (mapping.output_byte,) * int(output_event_count)
 
 
 DEFAULT_BYTE_MAPPINGS = (ByteMapping(65, 66),)
@@ -125,6 +159,15 @@ class ExperimentConfig:
             raise ValueError("one-event protocols require output interval 0")
         if self.output_event_count == 2 and self.output_event_interval_generations < 2:
             raise ValueError("two-event P6.3 protocols require output interval >= 2")
+        for item in self.mappings:
+            if (
+                isinstance(item, ByteSequenceMapping)
+                and item.output_bytes
+                and len(item.output_bytes) != self.output_event_count
+            ):
+                raise ValueError(
+                    "explicit output sequence length must match output_event_count"
+                )
         if self.retention_enabled:
             if self.retention_delay_generations <= 0:
                 raise ValueError("P6.4 retention delay must be positive")
@@ -781,17 +824,21 @@ class IOExperiment:
         for _ in range(self.experiment.teacher_delay_generations):
             self.release_input()
             advance(())
-        byte_event = OutputEvent.byte(mapping.output_byte)
+        output_bytes = _mapping_output_bytes(
+            mapping,
+            self.experiment.output_event_count,
+        )
         null_event = OutputEvent.null()
         teacher_events: list[OutputEvent] = []
-        for output_index in range(self.experiment.output_event_count):
+        for output_index, output_byte in enumerate(output_bytes):
+            byte_event = OutputEvent.byte(output_byte)
             self.teacher_output(
                 byte_event,
                 on_generation=on_generation,
                 on_step=on_step,
             )
             teacher_events.append(byte_event)
-            if output_index < self.experiment.output_event_count - 1:
+            if output_index < len(output_bytes) - 1:
                 for _ in range(
                     self.experiment.output_event_interval_generations - 1
                 ):
@@ -1067,7 +1114,13 @@ def _seed_measurement(
 
     for mapping in protocol.mappings:
         expected = (
-            *(OutputEvent.byte(mapping.output_byte),) * protocol.output_event_count,
+            *(
+                OutputEvent.byte(value)
+                for value in _mapping_output_bytes(
+                    mapping,
+                    protocol.output_event_count,
+                )
+            ),
             OutputEvent.null(),
         )
         baseline_result = evaluate(baseline, mapping, expected)
@@ -1141,8 +1194,13 @@ def _seed_measurement(
     trained_held_out = None
     if protocol.held_out_mapping is not None:
         held_out_expected = (
-            *(OutputEvent.byte(protocol.held_out_mapping.output_byte),)
-            * protocol.output_event_count,
+            *(
+                OutputEvent.byte(value)
+                for value in _mapping_output_bytes(
+                    protocol.held_out_mapping,
+                    protocol.output_event_count,
+                )
+            ),
             OutputEvent.null(),
         )
         baseline_held_out = evaluate(
@@ -1340,7 +1398,18 @@ def _assemble_learning_measurement(
         for index, mapping in enumerate(mapping_values)
     )
 
-    if sequence_protocol and output_event_count > 1:
+    explicit_output_sequence_protocol = any(
+        isinstance(mapping, ByteSequenceMapping) and bool(mapping.output_bytes)
+        for mapping in mapping_values
+    )
+
+    if explicit_output_sequence_protocol:
+        criterion = (
+            "all sequences across all seeds must autonomously emit each declared ordered output-byte sequence "
+            f"at the declared {output_event_interval_generations}-generation onset interval then NULL only after the full input sequence, "
+            "trained successes must exceed baseline, and no-input/prefix-only/unmapped-sequence counterfactuals must remain output-clean"
+        )
+    elif sequence_protocol and output_event_count > 1:
         criterion = (
             "all sequences across all seeds must autonomously emit the declared output byte "
             f"{output_event_count} times at the declared {output_event_interval_generations}-generation onset interval then NULL only after the full input sequence, "
