@@ -1,5 +1,24 @@
 # Specification Changelog
 
+## 2026-10-04 — Issue #63 authoritative Phase 5 browser integration
+
+- replaces the browser server's parallel Phase 3 population authority with the
+  existing 128-slot `SteadyStateOptimizer`;
+- overview/detail payloads now project the real category/genome/seed,
+  fitness/growth, evidence, lineage/allocation and replacement state;
+- separates outer Search Run/Pause/Search Step from clone-only physical
+  observation stepping and rewind;
+- Save/Load now round-trips the authoritative Phase 5 optimizer snapshot;
+- the server loads the canonical default physical config instead of inventing a
+  GUI-only `initial_density=4` runtime;
+- manual base-config edits are staged for Reset and do not mutate running slots;
+- the activity display is explicitly retained as a visualization-only proxy,
+  not optimizer `activity_cost`;
+- Playwright E2E verifies that a real optimizer replacement is visible through
+  the browser without rebuilding a parallel population;
+- P1 remediation is complete after this changeset; #61 residual reconciliation
+  and #60 readiness rerun remain before Phase 6.
+
 ## 2026-10-04 — Issue #65 Phase 5 search-semantics remediation accepted (#65 / PR #70)
 
 - executes the accepted 16-generation short-health cadence on authoritative

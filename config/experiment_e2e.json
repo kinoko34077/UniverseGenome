@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "status": "test_fixture_only",
+  "learning_claim": false,
+  "task": "A->B->NULL",
+  "byte_hold_generations": 0,
+  "byte_gap_generations": 0,
+  "teacher_delay_generations": 0,
+  "teacher_repetitions": 1,
+  "evaluation_timeout_generations": 0
+}

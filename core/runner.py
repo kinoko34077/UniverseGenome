@@ -28,7 +28,7 @@ def _current_state(config: dict[str, Any]) -> dict[str, Any]:
     configured = config.get("current_state", {})
     if not isinstance(configured, dict):
         raise ValueError("current_state must be an object")
-    owners = configured.get("blocking_owners", ["#63"])
+    owners = configured.get("blocking_owners", [])
     if not isinstance(owners, list) or not all(isinstance(owner, str) for owner in owners):
         raise ValueError("current_state.blocking_owners must be a list of strings")
     return {
@@ -37,7 +37,7 @@ def _current_state(config: dict[str, Any]) -> dict[str, Any]:
         "blocking_owners": list(owners),
         "readiness_owner": str(configured.get("readiness_owner", "#60")),
         "next_phase": str(
-            configured.get("next_phase", "GUI/search integration remediation (#63; Phase 6+ blocked)")
+            configured.get("next_phase", "Post-v0.1 residual reconciliation (#61; then readiness rerun #60; Phase 6+ blocked)")
         ),
     }
 

@@ -1,6 +1,6 @@
 # Phase 6+ capability handoff
 
-Status: **blocked pending remediation #63; readiness rerun #60**.
+Status: **blocked pending #61 residual reconciliation; readiness rerun #60**.
 No Phase 6+ capability has been implemented.
 
 ## Current v0.1 boundary
@@ -9,8 +9,10 @@ Phase 0 through Phase 5 implementation is present on `main`, but full current
 acceptance/readiness remains invalidated. Status-truth remediation #66 is
 complete via PR #69 and Phase 5 search-semantics remediation #65 is complete
 via PR #70, merged to main as `3e8c8f31a1d87d3f2a7e88de731392b4f3202bd2`.
-The remaining P1 owner is #63 (GUI/authoritative-search integration). Readiness
-owner #60 must rerun the audit from the repaired current `main`.
+GUI/authoritative-search integration #63 is complete via PR #73. No unresolved
+P1 owner remains. Still-relevant Phase 0–5 residuals must be reconciled under
+#61, then readiness owner #60 must rerun the audit from repaired current
+`main`.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
 Earlier remediation established the current Phase 0–5 implementation boundary;
@@ -24,6 +26,7 @@ historical implementation boundary is documented by:
 - Phase 5 semantic remediation #56 / PR #57;
 - Phase 5 architecture restoration #58 / PR #59;
 - Phase 5 search-semantics remediation #65 / PR #70;
+- GUI/authoritative-search integration #63 / PR #73;
 - readiness audit #60.
 
 PR #59 restored the original Phase 5 architecture and merged as
@@ -66,8 +69,8 @@ PR #70 completed #65 search-semantics remediation. Its exact reviewed head
 merge to current main `3e8c8f31...`.
 
 The previous #60 PASS is historical and invalidated by the later full
-traceability audit #64 and handoff #67/#68. The remaining P1 owner #63 is not
-replaced by the historical CI result. P2/P3 residuals remain tracked in #61.
+traceability audit #64 and handoff #67/#68. P1 remediation is now complete;
+P2/P3 residuals remain tracked in #61 and must be reconciled before #60 reruns.
 
 ## Phase 4 outcome
 
@@ -88,9 +91,8 @@ to the historical v0.1 physics/search contract.
 Before any Phase 6 mutation:
 
 1. reread live devflow Control #314;
-2. resolve #63;
-3. resolve or explicitly reclassify readiness-dependent #61 residuals, then
-   rerun readiness owner #60 from current `main`;
+2. resolve or explicitly reclassify still-relevant #61 residuals;
+3. rerun readiness owner #60 from current `main`;
 4. create a new explicit repository-local child Issue with measurable
    acceptance criteria only after readiness passes;
 5. keep any new capability behind the Phase 6 boundary;

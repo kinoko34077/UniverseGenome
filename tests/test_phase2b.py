@@ -133,7 +133,7 @@ class Phase2BLatentTests(unittest.TestCase):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
         status = build_status(raw)
         self.assertTrue(status["phase2b_latent_operators_implemented"])
-        self.assertEqual(status["next_phase"], "GUI/search integration remediation (#63; Phase 6+ blocked)")
+        self.assertEqual(status["next_phase"], "Post-v0.1 residual reconciliation (#61; then readiness rerun #60; Phase 6+ blocked)")
 
         proc = subprocess.run(
             [sys.executable, "-m", "core.runner", "--config", "config/default.json", "--generations", "2", "--json"],

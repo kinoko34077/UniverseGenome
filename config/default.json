@@ -5,9 +5,9 @@
   "current_state": {
     "acceptance_state": "remediation_in_progress",
     "phase6_ready": false,
-    "blocking_owners": ["#63"],
+    "blocking_owners": [],
     "readiness_owner": "#60",
-    "next_phase": "GUI/search integration remediation (#63; Phase 6+ blocked)"
+    "next_phase": "Post-v0.1 residual reconciliation (#61; then readiness rerun #60; Phase 6+ blocked)"
   },
   "world": {
     "logical_size": 32,

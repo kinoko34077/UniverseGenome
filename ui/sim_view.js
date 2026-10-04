@@ -1,9 +1,8 @@
 // Observation lineage: kinoko34077/2bit-cell-automaton @
 // e9e9a6895f70d9153676abf3656e3805588d60da
 //
-// Phase 3 reuses only grid/inspection concepts. The runtime API owns the
-// authoritative simulation clock is external to this view; this module only
-// polls and renders state.
+// The authoritative simulation clock is external to this view. The server owns
+// the Phase 5 optimizer; these timers only poll and render state.
 
 import { DETAIL_MODES, detailColor, overviewColor } from "./view_model.mjs";
 
@@ -13,7 +12,11 @@ const overview = document.getElementById("overview");
 const status = document.getElementById("status");
 const mode = document.getElementById("mode");
 const modeLock = document.getElementById("mode-lock");
-const rewind = document.querySelector("select[data-action=rewind]");
+const historyLength = document.getElementById("history-length");
+const metadata = document.getElementById("optimizer-meta");
+const pendingLabel = document.getElementById("pending-parameters");
+const collisionDamage = document.getElementById("collision-damage");
+const noiseAttempts = document.getElementById("noise-attempts");
 let currentState = null;
 let detailFrame = 0;
 
@@ -28,7 +31,10 @@ function renderOverview(summaries = []) {
     tile.className = "thumbnail";
     tile.dataset.category = summary.category;
     tile.dataset.index = String(summary.index);
-    tile.setAttribute("aria-label", `Universe ${summary.index}, ${summary.active_cells || 0} active cells`);
+    tile.setAttribute(
+      "aria-label",
+      `Universe ${summary.index}, ${summary.category}, seed ${summary.seed}, ${summary.active_cells || 0} active cells`,
+    );
     const map = document.createElement("canvas");
     map.width = 8;
     map.height = 8;
@@ -39,7 +45,7 @@ function renderOverview(summaries = []) {
       mapContext.fillRect(index % 8, Math.floor(index / 8), 1, 1);
     }
     const label = document.createElement("span");
-    label.textContent = `${summary.index} · ${summary.active_cells || 0}`;
+    label.textContent = `${summary.index} · ${summary.active_cells || 0} · e${summary.evidence_group_size ?? 0}`;
     tile.append(map, label);
     tile.addEventListener("click", () => window.universeGenomeControl("select", { index: summary.index }));
     overview.append(tile);
@@ -69,15 +75,61 @@ function renderDetail(detail = { cells: [] }, selectedMode = "HP") {
   }
 }
 
-function updateRewindOptions(historyLength) {
-  for (const option of rewind.options) {
-    option.disabled = Number(option.value) > Number(historyLength || 0);
-  }
+function updateLabels() {
+  const selected = currentState?.selected || {};
+  const target = currentState?.observation_target === "clone" ? " (clone)" : "";
+  document.getElementById("selected-label").textContent =
+    `Universe ${currentState?.selected_index ?? 0} · ${selected.category ?? "unknown"} · seed ${selected.seed ?? "?"}${target}`;
 }
 
-function updateLabels() {
-  const target = currentState?.observation_target === "clone" ? " (clone)" : "";
-  document.getElementById("selected-label").textContent = `Universe ${currentState?.selected_index ?? 0}${target}`;
+function updateMetadata() {
+  const selected = currentState?.selected || {};
+  const fitness = selected.fitness || {};
+  const growth = (selected.growth_windows || []).map((value) => Number(value).toString(16).padStart(2, "0")).join(" ");
+  const event = selected.last_event ? JSON.stringify(selected.last_event) : "none";
+  metadata.textContent = [
+    `Authority: ${currentState?.authority ?? "unknown"}`,
+    `Search iteration: ${currentState?.optimizer_generation ?? 0} (${currentState?.running ? "running" : "paused"})`,
+    `Selected physical generation: ${selected.generation ?? 0}`,
+    `Category / seed: ${selected.category ?? "?"} / ${selected.seed ?? "?"}`,
+    `Genome: ${JSON.stringify(selected.genome || {})}`,
+    `Evidence: ${selected.evidence_group_size ?? 0} slots; mature=${Boolean(selected.evidence_mature)}`,
+    `Lineage: parent=${selected.parent_index ?? "none"}; mutation=${selected.last_mutation_field ?? "none"}; allocation=${selected.allocation_reason ?? "?"}`,
+    `Fitness: success=${fitness.success ?? 0}, wrong=${fitness.wrong_outputs ?? 0}, timeout=${fitness.timeouts ?? 0}, latency=${fitness.response_latency ?? 0}, activity=${fitness.activity_cost ?? 0}`,
+    `Growth windows: ${growth || "none"}`,
+    `Last replacement event: ${event}`,
+    `Activity rendering: ${currentState?.activity_semantics ?? "unknown"}`,
+  ].join("\n");
+}
+
+function updateResetControls() {
+  const pending = currentState?.pending_reset_parameters || {};
+  const config = currentState?.reset_config || {};
+  if (document.activeElement !== collisionDamage) {
+    collisionDamage.value = pending.collision_damage ?? config.collision_damage ?? 0;
+  }
+  if (document.activeElement !== noiseAttempts) {
+    noiseAttempts.value = pending.noise_attempts ?? config.noise_attempts ?? 0;
+  }
+  const keys = Object.keys(pending);
+  pendingLabel.textContent = keys.length ? `Pending Reset: ${keys.join(", ")}` : "No pending Reset edits.";
+  historyLength.value = String(currentState?.history_length ?? 512);
+}
+
+function updateStatus(prefix = "") {
+  const selectedGeneration = currentState?.selected?.generation ?? 0;
+  const error = currentState?.last_error ? ` Error: ${currentState.last_error}` : "";
+  status.textContent =
+    `${prefix}Search ${currentState?.optimizer_generation ?? 0}; selected physical ${selectedGeneration}; ${currentState?.running ? "running" : "paused"}.${error}`;
+}
+
+function renderState({ updateOverview = true, updateDetail = true, prefix = "" } = {}) {
+  if (updateOverview) renderOverview(currentState?.summaries || []);
+  if (updateDetail) renderDetail(currentState?.selected, mode.value);
+  updateLabels();
+  updateMetadata();
+  updateResetControls();
+  updateStatus(prefix);
 }
 
 export async function refreshState({ updateOverview = true, updateDetail = true } = {}) {
@@ -85,11 +137,7 @@ export async function refreshState({ updateOverview = true, updateDetail = true 
   if (!response.ok) throw new Error(`state request failed: ${response.status}`);
   currentState = await response.json();
   window.universeGenomeState = currentState;
-  if (updateOverview) renderOverview(currentState.summaries);
-  if (updateDetail) renderDetail(currentState.selected, mode.value);
-  updateLabels();
-  updateRewindOptions(currentState.history_length);
-  status.textContent = `Generation ${currentState.generation}; ${currentState.running ? "running" : "paused"}.`;
+  renderState({ updateOverview, updateDetail });
   return currentState;
 }
 
@@ -103,10 +151,11 @@ function advanceAutomaticMode() {
 mode.replaceChildren(...DETAIL_MODES.map((value) => {
   const option = document.createElement("option");
   option.value = value;
-  option.textContent = value;
+  option.textContent = value === "activity" ? "activity (visual proxy)" : value;
   return option;
 }));
 mode.addEventListener("change", () => renderDetail(currentState?.selected, mode.value));
+
 window.universeGenomeRefresh = refreshState;
 window.universeGenomeControl = async (action, payload = {}) => {
   const response = await fetch("/api/control", {
@@ -114,14 +163,13 @@ window.universeGenomeControl = async (action, payload = {}) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action, ...payload }),
   });
-  if (!response.ok) throw new Error(`control request failed: ${response.status}`);
+  if (!response.ok) {
+    const errorPayload = await response.json().catch(() => ({}));
+    throw new Error(errorPayload.error || `control request failed: ${response.status}`);
+  }
   currentState = await response.json();
   window.universeGenomeState = currentState;
-  renderOverview(currentState.summaries || []);
-  renderDetail(currentState.selected, mode.value);
-  updateLabels();
-  updateRewindOptions(currentState.history_length);
-  status.textContent = `Action ${action}; generation ${currentState.generation}.`;
+  renderState({ prefix: `Action ${action}; ` });
   return currentState;
 };
 
