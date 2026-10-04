@@ -9,9 +9,10 @@ The inner system is intended to learn through deterministic time evolution of an
 **Phase 0 through Phase 5 are readiness-accepted on `main`; Phase 6.1
 multiple independent byte mappings, Phase 6.2 temporal sequence
 discrimination, Phase 6.3 multi-event output timing, Phase 6.4
-forgetting/relearning retention, and Phase 6.5 controlled physical-noise
-robustness are implemented/accepted through #79 / PR #80, #82 / PR #83,
-#85 / PR #86, #88 / PR #89, and #91 / PR #92.** The repository contains the
+forgetting/relearning retention, Phase 6.5 controlled physical-noise
+robustness, and Phase 6.6 predeclared held-out relation generalization are
+implemented/accepted through #79 / PR #80, #82 / PR #83, #85 / PR #86,
+#88 / PR #89, #91 / PR #92, and #95 / PR #96.** The repository contains the
 canonical v0.1 foundation, server-owned runtime/API, browser observer/control
 surface, authoritative Phase 5 optimizer, and the first six bounded Phase 6
 experimental capabilities.
