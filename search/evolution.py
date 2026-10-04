@@ -379,6 +379,14 @@ class SteadyStateOptimizer:
             retention_evidence_count=float(
                 getattr(measurement, "retention_eligible_count", 0)
             ),
+            noise_robustness=(
+                getattr(measurement, "noise_robustness_rate", None)
+                if getattr(measurement, "noise_robustness_rate", None) is not None
+                else 0.0
+            ),
+            noise_robustness_evidence_count=float(
+                getattr(measurement, "noise_robustness_eligible_count", 0)
+            ),
         )
 
     def _measure_slot(self, slot: UniverseSlot) -> tuple[LearningMeasurement, Fitness]:
