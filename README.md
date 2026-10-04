@@ -6,19 +6,24 @@ The inner system is intended to learn through deterministic time evolution of an
 
 ## Current state
 
-**Phase 0 through Phase 5 are accepted on `main`; readiness rerun #60 passed,
-and the repository is ready for one new bounded Phase 6 child Issue. No Phase 6+
-capability has been implemented yet.** The repository
-contains the canonical v0.1 requirements/specification, deterministic local
-physics, the server-owned runtime/API, browser observer/control surface,
-physical I/O measurement, and the persistent authoritative Phase 5 optimizer.
+**Phase 0 through Phase 5 are readiness-accepted on `main`, and the first
+bounded Phase 6 capability (P6.1 multiple independent byte mappings) is
+implemented and accepted via #79 / PR #80. The current capability frontier is
+P6.2 temporal sequence discrimination.** The repository contains the canonical
+requirements/specification, deterministic local physics, the server-owned
+runtime/API, browser observer/control surface, physical I/O measurement, the
+persistent authoritative Phase 5 optimizer, and the bounded Phase 6.1
+multi-mapping experiment layer.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
 reconciliation #61 is complete via PR #74. No unresolved remediation owner remains. The fresh #60 rerun passed on repaired
-current `main`; the earlier invalidated PASS remains historical evidence only. The current Phase 4
-measurement remains baseline 0 / trained 0 with no learning claim. See the
-[Phase 6+ handoff](docs/PHASE6_HANDOFF.md) for the bounded next-phase contract.
+current `main`; the earlier invalidated PASS remains historical evidence only. The historical Phase 4 measurement remains baseline 0 / trained 0 with no
+learning claim. The accepted P6.1 smoke likewise produced baseline 0 / trained
+0 for both A→B and C→D, with `learning_claim=false`; implementation acceptance
+does not reinterpret that result as learned behavior. See the
+[Phase 6+ handoff](docs/PHASE6_HANDOFF.md) and roadmap #78 for the next bounded
+capability contract.
 
 ## Canonical entry points
 
@@ -63,15 +68,19 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   now observes and controls the authoritative Phase 5 optimizer rather than a
   parallel Phase 3 population.
 - Post-v0.1 residual reconciliation #61 is complete via PR #74.
-- Readiness audit #60 has passed on repaired current `main`; a new bounded
-  Phase 6 child Issue may now be created before any Phase 6 capability mutation.
+- Readiness audit #60 passed on repaired Phase 0–5 `main`.
+- Phase 6 roadmap #78 is active; P6.1 #79 / PR #80 implements multiple
+  independent A→B and C→D mappings. P6.2 must start as its own bounded child
+  Issue before temporal-sequence capability mutation.
 
 ## Headless verification commands
 
 ```bash
 python -m core.runner --config config/default.json --generations 8 --json
 python -m core.runner --config config/default.json --optimizer --json
-# Optional bounded smoke only; explicit override is reported in JSON:
+# Bounded Phase 6.1 real-entry smoke:
+python -m core.runner --config config/default.json --experiment --experiment-config config/experiment_phase6_multi_mapping_smoke.json --json
+# Optional bounded optimizer smoke only; explicit override is reported in JSON:
 python -m core.runner --config config/default.json --optimizer --optimizer-iterations 0 --optimizer-timeout-generations 8 --json
 python -m unittest discover -s tests -v
 python -m server.app --help
