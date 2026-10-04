@@ -1433,16 +1433,19 @@ class Phase5OptimizerTests(unittest.TestCase):
             field="hp_decay",
         )
         optimizer.slots[31] = child
+        optimizer._refresh_evidence_maturity(child.evidence_group)
         self.assertEqual(child.parent_genome_key, expected_parent_genome_key)
         self.assertEqual(child.parent_index, parent.index)
 
         other_parent = optimizer.slots[4]
-        optimizer.slots[parent.index] = optimizer.replace_free_slot(
+        replacement = optimizer.replace_free_slot(
             free_index=parent.index,
             parent=other_parent,
             direction=1,
             field="hp_decay",
         )
+        optimizer.slots[parent.index] = replacement
+        optimizer._refresh_evidence_maturity(replacement.evidence_group)
         self.assertNotEqual(
             optimizer.slots[parent.index].genome_key,
             expected_parent_genome_key,
