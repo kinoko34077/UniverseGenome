@@ -22,7 +22,11 @@
 - preserves the 128 authoritative-slot, category-isolation, real-seed evidence,
   free/prune-target-only replacement, and deterministic snapshot boundaries.
 
-## 2026-10-04 — Issue #65 Phase 5 search-liveness remediation
+## 2026-10-04 — Issue #65 Phase 5 search-liveness remediation (historical checkpoint)
+
+This checkpoint is superseded by the later Issue #65 remediation candidate
+above; its unresolved-gate wording records the state before the Human policy
+decision and persistent-response protocol were completed.
 
 - connected the accepted 16-generation short-health cadence to authoritative
   physical-step metrics and recorded the explicit all-active-cell-loss failure
