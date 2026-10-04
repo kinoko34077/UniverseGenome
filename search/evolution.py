@@ -367,10 +367,16 @@ class SteadyStateOptimizer:
             timeouts=sum(result.timed_out for result in trained) / evaluation_denominator,
             response_latency=sum(result.response_latency for result in trained) / evaluation_denominator,
             activity_cost=sum(result.activity_cost for result in trained) / evaluation_denominator,
+            retention=(
+                measurement.retention_rate
+                if measurement.retention_rate is not None
+                else 0.0
+            ),
             counterfactual_no_input_clean=measurement.trained_no_input_clean / seed_denominator,
             counterfactual_alternate_input_clean=(
                 measurement.trained_alternate_input_clean / seed_denominator
             ),
+            retention_evidence_count=float(measurement.retention_eligible_count),
         )
 
     def _measure_slot(self, slot: UniverseSlot) -> tuple[LearningMeasurement, Fitness]:
@@ -591,13 +597,25 @@ class SteadyStateOptimizer:
         if not values:
             raise ValueError("cannot aggregate an empty evidence group")
         denominator = float(len(values))
+        retention_evidence_count = sum(
+            slot.fitness.retention_evidence_count for slot in values
+        )
+        retention = (
+            sum(
+                slot.fitness.retention * slot.fitness.retention_evidence_count
+                for slot in values
+            )
+            / retention_evidence_count
+            if retention_evidence_count > 0
+            else 0.0
+        )
         return Fitness(
             success=sum(slot.fitness.success for slot in values) / denominator,
             wrong_outputs=sum(slot.fitness.wrong_outputs for slot in values) / denominator,
             timeouts=sum(slot.fitness.timeouts for slot in values) / denominator,
             response_latency=sum(slot.fitness.response_latency for slot in values) / denominator,
             activity_cost=sum(slot.fitness.activity_cost for slot in values) / denominator,
-            retention=sum(slot.fitness.retention for slot in values) / denominator,
+            retention=retention,
             noise_robustness=sum(slot.fitness.noise_robustness for slot in values) / denominator,
             counterfactual_no_input_clean=(
                 sum(slot.fitness.counterfactual_no_input_clean for slot in values)
@@ -607,6 +625,7 @@ class SteadyStateOptimizer:
                 sum(slot.fitness.counterfactual_alternate_input_clean for slot in values)
                 / denominator
             ),
+            retention_evidence_count=retention_evidence_count,
         )
 
     def group_fitnesses(
