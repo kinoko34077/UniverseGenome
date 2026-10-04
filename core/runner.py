@@ -284,6 +284,17 @@ def main(argv: list[str] | None = None) -> int:
             "noise_robust_count": measurement.noise_robust_count,
             "noise_failed_count": measurement.noise_failed_count,
             "noise_robustness_rate": measurement.noise_robustness_rate,
+            "generalization_enabled": experiment.generalization_enabled,
+            "held_out_mapping": (
+                experiment.held_out_mapping.to_dict()
+                if experiment.held_out_mapping is not None
+                else None
+            ),
+            "training_qualified_count": measurement.training_qualified_count,
+            "generalization_eligible_count": measurement.generalization_eligible_count,
+            "generalized_count": measurement.generalized_count,
+            "generalization_failed_count": measurement.generalization_failed_count,
+            "generalization_rate": measurement.generalization_rate,
             "per_mapping": [
                 {
                     "input_bytes": list(item.mapping.input_bytes),
@@ -326,6 +337,30 @@ def main(argv: list[str] | None = None) -> int:
                         if item.noisy_sequence_counterfactual is not None
                         else None
                     ),
+                    "baseline_held_out_success": (
+                        item.baseline_held_out.success
+                        if item.baseline_held_out is not None
+                        else None
+                    ),
+                    "trained_held_out_success": (
+                        item.trained_held_out.success
+                        if item.trained_held_out is not None
+                        else None
+                    ),
+                    "baseline_held_out_event_generations": (
+                        list(item.baseline_held_out.event_generations)
+                        if item.baseline_held_out is not None
+                        else []
+                    ),
+                    "trained_held_out_event_generations": (
+                        list(item.trained_held_out.event_generations)
+                        if item.trained_held_out is not None
+                        else []
+                    ),
+                    "training_qualified": item.generalization_classification()[0],
+                    "generalization_eligible": item.generalization_classification()[1],
+                    "generalized": item.generalization_classification()[2],
+                    "generalization_failed": item.generalization_classification()[3],
                     "mappings": [
                         {
                             "input_bytes": list(record.mapping.input_bytes),
@@ -427,6 +462,12 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "noise_robustness_rate_delta": (
                 optimizer_experiment.noise_robustness_rate_delta
+            ),
+            "generalization_enabled": optimizer_experiment.generalization_enabled,
+            "held_out_mapping": (
+                optimizer_experiment.held_out_mapping.to_dict()
+                if optimizer_experiment.held_out_mapping is not None
+                else None
             ),
             "experiment_config": args.experiment_config,
         }
