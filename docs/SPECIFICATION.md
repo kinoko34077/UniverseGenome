@@ -1,6 +1,6 @@
 # UniverseGenome v0.1 Canonical Specification Index
 
-Status: accepted v0.1 specification basis; Phase 0 through Phase 5 are readiness-accepted after rerun #60
+Status: accepted Phase 0–5 basis; P6.1 multiple-mapping capability implemented after readiness rerun #60
 Requirements source: #3  
 Detailed specification source/review history: #4  
 Historical rationale: #2  
@@ -25,10 +25,11 @@ Issue #3 and #4 remain durable review/history surfaces and must link to future a
 
 The checked-in Phase 0–5 implementation is present and the fresh readiness
 rerun #60 passed after P1 remediation #66/#65/#63 and post-v0.1 residual
-reconciliation #61 completed. No Phase 6+ capability is implemented yet; the
-next permitted work is one new bounded Phase 6 child Issue with explicit
-acceptance criteria. This
-state statement is separate from the historical acceptance records preserved
+reconciliation #61 completed. P6.1 multiple independent byte mappings is now
+implemented and accepted via #79 / PR #80. The next permitted capability work
+is P6.2 temporal sequence discrimination in a new bounded child Issue with
+explicit acceptance criteria. The P6.1 experiment still reports no learning
+claim. This state statement is separate from the historical acceptance records preserved
 in the changelog and Issues.
 
 ## Status vocabulary
@@ -51,9 +52,10 @@ not promote `accepted-default` or `parameterized` into an immutable rule.
 ## Current implementation frontier
 
 Phase 0 through Phase 5 are readiness-accepted on `main`; remediation and
-residual reconciliation through #61 are complete and #60 has passed. Phase 6+
-remains a new bounded capability layer, not an already-implemented feature.
-Phase 4 recorded no learning claim, and Phase 5 consumes that explicit
-measurement rather than asserting success. See `docs/PHASE6_HANDOFF.md`.
+residual reconciliation through #61 are complete and #60 has passed. P6.1 is
+the first implemented bounded Phase 6 capability. Its A→B/C→D experiment
+remains a measured failure (`learning_claim=false`), not a success claim.
+The current implementation frontier is P6.2, which remains unimplemented. See
+`docs/PHASE6_HANDOFF.md` and roadmap #78.
 
 See `docs/ROADMAP.md`.
