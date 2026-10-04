@@ -1218,6 +1218,82 @@ generalizes.
 
 ---
 
+# 22.7 Phase 6.7 bounded distinct multi-byte output requirements
+
+## REQ-260 — Explicit ordered distinct output-byte sequence protocol
+**Status: accepted**
+
+Phase 6.7 shall allow a two-byte input mapping to declare an explicit ordered
+output-byte tuple as experiment/protocol data. The initial bounded capability is:
+
+- `AA → B, C → NULL`;
+- `AC → D, E → NULL`.
+
+The explicit tuple has exactly two distinct bytes and its first byte remains
+compatible with the legacy `output_byte` field. When no explicit tuple is
+present, P6.1–P6.6 legacy `output_byte + output_event_count` behavior remains
+authoritative.
+
+---
+
+## REQ-261 — Exact teacher and autonomous sequence semantics
+**Status: accepted**
+
+Teacher training shall stimulate the declared output bytes in order using the
+accepted output-event interval and then terminate with teacher NULL. Evaluation
+shall use disposable clones and require exact byte content, order, count,
+inter-event timing and NULL termination.
+
+Repeated wrong bytes, reversed order, wrong timing, missing/extra byte events,
+missing NULL, output before complete input and timeout are failures.
+Teacher-generated events shall never count as autonomous success.
+
+---
+
+## REQ-262 — Counterfactual-gated learning claim and authority isolation
+**Status: accepted**
+
+P6.7 shall retain no-input, prefix-A and unmapped-CA controls. A learning claim
+may be true only when every declared mapping succeeds for every evaluated seed,
+trained performance is strictly better than baseline, and all required controls
+remain clean.
+
+Baseline/trained and other evaluation probes remain disposable clones and shall
+not mutate the continuing authoritative training Universe. Failed learning is a
+valid result and remains `learning_claim=false`.
+
+---
+
+## REQ-263 — P6.7 remains outside Phase 5 search-policy changes
+**Status: accepted**
+
+Distinct sequence content may flow through existing success/wrong-output/
+timeout/latency/activity observables but shall not change the canonical
+absolute-fitness ordering, consume reserved growth bit 7, or alter retention
+bit5/noise-robustness bit6.
+
+P6.7 shall not change pruning, promising allocation, category isolation, seed
+handling, matched-seed behavior or authoritative-slot semantics.
+
+---
+
+## REQ-264 — Persistence, public evidence and executable entrypoints
+**Status: accepted**
+
+Experiment serialization, optimizer snapshot/restore and explicit timeout
+reconstruction shall preserve explicit output-byte tuples. Public experiment
+reporting shall expose declared output sequences and observed event
+kind/value/generation per mapping/seed.
+
+Canonical and bounded-smoke P6.7 configs shall use the same semantics. CI shall
+execute real P6.7 experiment and optimizer entrypoints. P6.8 raw UTF-8 remains
+deferred.
+
+Implementing this capability does not itself constitute evidence that the
+current universe learned the sequence task.
+
+---
+
 # 23. Traceability
 
 Historical rationale: #2  
