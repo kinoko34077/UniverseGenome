@@ -632,3 +632,51 @@ held-out relation. CI executes the bounded P6.6 optimizer integration path.
 Generalization evidence does not alter Phase 5 Fitness equality or set reserved
 growth bit 7.
 
+---
+
+## Phase 6.7 acceptance tests
+
+### TEST-P67-001 Explicit output-sequence serialization and legacy compatibility
+
+Legacy sequence mappings omit `output_bytes` and retain their prior serialized
+shape. Explicit mappings round-trip an ordered two-byte tuple.
+
+### TEST-P67-002 Bounded distinct-sequence validation
+
+The initial P6.7 protocol requires exactly two distinct output bytes, requires
+the first explicit byte to match legacy `output_byte`, and requires explicit
+sequence length to agree with `output_event_count`.
+
+### TEST-P67-003 Distinct-byte teacher execution
+
+Training AA emits B,C,NULL and training AC emits D,E,NULL in declared order at
+the configured interval.
+
+### TEST-P67-004 Mapping expected-event content
+
+Baseline/trained mapping evaluation constructs B,C,NULL and D,E,NULL rather
+than legacy repeated-byte expected tuples.
+
+### TEST-P67-005 Exact order/timing/termination failure semantics
+
+Synthetic output-edge evidence proves exact B,C,NULL at the declared interval
+succeeds while reversed order, repeated byte, wrong interval, extra event and
+missing NULL fail.
+
+### TEST-P67-006 Canonical and bounded-smoke configs
+
+Canonical and smoke configs both declare AA→[B,C] and AC→[D,E]; canonical uses
+the accepted interval/timing budget while smoke shortens timing explicitly.
+
+### TEST-P67-007 Snapshot and explicit-timeout reconstruction
+
+Optimizer snapshot round-trip and explicit timeout reconstruction preserve
+explicit `output_bytes`. Optimizer protocol JSON exposes the serialized
+mapping tuples.
+
+### TEST-P67-008 Public reporting and real CI entrypoints
+
+Public experiment JSON exposes declared output-byte sequences plus observed
+event kind/value/generation per mapping/seed. CI executes real bounded P6.7
+experiment and optimizer entrypoints while prior P6.1–P6.6 smokes remain GREEN.
+
