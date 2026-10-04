@@ -251,6 +251,8 @@ def main(argv: list[str] | None = None) -> int:
             "relearning_teacher_repetitions": (
                 experiment.relearning_teacher_repetitions
             ),
+            "noise_robustness_enabled": experiment.noise_robustness_enabled,
+            "noise_robustness_rate_delta": experiment.noise_robustness_rate_delta,
             "baseline_successes": measurement.baseline_successes,
             "trained_successes": measurement.trained_successes,
             "baseline_no_input_clean": measurement.baseline_no_input_clean,
@@ -272,6 +274,12 @@ def main(argv: list[str] | None = None) -> int:
             "relearned_count": measurement.relearned_count,
             "retention_rate": measurement.retention_rate,
             "relearning_rate": measurement.relearning_rate,
+            "noise_robustness_eligible_count": (
+                measurement.noise_robustness_eligible_count
+            ),
+            "noise_robust_count": measurement.noise_robust_count,
+            "noise_failed_count": measurement.noise_failed_count,
+            "noise_robustness_rate": measurement.noise_robustness_rate,
             "per_mapping": [
                 {
                     "input_bytes": list(item.mapping.input_bytes),
@@ -292,6 +300,28 @@ def main(argv: list[str] | None = None) -> int:
                     "retention_checkpoint_generations": list(
                         item.retention_checkpoint_generations
                     ),
+                    "clean_noise_rate": item.clean_noise_rate,
+                    "noisy_noise_rate": item.noisy_noise_rate,
+                    "noisy_no_input_clean": (
+                        item.noisy_no_input.success
+                        if item.noisy_no_input is not None
+                        else None
+                    ),
+                    "noisy_alternate_input_clean": (
+                        item.noisy_alternate.success
+                        if item.noisy_alternate is not None
+                        else None
+                    ),
+                    "noisy_prefix_input_clean": (
+                        item.noisy_prefix.success
+                        if item.noisy_prefix is not None
+                        else None
+                    ),
+                    "noisy_sequence_counterfactual_clean": (
+                        item.noisy_sequence_counterfactual.success
+                        if item.noisy_sequence_counterfactual is not None
+                        else None
+                    ),
                     "mappings": [
                         {
                             "input_bytes": list(record.mapping.input_bytes),
@@ -311,6 +341,11 @@ def main(argv: list[str] | None = None) -> int:
                             "t2_success": (
                                 record.t2.success if record.t2 is not None else None
                             ),
+                            "noisy_success": (
+                                record.noisy.success
+                                if record.noisy is not None
+                                else None
+                            ),
                             "t0_event_generations": list(
                                 record.t0.event_generations
                             ),
@@ -323,6 +358,11 @@ def main(argv: list[str] | None = None) -> int:
                                 list(record.t2.event_generations)
                                 if record.t2 is not None
                                 else None
+                            ),
+                            "noisy_event_generations": (
+                                list(record.noisy.event_generations)
+                                if record.noisy is not None
+                                else []
                             ),
                         }
                         for record in item.mapping_results
@@ -374,6 +414,12 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "relearning_teacher_repetitions": (
                 optimizer_experiment.relearning_teacher_repetitions
+            ),
+            "noise_robustness_enabled": (
+                optimizer_experiment.noise_robustness_enabled
+            ),
+            "noise_robustness_rate_delta": (
+                optimizer_experiment.noise_robustness_rate_delta
             ),
             "experiment_config": args.experiment_config,
         }
