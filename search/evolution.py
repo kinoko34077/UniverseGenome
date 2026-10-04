@@ -14,11 +14,19 @@ from core.experiment import (
     compare_baseline_trained,
     measure_trained_state,
 )
-from core.physics import PhysicsConfig, create_universe
+from core.physics import PhysicsConfig, StepMetrics, create_universe
 from core.state import UniverseState
 from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
-from .pruning import growth_flags, prune_candidates
+from .pruning import (
+    RESPONSE_HISTORY_LIMIT,
+    SHORT_HEALTH_HISTORY_LIMIT,
+    SHORT_WINDOW,
+    absolute_failure_reason,
+    growth_flags,
+    prune_candidates,
+    short_health_flags,
+)
 
 IMPLEMENTATION_PHASE = 5
 CATEGORY_OPERATORS = ("masked_copy", "masked_xor", "rotate_copy", "masked_and")
@@ -26,6 +34,7 @@ SLOTS_PER_CATEGORY = 32
 OPTIMIZER_POPULATION_SIZE = 128
 GROWTH_WINDOW_GENERATIONS = 128
 MINIMUM_EVIDENCE_SEEDS = 4
+PROMISING_POLICY_TIERED_CATEGORY_RANK = "tiered_category_rank"
 
 
 def seed_escalation(seed_count: int) -> int:
@@ -56,6 +65,11 @@ class UniverseSlot:
     last_mutation_field: str | None = None
     allocation_reason: str = "initial"
     evidence_mature: bool = False
+    short_health_windows: tuple[int, ...] = ()
+    short_health_activity_cost: int = 0
+    response_windows: tuple[int, ...] = ()
+    absolute_failure: bool = False
+    absolute_failure_reason: str | None = None
 
     def __post_init__(self) -> None:
         if not 0 <= self.index < OPTIMIZER_POPULATION_SIZE:
@@ -68,6 +82,14 @@ class UniverseSlot:
             raise ValueError("slot parent_index must be non-negative")
         if any(not 0 <= int(window) <= 0xFF for window in self.growth_windows):
             raise ValueError("slot growth windows must fit uint8")
+        if any(not 0 <= int(window) <= 0b11 for window in self.short_health_windows):
+            raise ValueError("slot short-health windows must fit two bits")
+        if self.short_health_activity_cost < 0:
+            raise ValueError("slot short-health activity cost must be non-negative")
+        if any(int(window) not in (0, 1) for window in self.response_windows):
+            raise ValueError("slot response windows must be binary")
+        if len(self.response_windows) > RESPONSE_HISTORY_LIMIT:
+            raise ValueError("slot response history exceeds the 512-generation horizon")
         if self.growth_reference is not None and not isinstance(self.growth_reference, Fitness):
             raise ValueError("slot growth_reference must be Fitness")
         if self.last_mutation_field is not None and self.last_mutation_field not in UNIVERSE_GENOME_FIELDS:
@@ -76,6 +98,16 @@ class UniverseSlot:
             raise ValueError("unsupported slot allocation reason")
         if not isinstance(self.evidence_mature, bool):
             raise ValueError("slot evidence_mature must be bool")
+        if not isinstance(self.absolute_failure, bool):
+            raise ValueError("slot absolute_failure must be bool")
+        if self.absolute_failure_reason not in (
+            None,
+            "all_active_cells_gone",
+            "persistent_non_response",
+        ):
+            raise ValueError("unsupported slot absolute failure reason")
+        if self.absolute_failure_reason is not None and not self.absolute_failure:
+            raise ValueError("absolute failure reason requires absolute_failure")
 
     @property
     def physical_generations(self) -> int:
@@ -105,6 +137,11 @@ class UniverseSlot:
             "last_mutation_field": self.last_mutation_field,
             "allocation_reason": self.allocation_reason,
             "evidence_mature": self.evidence_mature,
+            "short_health_windows": list(self.short_health_windows),
+            "short_health_activity_cost": self.short_health_activity_cost,
+            "response_windows": list(self.response_windows),
+            "absolute_failure": self.absolute_failure,
+            "absolute_failure_reason": self.absolute_failure_reason,
         }
 
     @classmethod
@@ -134,6 +171,16 @@ class UniverseSlot:
         raw_windows = payload.get("growth_windows", ())
         if not isinstance(raw_windows, (list, tuple)):
             raise ValueError("slot growth_windows must be an array")
+        raw_health_windows = payload.get("short_health_windows", ())
+        if not isinstance(raw_health_windows, (list, tuple)):
+            raise ValueError("slot short_health_windows must be an array")
+        raw_response_windows = payload.get("response_windows", ())
+        if not isinstance(raw_response_windows, (list, tuple)):
+            raise ValueError("slot response_windows must be an array")
+        absolute_failure = bool(payload.get("absolute_failure", False))
+        absolute_failure_reason_value = payload.get("absolute_failure_reason")
+        if absolute_failure_reason_value is not None:
+            absolute_failure_reason_value = str(absolute_failure_reason_value)
         return cls(
             index=int(payload["index"]),
             category=category,
@@ -159,6 +206,11 @@ class UniverseSlot:
             ),
             allocation_reason=str(payload.get("allocation_reason", "initial")),
             evidence_mature=bool(payload["evidence_mature"]),
+            short_health_windows=tuple(int(window) for window in raw_health_windows),
+            short_health_activity_cost=int(payload.get("short_health_activity_cost", 0)),
+            response_windows=tuple(int(window) for window in raw_response_windows),
+            absolute_failure=absolute_failure,
+            absolute_failure_reason=absolute_failure_reason_value,
         )
 
 
@@ -173,12 +225,12 @@ class SteadyStateOptimizer:
         experiment: ExperimentConfig | None = None,
         generation: int = 0,
         scheduler: Mapping[str, Any] | None = None,
-        promising_policy: str | None = None,
+        promising_policy: str | None = PROMISING_POLICY_TIERED_CATEGORY_RANK,
     ) -> None:
         if generation < 0:
             raise ValueError("optimizer generation must be non-negative")
-        if promising_policy is not None:
-            raise ValueError("no promising allocation policy is approved")
+        if promising_policy not in (None, PROMISING_POLICY_TIERED_CATEGORY_RANK):
+            raise ValueError(f"unsupported promising allocation policy: {promising_policy}")
         self.slots = list(slots)
         self.base_config = base_config or PhysicsConfig()
         self.experiment = experiment or ExperimentConfig()
@@ -190,12 +242,16 @@ class SteadyStateOptimizer:
             "evaluation_count": 0,
             "promising_policy": promising_policy,
         }
+        for category in CATEGORY_OPERATORS:
+            self.scheduler[f"allocation_mode_cursor:{category}"] = 0
         if scheduler is not None:
             for key, value in scheduler.items():
                 if key == "promising_policy":
-                    if value is not None:
-                        raise ValueError("no promising allocation policy is approved")
-                    self.scheduler[key] = None
+                    if value not in (None, PROMISING_POLICY_TIERED_CATEGORY_RANK):
+                        raise ValueError(
+                            f"unsupported promising allocation policy: {value}"
+                        )
+                    self.scheduler[key] = value
                 else:
                     self.scheduler[key] = int(value)
 
@@ -215,7 +271,7 @@ class SteadyStateOptimizer:
         base_seed: int = 0,
         base_config: PhysicsConfig | None = None,
         experiment: ExperimentConfig | None = None,
-        promising_policy: str | None = None,
+        promising_policy: str | None = PROMISING_POLICY_TIERED_CATEGORY_RANK,
     ) -> "SteadyStateOptimizer":
         base = base_config or PhysicsConfig()
         protocol = experiment or ExperimentConfig()
@@ -266,22 +322,93 @@ class SteadyStateOptimizer:
             timeouts=sum(result.timed_out for result in trained) / denominator,
             response_latency=sum(result.response_latency for result in trained) / denominator,
             activity_cost=sum(result.activity_cost for result in trained) / denominator,
-            retention=measurement.trained_no_input_clean / denominator,
-            noise_robustness=measurement.trained_alternate_input_clean / denominator,
+            counterfactual_no_input_clean=measurement.trained_no_input_clean / denominator,
+            counterfactual_alternate_input_clean=(
+                measurement.trained_alternate_input_clean / denominator
+            ),
         )
 
     def _measure_slot(self, slot: UniverseSlot) -> tuple[LearningMeasurement, Fitness]:
         measurement = measure_trained_state(slot.state, experiment=self.experiment)
         return measurement, self._fitness_from_measurement(measurement)
 
+    def _observe_short_health(
+        self,
+        slot: UniverseSlot,
+        metrics: StepMetrics,
+        *,
+        activity_cost: int | None = None,
+    ) -> None:
+        flags = short_health_flags(
+            active_cells=metrics.active_cells,
+            activity_cost=metrics.activity_cost if activity_cost is None else activity_cost,
+        )
+        slot.short_health_windows = (
+            *slot.short_health_windows,
+            flags,
+        )[-SHORT_HEALTH_HISTORY_LIMIT:]
+        reason = absolute_failure_reason(
+            slot.short_health_windows,
+            response_history=slot.response_windows,
+        )
+        if not slot.absolute_failure and reason is not None:
+            slot.absolute_failure = True
+            slot.absolute_failure_reason = reason
+
+    def _record_short_health_step(
+        self,
+        slot: UniverseSlot,
+        generation: int,
+        metrics: StepMetrics,
+    ) -> None:
+        """Accumulate one physical step and close an aligned short window."""
+        slot.short_health_activity_cost += metrics.activity_cost
+        if generation > 0 and generation % SHORT_WINDOW == 0:
+            self._observe_short_health(
+                slot,
+                metrics,
+                activity_cost=slot.short_health_activity_cost,
+            )
+            slot.short_health_activity_cost = 0
+
+    @staticmethod
+    def _measurement_has_autonomous_response(
+        measurement: LearningMeasurement,
+    ) -> bool:
+        return any(
+            bool(item.trained.autonomous_events)
+            for item in measurement.per_seed
+        )
+
+    def _record_response_observation(
+        self,
+        slot: UniverseSlot,
+        *,
+        responded: bool,
+    ) -> None:
+        slot.response_windows = (
+            *slot.response_windows,
+            1 if responded else 0,
+        )[-RESPONSE_HISTORY_LIMIT:]
+        reason = absolute_failure_reason(
+            slot.short_health_windows,
+            response_history=slot.response_windows,
+        )
+        if not slot.absolute_failure and reason is not None:
+            slot.absolute_failure = True
+            slot.absolute_failure_reason = reason
+
     def _observe_growth_boundary(self, slot: UniverseSlot) -> None:
         measurement, observed_fitness = self._measure_slot(slot)
         if slot.growth_reference is not None:
             flags = growth_flags(slot.growth_reference, observed_fitness)
             slot.growth_windows = (*slot.growth_windows, flags)[-4:]
+        self._record_response_observation(
+            slot,
+            responded=self._measurement_has_autonomous_response(measurement),
+        )
         slot.growth_reference = observed_fitness
         slot.fitness = observed_fitness
-        del measurement
 
     def _evaluate_slot(self, slot: UniverseSlot) -> LearningMeasurement:
         if slot.growth_reference is None:
@@ -292,8 +419,11 @@ class SteadyStateOptimizer:
             if generation > 0 and generation % GROWTH_WINDOW_GENERATIONS == 0:
                 self._observe_growth_boundary(slot)
 
+        def on_step(generation: int, metrics: StepMetrics) -> None:
+            self._record_short_health_step(slot, generation, metrics)
+
         trainer = IOExperiment(slot.state, experiment=self.experiment)
-        trainer.train_a_to_b_null(on_generation=on_generation)
+        trainer.train_a_to_b_null(on_generation=on_generation, on_step=on_step)
         measurement, slot.fitness = self._measure_slot(slot)
         return measurement
 
@@ -343,7 +473,7 @@ class SteadyStateOptimizer:
         *,
         free_index: int,
         parent: UniverseSlot,
-        direction: int = 1,
+        direction: int | None = None,
         field: str | None = None,
     ) -> UniverseSlot:
         if not 0 <= free_index < OPTIMIZER_POPULATION_SIZE:
@@ -351,7 +481,30 @@ class SteadyStateOptimizer:
         if parent.index == free_index:
             raise ValueError("mutation child must use a free slot distinct from parent")
         mutation_field = field or self._mutation_field(parent)
-        child_genome = parent.genome.mutate(mutation_field, direction=direction)
+        if direction is not None and direction not in (-1, 1):
+            raise ValueError("direction must be -1 or 1")
+        valid_directions = parent.genome.mutation_directions(
+            mutation_field,
+            base=self.base_config,
+        )
+        if not valid_directions:
+            raise ValueError(f"no valid adjacent mutation exists for {mutation_field}")
+        preferred_direction = direction
+        if preferred_direction is None:
+            cursor = int(self.scheduler["mutation_cursor"])
+            field_offset = UNIVERSE_GENOME_FIELDS.index(mutation_field)
+            preferred_direction = -1 if (cursor + parent.index + field_offset) % 2 else 1
+        if preferred_direction not in valid_directions:
+            preferred_direction = next(
+                candidate
+                for candidate in valid_directions
+                if candidate != preferred_direction
+            )
+        child_genome = parent.genome.mutate(
+            mutation_field,
+            direction=preferred_direction,
+            base=self.base_config,
+        )
         seed = self._next_seed(parent.category)
         config = self._effective_config(child_genome, parent.category, self.base_config)
         state = create_universe(seed=seed, config=config)
@@ -381,6 +534,14 @@ class SteadyStateOptimizer:
             activity_cost=sum(slot.fitness.activity_cost for slot in values) / denominator,
             retention=sum(slot.fitness.retention for slot in values) / denominator,
             noise_robustness=sum(slot.fitness.noise_robustness for slot in values) / denominator,
+            counterfactual_no_input_clean=(
+                sum(slot.fitness.counterfactual_no_input_clean for slot in values)
+                / denominator
+            ),
+            counterfactual_alternate_input_clean=(
+                sum(slot.fitness.counterfactual_alternate_input_clean for slot in values)
+                / denominator
+            ),
         )
 
     def group_fitnesses(
@@ -434,7 +595,7 @@ class SteadyStateOptimizer:
     @staticmethod
     def _pruning_eligible_slots(records: Iterable[UniverseSlot]) -> list[UniverseSlot]:
         """Return slots whose group has established the minimum evidence tier at least once."""
-        return [slot for slot in records if slot.evidence_mature]
+        return [slot for slot in records if slot.evidence_mature or slot.absolute_failure]
 
     def _incomplete_mutation_parent(
         self,
@@ -477,12 +638,114 @@ class SteadyStateOptimizer:
         aggregates = self.group_fitnesses(local)
         return min(sources, key=lambda slot: self._selection_key(slot, aggregates))
 
-    def _is_promising(self, slot: UniverseSlot, local: list[UniverseSlot]) -> bool:
-        """Policy hook; no concrete promising rule is approved for v0.1."""
-        del slot, local
+    @staticmethod
+    def _promising_tier_divisor(seed_count: int) -> int | None:
+        if MINIMUM_EVIDENCE_SEEDS <= seed_count < 8:
+            return 2
+        if 8 <= seed_count < 16:
+            return 4
+        if 16 <= seed_count < 32:
+            return 8
+        return None
+
+    def _promising_group_keys(
+        self,
+        local: list[UniverseSlot],
+    ) -> set[tuple[str, str]]:
         if self.promising_policy is None:
-            return False
-        raise ValueError("no promising allocation policy is approved")
+            return set()
+        if self.promising_policy != PROMISING_POLICY_TIERED_CATEGORY_RANK:
+            raise ValueError(
+                f"unsupported promising allocation policy: {self.promising_policy}"
+            )
+        if not local:
+            return set()
+        categories = {slot.category for slot in local}
+        if len(categories) != 1:
+            raise ValueError("promising ranking must be category-local")
+
+        counts = self._evidence_group_counts(local)
+        aggregates = self.group_fitnesses(local)
+        eligible_keys = [
+            group_key
+            for group_key, count in counts.items()
+            if count >= MINIMUM_EVIDENCE_SEEDS
+        ]
+        ranked = sorted(
+            eligible_keys,
+            key=lambda group_key: (
+                aggregates[group_key].sort_key(),
+                group_key[1],
+            ),
+        )
+        rank_by_group = {
+            group_key: rank
+            for rank, group_key in enumerate(ranked)
+        }
+
+        promising: set[tuple[str, str]] = set()
+        for group_key in ranked:
+            count = counts[group_key]
+            divisor = self._promising_tier_divisor(count)
+            if divisor is None:
+                continue
+            cutoff = max(1, len(ranked) // divisor)
+            if rank_by_group[group_key] < cutoff:
+                promising.add(group_key)
+        return promising
+
+    def _is_promising(self, slot: UniverseSlot, local: list[UniverseSlot]) -> bool:
+        return slot.evidence_group in self._promising_group_keys(local)
+
+    def _select_promising_parent(
+        self,
+        local: list[UniverseSlot],
+        *,
+        excluded_group: tuple[str, str] | None = None,
+    ) -> UniverseSlot | None:
+        candidates = [
+            slot
+            for slot in local
+            if excluded_group is None or slot.evidence_group != excluded_group
+        ]
+        promising = self._promising_group_keys(candidates)
+        if not promising:
+            return None
+
+        counts = self._evidence_group_counts(candidates)
+        aggregates = self.group_fitnesses(candidates)
+        representatives: dict[tuple[str, str], UniverseSlot] = {}
+        for slot in candidates:
+            if slot.evidence_group not in promising:
+                continue
+            current = representatives.get(slot.evidence_group)
+            if current is None or slot.index < current.index:
+                representatives[slot.evidence_group] = slot
+
+        return min(
+            representatives.values(),
+            key=lambda slot: (
+                counts[slot.evidence_group],
+                aggregates[slot.evidence_group].sort_key(),
+                slot.genome_key,
+                slot.index,
+            ),
+        )
+
+    def _next_allocation_mode(
+        self,
+        category: str,
+        *,
+        promising_available: bool,
+    ) -> str:
+        if category not in CATEGORY_OPERATORS:
+            raise ValueError("unsupported optimizer category")
+        if not promising_available:
+            return "mutation_child"
+        key = f"allocation_mode_cursor:{category}"
+        cursor = int(self.scheduler.get(key, 0))
+        self.scheduler[key] = cursor + 1
+        return "seed_evidence" if cursor % 2 == 0 else "mutation_child"
 
     def _protected_indices(self, local: list[UniverseSlot]) -> set[int]:
         aggregates = self.group_fitnesses(local)
@@ -552,24 +815,28 @@ class SteadyStateOptimizer:
                 )
                 reason = "seed_evidence"
             else:
-                eligible_indices = {
-                    slot.index for slot in self._selection_eligible_slots(local)
-                }
-                promising = [
-                    slot
-                    for slot in sources
-                    if slot.index in eligible_indices and self._is_promising(slot, local)
-                ]
-                if promising:
-                    parent = min(promising, key=lambda slot: self._selection_key(slot, aggregates))
-                    child = self.allocate_seed_slot(free_index=target.index, parent=parent)
+                promising_parent = self._select_promising_parent(
+                    sources,
+                    excluded_group=target.evidence_group,
+                )
+                allocation_mode = self._next_allocation_mode(
+                    category,
+                    promising_available=promising_parent is not None,
+                )
+                if allocation_mode == "seed_evidence":
+                    if promising_parent is None:
+                        raise RuntimeError("seed-evidence mode requires a promising parent")
+                    parent = promising_parent
+                    child = self.allocate_seed_slot(
+                        free_index=target.index,
+                        parent=parent,
+                    )
                     reason = "seed_evidence"
                 else:
                     parent = self._select_parent(local, excluded_index=target_index)
                     child = self.replace_free_slot(
                         free_index=target.index,
                         parent=parent,
-                        direction=1,
                     )
             self.slots[target.index] = child
             self._refresh_evidence_maturity(child.evidence_group)

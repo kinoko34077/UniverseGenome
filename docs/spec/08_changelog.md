@@ -1,5 +1,46 @@
 # Specification Changelog
 
+## 2026-10-04 — Issue #65 Phase 5 search-semantics remediation candidate
+
+- executes the accepted 16-generation short-health cadence on authoritative
+  physical time and retires explicit all-active-cell loss as an absolute
+  failure;
+- defines persistent non-response through task-level autonomous output evidence:
+  four consecutive no-output observations at real 128-generation boundaries
+  while active cells remain, covering the 512-generation stagnation horizon;
+- preserves canonical growth bit 5/6 semantics as retention/noise robustness,
+  keeps Phase 4 no-input/alternate-input cleanliness as separate observables,
+  and leaves integrated v0.1 retention/noise fields inactive until an explicit
+  later measurement protocol is accepted;
+- accepts and implements the Human-approved `tiered_category_rank` policy for
+  real-slot evidence escalation: category-local aggregate canonical fitness,
+  4→8 top 1/2, 8→16 top 1/4, 16→32 top 1/8, with deterministic per-category
+  1:1 evidence/mutation scheduling after provisional groups reach four seeds;
+- repairs integrated mutation to explore valid adjacent binary-grid directions
+  without no-op children and constrains effective `initial_density` mutation
+  to `PhysicsConfig.max_cells`;
+- preserves the 128 authoritative-slot, category-isolation, real-seed evidence,
+  free/prune-target-only replacement, and deterministic snapshot boundaries.
+
+## 2026-10-04 — Issue #65 Phase 5 search-liveness remediation (historical checkpoint)
+
+This checkpoint is superseded by the later Issue #65 remediation candidate
+above; its unresolved-gate wording records the state before the Human policy
+decision and persistent-response protocol were completed.
+
+- connected the accepted 16-generation short-health cadence to authoritative
+  physical-step metrics and recorded the explicit all-active-cell-loss failure
+  reason;
+- made that accepted absolute failure retirement-eligible independently of
+  growth history, leader protection, or provisional minimum-evidence maturity;
+- constrained integrated mutation to valid adjacent binary-grid values,
+  including the effective `initial_density <= max_cells` bound and deterministic
+  opposite-direction fallback;
+- kept the canonical growth bit 5/6 meanings (`retention` and `noise
+  robustness`) separate from Phase 4 counterfactual observables; the
+  persistent-non-response predicate and promising-allocation policy remain
+  unresolved specification gates.
+
 ## 2026-10-04 — Audit #64 / Issues #66/#67/#68 current-state correction
 
 - distinguished Phase 0–5 implementation presence from current acceptance and

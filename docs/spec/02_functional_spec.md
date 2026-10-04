@@ -327,6 +327,18 @@ Initial candidate bits:
 - bit6 noise robustness improved
 - bit7 reserved
 
+Retention and alternate-input noise robustness remain distinct growth-only
+dimensions and are not added to the absolute-fitness ordering. Phase 4
+counterfactual measurements such as no-input-clean and alternate-input-clean
+are recorded as separate observables; this specification does not equate
+either observable with retention or noise robustness.
+
+The integrated v0.1 Phase 5 protocol does not yet define a retention or
+noise-robustness measurement procedure. Its authoritative measurement path
+therefore leaves those two Fitness fields at zero and bits 5/6 remain unset in
+integrated v0.1 growth history. Their semantic bit positions are reserved; they
+may become active only under a later explicitly accepted measurement protocol.
+
 ---
 
 ## SPEC-GROWTH-002
@@ -354,6 +366,22 @@ Recent growth score may use:
 - 16-generation short health window
 - 128-generation growth window
 - 512-generation stagnation horizon
+
+At each authoritative multiple of 16 generations, short health records
+whether active cells remain and whether the physical window produced
+measurable activity. A window with no active cells is an
+`all_active_cells_gone` absolute failure.
+
+Persistent non-response uses the already-defined task/evaluation protocol,
+rather than generic physical activity. At each authoritative 128-generation
+growth boundary, the trained-state A-only evaluation clone records whether any
+autonomous output event occurred. Four consecutive boundary observations with
+no autonomous output event cover the accepted 512-generation stagnation
+horizon and produce `persistent_non_response`, provided active cells still
+remain. Any autonomous output event, including a wrong byte or NULL, counts as
+a response for this absolute-failure test and breaks the consecutive
+non-response run. Correctness remains the responsibility of absolute fitness
+and growth. `activity_cost` is not used as a substitute for task response.
 
 ---
 
@@ -387,6 +415,12 @@ Examples:
 
 Implementation corruption is an error, not evolutionary death.
 
+The v0.1 implementation retires both accepted measurable absolute failures
+before growth-only protection and minimum-evidence maturity:
+`all_active_cells_gone` and the 512-physical-generation
+`persistent_non_response` protocol defined by SPEC-PRUNE-001. Malformed
+state/configuration remains an error.
+
 ---
 
 ---
@@ -414,33 +448,50 @@ newly allocated evidence or mutation slot owns one fresh UniverseState at
 generation 0.
 
 ## SPEC-EVOL-002 — Promising allocation policy
-**Status: candidate**
+**Status: accepted-default**
 
-This is a policy hook only; no concrete allocation rule is accepted by v0.1.
+The accepted v0.1 policy is named `tiered_category_rank`.
 
-The v0.1 specification does not yet approve a concrete promising-allocation
-threshold or selection rule. The implementation keeps an isolated policy hook
-and defaults to no automatic promising allocation until the owning issue
-explicitly accepts a rule. Any future rule must use the aggregate normalized
-fitness of the currently allocated real seed slots for one category/genome
-group, be named and persisted in the scheduler, and be added as an explicit
-specification decision. This policy hook does not add fields to the absolute
-fitness ordering.
+Promising decisions are category-local and operate on one category/genome
+evidence group, never on individual seed slots. Rank groups by aggregate
+normalized `SPEC-FIT-001` absolute fitness using its canonical lexicographic
+ordering. Only groups with at least four currently occupied real seed slots are
+eligible.
 
-The implemented steady-state boundary maintains exactly 128 authoritative
-Universe slots as four category-local groups of 32. Each occupied slot owns
-one category, one genome, one seed, one persistent `UniverseState`, that
-Universe's physical generation, and its fitness/growth/pruning metadata.
-Repeated optimizer steps continue the same authoritative Universe through
-teacher/input/noise evolution. Evaluation clones are created from the current
-authoritative Universe, scored, and discarded; their generations do not advance
-the slot or its growth clock.
+The next real-seed evidence tier is selected from the group's current occupied
+cardinality:
 
-For selection and allocation evidence, fitness is aggregated across all
-currently occupied real seed slots in one category/genome group. An individual
-seed result must not make its Genome promising by itself. The aggregate uses
-the normalized absolute-fitness fields while retaining growth-only fields for
-growth and pruning decisions.
+- 4..7 seeds: eligible for 4 → 8 only while the group ranks in the top 1/2;
+- 8..15 seeds: eligible for 8 → 16 only while the group ranks in the top 1/4;
+- 16..31 seeds: eligible for 16 → 32 only while the group ranks in the top 1/8;
+- 32 seeds: no further evidence allocation.
+
+For a fractional rank cutoff, use floor division with a minimum of one eligible
+group. Rank ties are resolved by the stable genome key. Evidence-group rank is
+computed once per group, so a group does not gain extra ranking weight merely
+because it already occupies more seed slots.
+
+A never-matured mutation group below four real seeds keeps the existing
+minimum-evidence completion priority. Once that obligation is absent, and both
+ordinary choices are available, each category alternates deterministically 1:1
+between promising evidence allocation and a new mutation child. A category's
+alternation cursor is independent of the other categories and is persisted in
+the optimizer scheduler. If no promising group is eligible, mutation proceeds
+without consuming the evidence side of the alternation.
+
+When multiple promising groups can receive a real seed, prefer:
+
+1. lower current occupied seed count;
+2. better aggregate canonical absolute fitness;
+3. stable genome key.
+
+A pruned/free target cannot count as progress for its own evidence group: the
+target's group is excluded from the promising ranking and evidence allocation
+for that replacement. Allocation still occurs only into a real
+free/prune-eligible slot; this policy does not authorize forced replacement.
+
+The policy is persisted by name and does not add fields to the absolute-fitness
+tuple, evolve seed, or permit cross-category elimination.
 
 ## SPEC-EVOL-003 — Minimum evidence eligibility
 **Status: accepted**

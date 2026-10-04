@@ -198,12 +198,20 @@ binary-grid parameter without changing category or seed.
 ### TEST-P5-002 Fitness and growth
 
 Absolute fitness follows the lexicographic specification, while growth flags
-and four 8-bit windows remain separate and bounded.
+and four 8-bit windows remain separate and bounded. Growth bit 5 retains the
+canonical `retention` meaning and bit 6 retains the canonical `noise
+robustness` meaning. Phase 4 no-input-clean and alternate-input-clean
+counterfactual measurements must not be silently substituted for those fields.
 
 ### TEST-P5-003 Pruning and protection
 
 Category-relative low-growth eligibility uses four windows and protects the
-absolute-fitness top 1/8 from growth-only pruning.
+absolute-fitness top 1/8 from growth-only pruning. Authoritative 16-generation
+health boundaries detect all-active-cell loss as an absolute-failure reason,
+including for a provisional slot. Activity telemetry is persisted but is not
+used as a task-response proxy. Persistent non-response is task-level and
+requires four consecutive no-autonomous-output observations at real
+128-generation growth boundaries while active cells remain.
 
 ### TEST-P5-004 Steady-state escalation
 
@@ -213,7 +221,13 @@ mutation children are separate real slots with fresh state. The integrated loop
 maintains all 128 authoritative Universe states, measures normalized fitness
 from evaluation clones of those states, aggregates evidence across each real
 same-genome seed group, advances growth only at real 128-generation boundaries,
-leaves promising allocation policy selection open until explicitly approved,
+applies the accepted category-local `tiered_category_rank` policy: aggregate
+canonical fitness ranks evidence groups, 4→8 uses the top 1/2, 8→16 the top
+1/4, and 16→32 the top 1/8; fractional cutoffs use floor division with a
+minimum of one group. Never-matured mutation groups still complete to four
+real seeds first; otherwise each category persistently alternates promising
+evidence and mutation 1:1 when both are available, preferring lower evidence
+count then better aggregate fitness then stable genome key. It
 does not replace a live slot without a real free/prune-eligible target, keeps
 groups below four real seed slots out of parent/protection selection, completes
 never-matured mutation evidence through later freed slots, keeps provisional
@@ -221,21 +235,32 @@ sub-four mutation groups temporarily pruning-protected, preserves an
 ever-mature marker once a group first reaches four real seeds, and keeps a
 later-depleted mature group pruning-eligible without restoring parent/protection
 eligibility. It also exercises multiple genome mutation fields and directly
-covers the real growth sequence `0 → 128 → 256 → 384 → 512`.
+covers the real growth sequence `0 → 128 → 256 → 384 → 512`. Integrated
+mutation uses both directions of the adjacent binary grid, falls back from an
+invalid bound direction, and never creates a no-op or an `initial_density`
+value above effective `PhysicsConfig.max_cells`. Short-health tests retire
+all-active-cell loss at the 16-generation cadence. Task-response tests record
+one response/no-response observation at each 128-generation growth boundary
+and retire `persistent_non_response` only after four consecutive no-output
+observations (512 physical generations) while active cells remain; a wrong
+autonomous output still counts as a response for this failure rule. Integrated
+v0.1 measurement keeps retention/noise-robustness fields zero, so growth bits
+5/6 cannot be driven by the separate counterfactual-clean observables.
 
 ### TEST-P5-005 Integrated persistence
 
 Optimizer persistence includes the effective base/protocol configuration,
 all 128 authoritative Universe states and their parameters, normalized
-fitness/growth references, physical cadence state, lineage, and scheduler
-policy state. It does not retain disposable evaluation clones. Restore/resume
-produces the same bounded slot population as uninterrupted continuation.
+fitness/growth references, short-health/failure state, physical cadence state,
+lineage, and scheduler policy state. It does not retain disposable evaluation
+clones. Restore/resume produces the same bounded slot population as
+uninterrupted continuation.
 
 The headless performance path reports bounded optimizer iterations, evaluated
 slots, replacements, mutation fields, actual same-genome slot-group counts,
-and throughput. It does not report a promising-allocation threshold or
-seed-escalation level without an explicit approved policy and corresponding
-real authoritative slots.
+and throughput. Promising-allocation state reports the accepted persisted
+policy name and only reports evidence growth represented by corresponding real
+authoritative slots.
 
 ### TEST-P5-006 Phase 6+ handoff boundary
 

@@ -12,7 +12,7 @@ from core.experiment import (
 )
 from core.io_bus import OutputEvent
 from core.population import run_population_headless
-from core.physics import PhysicsConfig, create_universe
+from core.physics import PhysicsConfig, StepMetrics, create_universe
 from core.runner import build_status, load_config
 from core.state import UniverseState
 from search import evolution as evolution_module
@@ -25,7 +25,16 @@ from search.evolution import (
 )
 from search.fitness import Fitness, compare_fitness
 from search.genome import UniverseGenome
-from search.pruning import GrowthHistory, growth_flags, prune_candidates, protected_indices
+from search.pruning import (
+    GROWTH_BIT_NOISE_ROBUSTNESS,
+    GROWTH_BIT_RETENTION,
+    GrowthHistory,
+    absolute_failure_reason,
+    growth_flags,
+    prune_candidates,
+    protected_indices,
+    short_health_flags,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -156,6 +165,14 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(fitness.timeouts, 1.0)
         self.assertEqual(fitness.response_latency, 5.0)
         self.assertEqual(fitness.activity_cost, 17.0)
+        self.assertEqual(fitness.retention, 0.0)
+        self.assertEqual(fitness.noise_robustness, 0.0)
+        self.assertEqual(fitness.counterfactual_no_input_clean, 1.0)
+        self.assertEqual(fitness.counterfactual_alternate_input_clean, 1.0)
+        self.assertTrue(
+            SteadyStateOptimizer._measurement_has_autonomous_response(measurement)
+        )
+        self.assertEqual(growth_flags(Fitness(), fitness) & ((1 << 5) | (1 << 6)), 0)
         self.assertEqual(
             Fitness(success=1, retention=0, noise_robustness=0).sort_key(),
             Fitness(success=1, retention=1, noise_robustness=1).sort_key(),
@@ -593,6 +610,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(result["mutation_fields"], [])
         self.assertEqual(result["authoritative_slot_count"], 128)
         self.assertTrue(result["group_counts"])
+        self.assertEqual(result["promising_policy"], "tiered_category_rank")
 
     def test_p5_014_integrated_loop_does_not_prune_before_physical_window(self):
         protocol = ExperimentConfig(
@@ -676,9 +694,11 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(all("state" in record for record in payload["slots"]))
         self.assertTrue(all("training_states" not in record for record in payload["slots"]))
 
-    def test_p5_028_promising_policy_is_not_fixed_without_approval(self):
+    def test_p5_028_promising_policy_defaults_to_approved_tiered_category_rank(self):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=109)
-        self.assertIsNone(optimizer.promising_policy)
+        self.assertEqual(optimizer.promising_policy, "tiered_category_rank")
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(restored.promising_policy, "tiered_category_rank")
 
     def test_p5_029_group_fitness_uses_all_real_seed_slots_for_parent_selection(self):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=110)
@@ -705,7 +725,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         group_key = f"{parent.category}:{parent.genome_key}"
         self.assertEqual(optimizer.group_counts()[group_key], 5)
         restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
-        self.assertIsNone(restored.promising_policy)
+        self.assertEqual(restored.promising_policy, "tiered_category_rank")
         self.assertEqual(restored.group_counts()[group_key], 5)
 
     def test_p5_030_snapshot_rejects_metadata_config_mismatch(self):
@@ -1010,6 +1030,301 @@ class Phase5OptimizerTests(unittest.TestCase):
             if slot.category == "masked_copy" and slot.genome == genome
         ]
         self.assertLess(len(surviving), 3)
+
+    def test_p5_041_growth_bits_keep_canonical_retention_and_noise_names(self):
+        before = Fitness(retention=0, noise_robustness=0)
+        no_input_after = Fitness(retention=1, noise_robustness=0)
+        alternate_after = Fitness(retention=0, noise_robustness=1)
+
+        self.assertFalse(hasattr(before, "trained_no_input_clean"))
+        self.assertFalse(hasattr(before, "trained_alternate_input_clean"))
+        self.assertEqual(
+            growth_flags(before, no_input_after),
+            1 << GROWTH_BIT_RETENTION,
+        )
+        self.assertEqual(
+            growth_flags(before, alternate_after),
+            1 << GROWTH_BIT_NOISE_ROBUSTNESS,
+        )
+
+    def test_p5_042_short_health_runs_at_authoritative_16_generation_boundaries(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=16,
+            evaluation_timeout_generations=0,
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=122,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        slot = optimizer.slots[0]
+        for cell in tuple(slot.state.active_slots()):
+            slot.state.free(cell)
+
+        optimizer._evaluate_slot(slot)
+
+        self.assertEqual(slot.physical_generations, 32)
+        self.assertEqual(slot.short_health_windows, (0, 0))
+        self.assertTrue(slot.absolute_failure)
+        self.assertEqual(slot.absolute_failure_reason, "all_active_cells_gone")
+
+    def test_p5_043_persistent_non_response_requires_four_128_generation_response_windows(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=123)
+        slot = optimizer.slots[0]
+        self.assertTrue(tuple(slot.state.active_slots()))
+        slot.short_health_windows = (
+            short_health_flags(active_cells=1, activity_cost=0),
+        )
+
+        for _ in range(3):
+            optimizer._record_response_observation(slot, responded=False)
+            self.assertFalse(slot.absolute_failure)
+
+        optimizer._record_response_observation(slot, responded=True)
+        self.assertFalse(slot.absolute_failure)
+        self.assertEqual(slot.response_windows, (0, 0, 0, 1))
+
+        for _ in range(3):
+            optimizer._record_response_observation(slot, responded=False)
+            self.assertFalse(slot.absolute_failure)
+
+        optimizer._record_response_observation(slot, responded=False)
+        self.assertTrue(slot.absolute_failure)
+        self.assertEqual(slot.absolute_failure_reason, "persistent_non_response")
+        self.assertEqual(slot.response_windows, (0, 0, 0, 0))
+
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        restored_slot = restored.slots[slot.index]
+        self.assertEqual(restored_slot.response_windows, (0, 0, 0, 0))
+        self.assertTrue(restored_slot.absolute_failure)
+        self.assertEqual(
+            restored_slot.absolute_failure_reason,
+            "persistent_non_response",
+        )
+
+
+    def test_p5_044_absolute_failure_is_prunable_without_growth_or_maturity(self):
+        record = make_slot(index=7, seed=7)
+        record.absolute_failure = True
+        record.absolute_failure_reason = "all_active_cells_gone"
+
+        self.assertIn(7, prune_candidates([record], protected={7}))
+
+    def test_p5_045_mutation_directions_respect_effective_max_cells(self):
+        base = PhysicsConfig(max_cells=8)
+        upper = UniverseGenome(initial_density=8)
+        lower = UniverseGenome(initial_density=0)
+
+        self.assertEqual(
+            upper.mutation_directions("initial_density", base=base),
+            (-1,),
+        )
+        self.assertEqual(
+            lower.mutation_directions("initial_density", base=base),
+            (1,),
+        )
+        self.assertEqual(
+            upper.mutate("initial_density", direction=-1, base=base).initial_density,
+            4,
+        )
+        with self.assertRaises(ValueError):
+            upper.mutate("initial_density", direction=1, base=base)
+
+    def test_p5_046_integrated_mutation_flips_from_an_invalid_upper_direction(self):
+        base = PhysicsConfig(max_cells=8)
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=124,
+            base_config=base,
+        )
+        genome = UniverseGenome(initial_density=8)
+        config = SteadyStateOptimizer._effective_config(
+            genome,
+            "masked_copy",
+            base,
+        )
+        parent = UniverseSlot(
+            index=0,
+            category="masked_copy",
+            genome=genome,
+            seed=999,
+            state=create_universe(seed=999, config=config),
+            evidence_mature=True,
+        )
+
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=parent,
+            direction=1,
+            field="initial_density",
+        )
+
+        self.assertEqual(child.genome.initial_density, 4)
+        self.assertNotEqual(child.genome, parent.genome)
+        child.genome.to_physics_config(base)
+
+    def test_p5_047_short_health_uses_window_activity_and_roundtrips(self):
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=125)
+        slot = optimizer.slots[0]
+        active_metrics = StepMetrics(
+            generation=1,
+            active_cells=1,
+            collision_count=1,
+            collision_pair_evaluations=1,
+            bond_contact_count=0,
+            latent_transmission_count=0,
+            fusion_count=0,
+            fragmentation_count=0,
+            noise_spawn_count=0,
+            generations_per_second=1.0,
+        )
+        boundary_metrics = StepMetrics(
+            generation=16,
+            active_cells=1,
+            collision_count=0,
+            collision_pair_evaluations=0,
+            bond_contact_count=0,
+            latent_transmission_count=0,
+            fusion_count=0,
+            fragmentation_count=0,
+            noise_spawn_count=0,
+            generations_per_second=1.0,
+        )
+
+        optimizer._record_short_health_step(slot, 1, active_metrics)
+        optimizer._record_short_health_step(slot, 16, boundary_metrics)
+
+        self.assertEqual(slot.short_health_windows, (3,))
+        self.assertEqual(slot.short_health_activity_cost, 0)
+        self.assertFalse(slot.absolute_failure)
+
+        slot.short_health_activity_cost = 2
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+        self.assertEqual(restored.slots[0].short_health_windows, (3,))
+        self.assertEqual(restored.slots[0].short_health_activity_cost, 2)
+        self.assertEqual(restored.to_snapshot(), payload)
+
+
+    def test_p5_048_tiered_category_rank_uses_group_rank_and_real_seed_tiers(self):
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=126,
+            promising_policy="tiered_category_rank",
+        )
+        genomes = UniverseGenome.initial_population()
+
+        four_seed_local = []
+        index = 0
+        for rank, genome in enumerate(genomes):
+            for _ in range(4):
+                slot = make_slot(
+                    index=index,
+                    seed=2000 + index,
+                    genome=genome,
+                    fitness=Fitness(success=float(len(genomes) - rank)),
+                )
+                slot.evidence_mature = True
+                four_seed_local.append(slot)
+                index += 1
+
+        self.assertTrue(optimizer._is_promising(four_seed_local[0], four_seed_local))
+        self.assertTrue(optimizer._is_promising(four_seed_local[12], four_seed_local))
+        self.assertFalse(optimizer._is_promising(four_seed_local[16], four_seed_local))
+
+        eight_seed_local = []
+        index = 0
+        for rank, genome in enumerate(genomes[:4]):
+            for _ in range(8):
+                slot = make_slot(
+                    index=index,
+                    seed=3000 + index,
+                    genome=genome,
+                    fitness=Fitness(success=float(4 - rank)),
+                )
+                slot.evidence_mature = True
+                eight_seed_local.append(slot)
+                index += 1
+
+        self.assertTrue(optimizer._is_promising(eight_seed_local[0], eight_seed_local))
+        self.assertFalse(optimizer._is_promising(eight_seed_local[8], eight_seed_local))
+
+        full_group = [
+            make_slot(
+                index=index,
+                seed=4000 + index,
+                genome=genomes[0],
+                fitness=Fitness(success=1),
+            )
+            for index in range(32)
+        ]
+        for slot in full_group:
+            slot.evidence_mature = True
+        self.assertFalse(optimizer._is_promising(full_group[0], full_group))
+
+    def test_p5_049_promising_parent_prefers_lower_evidence_count_before_fitness(self):
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=127,
+            promising_policy="tiered_category_rank",
+        )
+        genomes = UniverseGenome.initial_population()
+        local = []
+        index = 0
+        group_specs = (
+            (genomes[0], 4, 0.8),
+            (genomes[1], 7, 0.9),
+            (genomes[2], 4, 0.2),
+            (genomes[3], 4, 0.1),
+        )
+        for genome, count, success in group_specs:
+            for _ in range(count):
+                slot = make_slot(
+                    index=index,
+                    seed=5000 + index,
+                    genome=genome,
+                    fitness=Fitness(success=success),
+                )
+                slot.evidence_mature = True
+                local.append(slot)
+                index += 1
+
+        selected = optimizer._select_promising_parent(local)
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected.genome, genomes[0])
+
+    def test_p5_050_promising_and_mutation_allocation_alternate_per_category(self):
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=128,
+            promising_policy="tiered_category_rank",
+        )
+
+        self.assertEqual(
+            optimizer._next_allocation_mode("masked_copy", promising_available=False),
+            "mutation_child",
+        )
+        self.assertEqual(
+            optimizer._next_allocation_mode("masked_copy", promising_available=True),
+            "seed_evidence",
+        )
+        self.assertEqual(
+            optimizer._next_allocation_mode("masked_copy", promising_available=True),
+            "mutation_child",
+        )
+        self.assertEqual(
+            optimizer._next_allocation_mode("masked_xor", promising_available=True),
+            "seed_evidence",
+        )
+
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(
+            restored._next_allocation_mode("masked_copy", promising_available=True),
+            "seed_evidence",
+        )
+        self.assertEqual(
+            restored._next_allocation_mode("masked_xor", promising_available=True),
+            "mutation_child",
+        )
 
 
 if __name__ == "__main__":
