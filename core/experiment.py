@@ -60,14 +60,6 @@ class ByteSequenceMapping:
             validate_byte(value)
         validate_byte(self.output_byte)
 
-    @property
-    def retention_enabled(self) -> bool:
-        return bool(
-            self.retention_delay_generations
-            or self.retention_interference_repetitions
-            or self.relearning_teacher_repetitions
-        )
-
     def to_dict(self) -> dict[str, Any]:
         return {
             "input_bytes": [int(value) for value in self.input_bytes],
@@ -185,6 +177,14 @@ class ExperimentConfig:
                 )
             if counterfactual_sequence in set(input_sequences):
                 raise ValueError("counterfactual input sequence must be unmapped")
+
+    @property
+    def retention_enabled(self) -> bool:
+        return bool(
+            self.retention_delay_generations
+            or self.retention_interference_repetitions
+            or self.relearning_teacher_repetitions
+        )
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
