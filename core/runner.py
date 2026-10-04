@@ -308,6 +308,10 @@ def main(argv: list[str] | None = None) -> int:
                         else {}
                     ),
                     "output_byte": item.mapping.output_byte,
+                    "output_bytes": list(
+                        getattr(item.mapping, "output_bytes", ())
+                        or (item.mapping.output_byte,) * measurement.output_event_count
+                    ),
                     "baseline_successes": item.baseline_successes,
                     "trained_successes": item.trained_successes,
                 }
@@ -369,8 +373,37 @@ def main(argv: list[str] | None = None) -> int:
                         {
                             "input_bytes": list(record.mapping.input_bytes),
                             "output_byte": record.mapping.output_byte,
+                            "output_bytes": list(
+                                getattr(record.mapping, "output_bytes", ())
+                                or (
+                                    (record.mapping.output_byte,)
+                                    * measurement.output_event_count
+                                )
+                            ),
                             "baseline_success": record.baseline.success,
                             "trained_success": record.trained.success,
+                            "baseline_events": [
+                                {
+                                    "kind": event.kind,
+                                    "value": event.value,
+                                    "generation": generation,
+                                }
+                                for event, generation in zip(
+                                    record.baseline.autonomous_events,
+                                    record.baseline.event_generations,
+                                )
+                            ],
+                            "trained_events": [
+                                {
+                                    "kind": event.kind,
+                                    "value": event.value,
+                                    "generation": generation,
+                                }
+                                for event, generation in zip(
+                                    record.trained.autonomous_events,
+                                    record.trained.event_generations,
+                                )
+                            ],
                             "baseline_event_generations": list(
                                 record.baseline.event_generations
                             ),
@@ -439,6 +472,10 @@ def main(argv: list[str] | None = None) -> int:
                 optimizer_experiment.evaluation_timeout_generations
             ),
             "mapping_count": len(optimizer_experiment.mappings),
+            "mappings": [
+                mapping.to_dict()
+                for mapping in optimizer_experiment.mappings
+            ],
             "counterfactual_input_byte": optimizer_experiment.counterfactual_input_byte,
             "inter_input_generations": optimizer_experiment.inter_input_generations,
             "counterfactual_prefix": list(
