@@ -3756,5 +3756,137 @@ class Phase5OptimizerTests(unittest.TestCase):
                 self.assertIsInstance(mapping_record["trained_events"], list)
 
 
+    def test_p69_001_mixed_length_mapping_contract_roundtrips(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteMapping(0x41, 0x42),
+                ByteSequenceMapping(
+                    (0x43, 0x44),
+                    0x45,
+                    output_bytes=(0x45, 0x46),
+                ),
+                ByteSequenceMapping(
+                    (0x47, 0x48, 0x49),
+                    0x4A,
+                    output_bytes=(0x4A, 0x4B, 0x4C),
+                ),
+            ),
+            counterfactual_input_byte=0x4D,
+            inter_input_generations=1,
+            counterfactual_prefix=(0x47, 0x48),
+            counterfactual_input_sequence=(0x4D, 0x4E),
+            output_event_count=1,
+            output_event_interval_generations=2,
+        )
+
+        self.assertEqual(
+            tuple(len(item.input_bytes) for item in protocol.mappings),
+            (1, 2, 3),
+        )
+        self.assertEqual(
+            tuple(
+                len(getattr(item, "output_bytes", ()) or (item.output_byte,))
+                for item in protocol.mappings
+            ),
+            (1, 2, 3),
+        )
+        self.assertEqual(
+            ExperimentConfig.from_mapping(protocol.to_dict()),
+            protocol,
+        )
+
+        with self.assertRaises(ValueError):
+            ByteSequenceMapping(
+                (1, 2, 3, 4),
+                5,
+                output_bytes=(5, 6, 7),
+            )
+        with self.assertRaises(ValueError):
+            ByteSequenceMapping(
+                (1, 2, 3),
+                5,
+                output_bytes=(5, 6, 7, 8),
+            )
+
+    def test_p69_002_teacher_and_evaluation_use_mapping_specific_output_lengths(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteMapping(0x41, 0x42),
+                ByteSequenceMapping(
+                    (0x43, 0x44),
+                    0x45,
+                    output_bytes=(0x45, 0x46),
+                ),
+                ByteSequenceMapping(
+                    (0x47, 0x48, 0x49),
+                    0x4A,
+                    output_bytes=(0x4A, 0x4B, 0x4C),
+                ),
+            ),
+            counterfactual_input_byte=0x4D,
+            inter_input_generations=1,
+            counterfactual_prefix=(0x47, 0x48),
+            counterfactual_input_sequence=(0x4D, 0x4E),
+            output_event_count=1,
+            output_event_interval_generations=2,
+        )
+
+        trained = create_universe(seed=1601, config=PhysicsConfig(max_cells=8))
+        records = IOExperiment(trained, experiment=protocol).train_mappings()
+        self.assertEqual(
+            [
+                tuple(
+                    event.value
+                    for event in record.teacher_events
+                    if event.kind == "byte"
+                )
+                for record in records
+            ],
+            [
+                (0x42,),
+                (0x45, 0x46),
+                (0x4A, 0x4B, 0x4C),
+            ],
+        )
+
+        measurement = experiment_module._seed_measurement(
+            seed=1601,
+            baseline_state=create_universe(
+                seed=1601,
+                config=PhysicsConfig(max_cells=8),
+            ),
+            trained_state=trained,
+            protocol=protocol,
+        )
+        self.assertEqual(
+            [
+                result.trained.expected_output_event_count
+                for result in measurement.mapping_results
+            ],
+            [1, 2, 3],
+        )
+        self.assertEqual(
+            [
+                tuple(event.value for event in result.trained.expected_events if event.kind == "byte")
+                for result in measurement.mapping_results
+            ],
+            [
+                (0x42,),
+                (0x45, 0x46),
+                (0x4A, 0x4B, 0x4C),
+            ],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
