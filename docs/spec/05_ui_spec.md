@@ -139,12 +139,17 @@ Selectable:
 
 Use bounded ring/history storage, not unbounded generation retention.
 
-The population runtime stores each retained checkpoint as compact deterministic
-JSON text rather than a live nested Python dictionary. Runtime summaries expose
-the retained entry count, serialized object memory estimate, a 256 MiB bound,
-and whether the current estimate is within that bound. The 128/256/512 policy
-therefore has executable memory evidence while preserving exact rewind and
-snapshot round-trips.
+The Phase 3 population helper stores each retained checkpoint as compact
+deterministic JSON text rather than a live nested Python dictionary. Its runtime
+summaries expose the retained entry count, serialized object memory estimate, a
+256 MiB bound, and whether the estimate is within that bound. That remains
+executable evidence for the original whole-population history implementation.
+
+After Phase 5 integration, the browser no longer owns that parallel population
+history. Rewind is a selected observation-clone operation: the runtime retains
+only bounded snapshots of that isolated clone, at the selected 128/256/512
+physical-generation capacity. Those records are non-authoritative and must not
+roll back, pause, or rewrite the optimizer.
 
 ---
 
@@ -154,9 +159,11 @@ snapshot round-trips.
 Manual parameter changes do not mutate the constants of an already-running authoritative experiment.
 
 Apply on next reset/spawn/new universe unless a future explicit live-edit mode is specified.
-For the integrated v0.1 browser surface, exposed manual edits are staged as
-pending reset parameters and are applied when Reset creates a new authoritative
-optimizer. They are never written into already-running slot configurations.
+For the integrated v0.1 browser surface, the exposed base-configuration edits
+use Reset as the accepted application boundary: they are staged until Reset
+creates a new authoritative optimizer. They are never written into
+already-running slot configurations. This does not add live-edit semantics or
+redefine genome mutation.
 
 ---
 
