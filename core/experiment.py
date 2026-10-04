@@ -1126,11 +1126,12 @@ def _retention_checkpoint_states(
     state: UniverseState,
     *,
     protocol: ExperimentConfig,
+    isolate_authority: bool = False,
 ) -> tuple[UniverseState, UniverseState, UniverseState, tuple[int, int, int]]:
     if not protocol.retention_enabled:
         raise ValueError("P6.4 retention protocol is not enabled")
 
-    working = _clone_state(state)
+    working = _clone_state(state) if isolate_authority else state
     t0_state = _clone_state(working)
     t0_generation = working.generation
 
@@ -1167,7 +1168,11 @@ def measure_trained_state(
     resolved = state.config or PhysicsConfig()
     if protocol.retention_enabled:
         t0_state, t1_state, t2_state, checkpoint_generations = (
-            _retention_checkpoint_states(state, protocol=protocol)
+            _retention_checkpoint_states(
+                state,
+                protocol=protocol,
+                isolate_authority=True,
+            )
         )
         measurement = _seed_measurement(
             seed=state.seed,
