@@ -1,5 +1,12 @@
 # Phase 5 search liveness and mutation-boundary remediation
 
+> **Historical checkpoint / superseded scope:** This plan records the initial
+> unambiguous-remediation unit before the Human decision in Issue #65.
+> The later accepted `tiered_category_rank` policy, task-level
+> `persistent_non_response` protocol, and integrated v0.1 growth-bit boundary
+> are governed by current canonical specs and Issue #65/PR #70. The unresolved
+> wording below is retained only as execution history.
+
 ## Objective
 
 Address only the unambiguous implementation gaps recorded in Issue #65 and
