@@ -2765,5 +2765,73 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(optimizer_payload["noise_robustness_enabled"])
 
 
+    def test_p66_001_held_out_relation_roundtrips_without_changing_legacy_default(self):
+        legacy = ExperimentConfig()
+        self.assertIsNone(legacy.held_out_mapping)
+        self.assertFalse(legacy.generalization_enabled)
+
+        protocol = ExperimentConfig(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            held_out_mapping=ByteSequenceMapping((65, 69), 70),
+        )
+        restored = ExperimentConfig.from_mapping(protocol.to_dict())
+
+        self.assertTrue(protocol.generalization_enabled)
+        self.assertEqual(restored, protocol)
+        self.assertEqual(
+            protocol.to_dict()["held_out_mapping"],
+            {"input_bytes": [65, 69], "output_byte": 70},
+        )
+
+    def test_p66_002_held_out_relation_validates_shared_prefix_and_second_byte_plus_one(self):
+        base = dict(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                **base,
+                held_out_mapping=ByteSequenceMapping((66, 69), 70),
+            )
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                **base,
+                held_out_mapping=ByteSequenceMapping((65, 69), 71),
+            )
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                **base,
+                held_out_mapping=ByteSequenceMapping((65, 67), 68),
+            )
+
+    def test_p66_003_generalization_rejects_training_mapping_outside_predeclared_relation(self):
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                mappings=(
+                    ByteSequenceMapping((65, 65), 66),
+                    ByteSequenceMapping((65, 67), 69),
+                ),
+                counterfactual_prefix=(65,),
+                counterfactual_input_sequence=(67, 65),
+                output_event_count=2,
+                output_event_interval_generations=2,
+                held_out_mapping=ByteSequenceMapping((65, 69), 70),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
