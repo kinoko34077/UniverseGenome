@@ -1,7 +1,7 @@
 # Phase 6+ capability handoff
 
-Status: **P6.1 and P6.2 accepted; P6.3 multi-event output timing is the next bounded child frontier**.
-No P6.3+ capability has been implemented.
+Status: **P6.1, P6.2 and P6.3 accepted; P6.4 forgetting/relearning is the next bounded child frontier**.
+No P6.4+ capability has been implemented.
 
 ## Current v0.1 boundary
 
@@ -12,9 +12,9 @@ via PR #70, merged to main as `3e8c8f31a1d87d3f2a7e88de731392b4f3202bd2`.
 GUI/authoritative-search integration #63 is complete via PR #73, and
 post-v0.1 residual reconciliation #61 is complete via PR #74, merged to main
 as `87de79012650b44b934651c8e1ba5a7b8d91e173`. No unresolved remediation
-owner remains. Readiness rerun #60 passed. P6.1 #79 / PR #80 and P6.2 #82 /
-PR #83 subsequently added the first two accepted bounded Phase 6 experimental
-capabilities.
+owner remains. Readiness rerun #60 passed. P6.1 #79 / PR #80, P6.2 #82 /
+PR #83, and P6.3 #85 / PR #86 subsequently added the first three accepted
+bounded Phase 6 experimental capabilities.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
 Earlier remediation established the current Phase 0–5 implementation boundary;
@@ -94,6 +94,16 @@ across three seeds; no-input, prefix-A and unmapped-CA counterfactuals were
 clean and `learning_claim=false`. Capability acceptance therefore does not
 claim that temporal learning has succeeded.
 
+PR #86 completed P6.3 multi-event output timing. Its exact reviewed
+head `08a6df9741f864a3482732818040667bbf865a74` passed CI #214
+(`37195498334`) with 173 tests / OK, the real P6.3 experiment smoke, bounded
+P6.3 optimizer integration smoke, and browser E2E SUCCESS before squash merge
+to main `1df6e29687ab383fb01812ddb5c1e25cc86d6652`. The bounded experiment
+smoke observed AA→B,B baseline 0 / trained 0 and AC→D,D baseline 0 / trained 0
+across three seeds; no-input, prefix-A and unmapped-CA counterfactuals were
+clean and `learning_claim=false`. Capability acceptance therefore does not
+claim that timed multi-event learning has succeeded.
+
 The previous #60 PASS remains historical and invalidated by the later full
 traceability audit #64 and handoff #67/#68. Remediation and residual
 reconciliation are complete, and the fresh #60 rerun has established the
@@ -112,7 +122,7 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 
 ## Phase 6 boundary
 
-P6.1 and P6.2 are accepted capability layers. Later Phase 6 work must remain
+P6.1, P6.2 and P6.3 are accepted capability layers. Later Phase 6 work must remain
 bounded rather than becoming a silent change
 to the historical v0.1 physics/search contract.
 
@@ -131,8 +141,8 @@ Candidate order remains:
 
 1. `A→B` and `C→D` mappings — **P6.1 complete (#79 / PR #80)**;
 2. temporal sequences such as `AA→B` and `AC→D` — **P6.2 complete (#82 / PR #83)**;
-3. multi-event output timing — **next bounded frontier**;
-4. forgetting and relearning;
+3. multi-event output timing — **P6.3 complete (#85 / PR #86)**;
+4. forgetting and relearning — **next bounded frontier**;
 5. noise robustness;
 6. generalization;
 7. multi-byte sequences;
