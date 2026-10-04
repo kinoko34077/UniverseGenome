@@ -360,13 +360,15 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(raw["features"]["phase6_generalization"])
         self.assertTrue(raw["features"]["phase6_multi_byte_sequences"])
         self.assertTrue(raw["features"]["phase6_raw_utf8"])
+        self.assertTrue(raw["features"]["phase6_mixed_length_sequences"])
         self.assertTrue(status["phase6_raw_utf8_implemented"])
+        self.assertTrue(status["phase6_mixed_length_sequences_implemented"])
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             experiment = json.load(handle)
         self.assertEqual(experiment["learning_claim"], False)
         handoff = (ROOT / "docs" / "PHASE6_HANDOFF.md").read_text(encoding="utf-8")
-        self.assertIn("P6.1 through P6.8 accepted", handoff)
-        self.assertIn("No automatic P6.9 is authorized", handoff)
+        self.assertIn("P6.1 through P6.9 accepted", handoff)
+        self.assertIn("No automatic P6.10 is authorized", handoff)
 
     def test_p5_007_genome_maps_every_field_to_effective_physics(self):
         genome = UniverseGenome(
