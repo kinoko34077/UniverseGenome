@@ -8,14 +8,19 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
+from core import experiment as experiment_module
 from core.experiment import (
     ByteMapping,
     ByteSequenceMapping,
     EvaluationResult,
     ExperimentConfig,
+    IOExperiment,
     LearningMeasurement,
+    MappingSeedMeasurement,
     SeedMeasurement,
+    compare_baseline_trained,
     load_experiment_config,
+    measure_trained_state,
 )
 from core.io_bus import OutputEvent
 from core.population import run_population_headless
@@ -452,8 +457,26 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(all("state" in slot for slot in payload["slots"]))
 
     def test_p2g_growth_flags_include_retention_and_noise_robustness(self):
-        before = Fitness(0, 4, 3, 8, 10, 0, 0)
-        after = Fitness(1, 3, 2, 7, 9, 1, 1)
+        before = Fitness(
+            success=0,
+            wrong_outputs=4,
+            timeouts=3,
+            response_latency=8,
+            activity_cost=10,
+            retention=0,
+            noise_robustness=0,
+            retention_evidence_count=1,
+        )
+        after = Fitness(
+            success=1,
+            wrong_outputs=3,
+            timeouts=2,
+            response_latency=7,
+            activity_cost=9,
+            retention=1,
+            noise_robustness=1,
+            retention_evidence_count=1,
+        )
         self.assertEqual(growth_flags(before, after) & 0b1111111, 0b1111111)
 
     def test_p2g_pruning_uses_growth_bit_count_not_numeric_byte_sum(self):
@@ -1040,9 +1063,21 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertLess(len(surviving), 3)
 
     def test_p5_041_growth_bits_keep_canonical_retention_and_noise_names(self):
-        before = Fitness(retention=0, noise_robustness=0)
-        no_input_after = Fitness(retention=1, noise_robustness=0)
-        alternate_after = Fitness(retention=0, noise_robustness=1)
+        before = Fitness(
+            retention=0,
+            noise_robustness=0,
+            retention_evidence_count=1,
+        )
+        no_input_after = Fitness(
+            retention=1,
+            noise_robustness=0,
+            retention_evidence_count=1,
+        )
+        alternate_after = Fitness(
+            retention=0,
+            noise_robustness=1,
+            retention_evidence_count=1,
+        )
 
         self.assertFalse(hasattr(before, "trained_no_input_clean"))
         self.assertFalse(hasattr(before, "trained_alternate_input_clean"))
@@ -1902,6 +1937,404 @@ class Phase5OptimizerTests(unittest.TestCase):
                     list,
                 )
         self.assertFalse(payload["learning_claim"])
+
+
+    def test_p64_001_retention_protocol_fields_roundtrip_without_changing_legacy_defaults(self):
+        legacy = ExperimentConfig()
+        self.assertEqual(legacy.retention_delay_generations, 0)
+        self.assertEqual(legacy.retention_interference_repetitions, 0)
+        self.assertEqual(legacy.relearning_teacher_repetitions, 0)
+
+        protocol = ExperimentConfig(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=128,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+        )
+        restored = ExperimentConfig.from_mapping(protocol.to_dict())
+
+        self.assertEqual(restored, protocol)
+        self.assertEqual(restored.retention_delay_generations, 128)
+        self.assertEqual(restored.retention_interference_repetitions, 1)
+        self.assertEqual(restored.relearning_teacher_repetitions, 1)
+
+    def test_p64_002_retention_rates_are_none_without_eligible_cases(self):
+        base = dict(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(),
+        )
+        unavailable = LearningMeasurement(
+            **base,
+            retention_eligible_count=0,
+            retained_count=0,
+            forgotten_count=0,
+            relearning_eligible_count=0,
+            relearned_count=0,
+        )
+        self.assertIsNone(unavailable.retention_rate)
+        self.assertIsNone(unavailable.relearning_rate)
+
+        measured = LearningMeasurement(
+            **base,
+            retention_eligible_count=2,
+            retained_count=1,
+            forgotten_count=1,
+            relearning_eligible_count=1,
+            relearned_count=1,
+        )
+        self.assertEqual(measured.retention_rate, 0.5)
+        self.assertEqual(measured.relearning_rate, 1.0)
+
+    def test_p64_003_growth_bit5_requires_comparable_retention_evidence(self):
+        unavailable_before = Fitness(retention=0.0, retention_evidence_count=0)
+        newly_evaluable = Fitness(retention=1.0, retention_evidence_count=2)
+        self.assertEqual(
+            growth_flags(unavailable_before, newly_evaluable)
+            & (1 << GROWTH_BIT_RETENTION),
+            0,
+        )
+
+        comparable_before = Fitness(retention=0.25, retention_evidence_count=2)
+        comparable_after = Fitness(retention=0.5, retention_evidence_count=2)
+        self.assertEqual(
+            growth_flags(comparable_before, comparable_after)
+            & (1 << GROWTH_BIT_RETENTION),
+            1 << GROWTH_BIT_RETENTION,
+        )
+        self.assertEqual(
+            Fitness(
+                success=1,
+                retention=0.0,
+                retention_evidence_count=0,
+            ).sort_key(),
+            Fitness(
+                success=1,
+                retention=1.0,
+                retention_evidence_count=2,
+            ).sort_key(),
+        )
+
+    def test_p64_004_phase5_fitness_uses_only_evaluable_retention_rate(self):
+        result = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(),
+            success=False,
+            clone_generation=4,
+            evaluation_generations=4,
+            timed_out=True,
+        )
+        seed_measurement = SeedMeasurement(
+            seed=1,
+            baseline=result,
+            trained=result,
+            baseline_no_input=result,
+            trained_no_input=result,
+            baseline_alternate=result,
+            trained_alternate=result,
+        )
+        measurement = LearningMeasurement(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(seed_measurement,),
+            retention_eligible_count=2,
+            retained_count=1,
+            forgotten_count=1,
+            relearning_eligible_count=1,
+            relearned_count=0,
+        )
+
+        fitness = SteadyStateOptimizer._fitness_from_measurement(measurement)
+        self.assertEqual(fitness.retention, 0.5)
+        self.assertEqual(fitness.retention_evidence_count, 2)
+        self.assertEqual(
+            fitness.sort_key(),
+            Fitness(
+                timeouts=1,
+                response_latency=4,
+                retention=0.0,
+                retention_evidence_count=0,
+            ).sort_key(),
+        )
+
+
+    def test_p64_005_retention_protocol_records_t0_t1_t2_on_one_continuing_state(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+        )
+
+        measurement = compare_baseline_trained(
+            seeds=(701,),
+            config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        seed_record = measurement.per_seed[0]
+
+        self.assertEqual(len(seed_record.mapping_results), 2)
+        self.assertEqual(len(seed_record.retention_checkpoint_generations), 3)
+        t0_generation, t1_generation, t2_generation = (
+            seed_record.retention_checkpoint_generations
+        )
+        self.assertLess(t0_generation, t1_generation)
+        self.assertGreaterEqual(
+            t1_generation - t0_generation,
+            protocol.retention_delay_generations,
+        )
+        self.assertLess(t1_generation, t2_generation)
+
+        for mapping_record in seed_record.mapping_results:
+            self.assertIs(mapping_record.t0, mapping_record.trained)
+            self.assertIsNotNone(mapping_record.t1)
+            self.assertIsNotNone(mapping_record.t2)
+
+        self.assertEqual(measurement.retention_eligible_count, 0)
+        self.assertIsNone(measurement.retention_rate)
+        self.assertIsNone(measurement.relearning_rate)
+        self.assertFalse(measurement.learning_claim)
+
+    def test_p64_006_retention_classification_uses_t0_t1_t2_eligibility(self):
+        expected = (OutputEvent.byte(66), OutputEvent.null())
+
+        def result(success: bool) -> EvaluationResult:
+            return EvaluationResult(
+                expected_events=expected,
+                autonomous_events=expected if success else (),
+                success=success,
+                clone_generation=4,
+                evaluation_generations=4,
+                timed_out=not success,
+            )
+
+        mappings = (
+            ByteMapping(65, 66),
+            ByteMapping(67, 68),
+            ByteMapping(69, 70),
+        )
+        mapping_results = (
+            MappingSeedMeasurement(
+                mapping=mappings[0],
+                baseline=result(False),
+                trained=result(True),
+                t1=result(True),
+                t2=result(True),
+            ),
+            MappingSeedMeasurement(
+                mapping=mappings[1],
+                baseline=result(False),
+                trained=result(True),
+                t1=result(False),
+                t2=result(True),
+            ),
+            MappingSeedMeasurement(
+                mapping=mappings[2],
+                baseline=result(False),
+                trained=result(False),
+                t1=result(False),
+                t2=result(True),
+            ),
+        )
+        seed_record = SeedMeasurement(
+            seed=1,
+            baseline=mapping_results[0].baseline,
+            trained=mapping_results[0].trained,
+            baseline_no_input=result(True),
+            trained_no_input=result(True),
+            baseline_alternate=result(True),
+            trained_alternate=result(True),
+            mapping_results=mapping_results,
+        )
+
+        measurement = experiment_module._assemble_learning_measurement(
+            (seed_record,),
+            mappings=mappings,
+        )
+
+        self.assertEqual(measurement.retention_eligible_count, 2)
+        self.assertEqual(measurement.retained_count, 1)
+        self.assertEqual(measurement.forgotten_count, 1)
+        self.assertEqual(measurement.relearning_eligible_count, 1)
+        self.assertEqual(measurement.relearned_count, 1)
+        self.assertEqual(measurement.retention_rate, 0.5)
+        self.assertEqual(measurement.relearning_rate, 1.0)
+
+    def test_p64_007_phase5_retention_probe_does_not_mutate_authoritative_state(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=1,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=2,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+        )
+        state = create_universe(seed=702, config=PhysicsConfig(max_cells=8))
+        IOExperiment(state, experiment=protocol).train_mappings()
+        before = state.to_snapshot()
+
+        measurement = measure_trained_state(state, experiment=protocol)
+
+        self.assertEqual(state.to_snapshot(), before)
+        self.assertEqual(len(measurement.per_seed), 1)
+        for mapping_record in measurement.per_seed[0].mapping_results:
+            self.assertIsNotNone(mapping_record.t1)
+            self.assertIsNotNone(mapping_record.t2)
+
+
+    def test_p64_008_canonical_and_smoke_retention_configs_are_explicit(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_forgetting_relearning.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_forgetting_relearning_smoke.json"
+        )
+
+        self.assertTrue(canonical.retention_enabled)
+        self.assertEqual(canonical.retention_delay_generations, 128)
+        self.assertEqual(canonical.retention_interference_repetitions, 1)
+        self.assertEqual(canonical.relearning_teacher_repetitions, 1)
+        self.assertEqual(canonical.output_event_count, 2)
+        self.assertEqual(canonical.output_event_interval_generations, 4)
+
+        self.assertTrue(smoke.retention_enabled)
+        self.assertEqual(smoke.retention_delay_generations, 2)
+        self.assertEqual(smoke.retention_interference_repetitions, 1)
+        self.assertEqual(smoke.relearning_teacher_repetitions, 1)
+        self.assertEqual(smoke.output_event_count, 2)
+        self.assertEqual(smoke.output_event_interval_generations, 2)
+
+    def test_p64_009_runner_reports_public_retention_checkpoints_and_classification(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_forgetting_relearning_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertEqual(payload["retention_delay_generations"], 2)
+        self.assertEqual(payload["retention_interference_repetitions"], 1)
+        self.assertEqual(payload["relearning_teacher_repetitions"], 1)
+        self.assertIn("retention_eligible_count", payload)
+        self.assertIn("retained_count", payload)
+        self.assertIn("forgotten_count", payload)
+        self.assertIn("relearning_eligible_count", payload)
+        self.assertIn("relearned_count", payload)
+        self.assertIn("retention_rate", payload)
+        self.assertIn("relearning_rate", payload)
+        self.assertEqual(len(payload["per_seed"]), 3)
+        for seed_record in payload["per_seed"]:
+            self.assertEqual(len(seed_record["retention_checkpoint_generations"]), 3)
+            for mapping_record in seed_record["mappings"]:
+                for name in ("t0", "t1", "t2"):
+                    self.assertIn(f"{name}_success", mapping_record)
+                    self.assertIn(f"{name}_event_generations", mapping_record)
+                    self.assertIsInstance(
+                        mapping_record[f"{name}_event_generations"],
+                        list,
+                    )
+
+    def test_p64_010_snapshot_and_timeout_override_preserve_retention_protocol(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_forgetting_relearning_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=703,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(payload["experiment"]["retention_delay_generations"], 2)
+        self.assertEqual(payload["experiment"]["retention_interference_repetitions"], 1)
+        self.assertEqual(payload["experiment"]["relearning_teacher_repetitions"], 1)
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_forgetting_relearning_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        overridden = captured[-1]
+        optimizer_payload = json.loads(stdout.getvalue())["optimizer_protocol"]
+        self.assertEqual(overridden.evaluation_timeout_generations, 1)
+        self.assertEqual(overridden.retention_delay_generations, 2)
+        self.assertEqual(overridden.retention_interference_repetitions, 1)
+        self.assertEqual(overridden.relearning_teacher_repetitions, 1)
+        self.assertEqual(optimizer_payload["retention_delay_generations"], 2)
+        self.assertEqual(optimizer_payload["retention_interference_repetitions"], 1)
+        self.assertEqual(optimizer_payload["relearning_teacher_repetitions"], 1)
 
 
 if __name__ == "__main__":

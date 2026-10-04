@@ -97,12 +97,18 @@ class ExperimentConfig:
     counterfactual_input_sequence: tuple[int, ...] = ()
     output_event_count: int = 1
     output_event_interval_generations: int = 0
+    retention_delay_generations: int = 0
+    retention_interference_repetitions: int = 0
+    relearning_teacher_repetitions: int = 0
 
     def __post_init__(self) -> None:
         for name in (
             "byte_hold_generations", "byte_gap_generations", "teacher_delay_generations",
             "teacher_repetitions", "evaluation_timeout_generations",
             "inter_input_generations", "output_event_interval_generations",
+            "retention_delay_generations",
+            "retention_interference_repetitions",
+            "relearning_teacher_repetitions",
         ):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
@@ -114,6 +120,13 @@ class ExperimentConfig:
             raise ValueError("one-event protocols require output interval 0")
         if self.output_event_count == 2 and self.output_event_interval_generations < 2:
             raise ValueError("two-event P6.3 protocols require output interval >= 2")
+        if self.retention_enabled:
+            if self.retention_delay_generations <= 0:
+                raise ValueError("P6.4 retention delay must be positive")
+            if self.retention_interference_repetitions <= 0:
+                raise ValueError("P6.4 interference repetitions must be positive")
+            if self.relearning_teacher_repetitions <= 0:
+                raise ValueError("P6.4 relearning repetitions must be positive")
         if not self.mappings:
             raise ValueError("at least one byte mapping is required")
         if any(
@@ -150,6 +163,9 @@ class ExperimentConfig:
             item for item in self.mappings
             if isinstance(item, ByteSequenceMapping)
         )
+        if self.retention_enabled and not counterfactual_sequence:
+            raise ValueError("P6.4 requires a deterministic unmapped interference sequence")
+
         if sequence_mappings:
             if len(prefix) != 1:
                 raise ValueError("P6.2 counterfactual_prefix must contain one byte")
@@ -161,6 +177,14 @@ class ExperimentConfig:
                 )
             if counterfactual_sequence in set(input_sequences):
                 raise ValueError("counterfactual input sequence must be unmapped")
+
+    @property
+    def retention_enabled(self) -> bool:
+        return bool(
+            self.retention_delay_generations
+            or self.retention_interference_repetitions
+            or self.relearning_teacher_repetitions
+        )
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -182,6 +206,18 @@ class ExperimentConfig:
             payload["output_event_count"] = self.output_event_count
             payload["output_event_interval_generations"] = (
                 self.output_event_interval_generations
+            )
+        if (
+            self.retention_delay_generations
+            or self.retention_interference_repetitions
+            or self.relearning_teacher_repetitions
+        ):
+            payload["retention_delay_generations"] = self.retention_delay_generations
+            payload["retention_interference_repetitions"] = (
+                self.retention_interference_repetitions
+            )
+            payload["relearning_teacher_repetitions"] = (
+                self.relearning_teacher_repetitions
             )
         if (
             self.mappings != DEFAULT_BYTE_MAPPINGS
@@ -241,6 +277,13 @@ class ExperimentConfig:
             values["output_event_interval_generations"] = int(
                 mapping["output_event_interval_generations"]
             )
+        for name in (
+            "retention_delay_generations",
+            "retention_interference_repetitions",
+            "relearning_teacher_repetitions",
+        ):
+            if mapping.get(name) is not None:
+                values[name] = int(mapping[name])
         return cls(**values)
 
 
@@ -338,6 +381,12 @@ class MappingSeedMeasurement:
     mapping: ProtocolMapping
     baseline: EvaluationResult
     trained: EvaluationResult
+    t1: EvaluationResult | None = None
+    t2: EvaluationResult | None = None
+
+    @property
+    def t0(self) -> EvaluationResult:
+        return self.trained
 
 
 @dataclass(frozen=True)
@@ -361,6 +410,7 @@ class SeedMeasurement:
     trained_prefix: EvaluationResult | None = None
     baseline_sequence_counterfactual: EvaluationResult | None = None
     trained_sequence_counterfactual: EvaluationResult | None = None
+    retention_checkpoint_generations: tuple[int, int, int] = ()
 
     @property
     def baseline_evaluations(self) -> tuple[EvaluationResult, ...]:
@@ -398,6 +448,23 @@ class LearningMeasurement:
     trained_sequence_counterfactual_clean: int = 0
     output_event_count: int = 1
     output_event_interval_generations: int = 0
+    retention_eligible_count: int = 0
+    retained_count: int = 0
+    forgotten_count: int = 0
+    relearning_eligible_count: int = 0
+    relearned_count: int = 0
+
+    @property
+    def retention_rate(self) -> float | None:
+        if self.retention_eligible_count <= 0:
+            return None
+        return self.retained_count / self.retention_eligible_count
+
+    @property
+    def relearning_rate(self) -> float | None:
+        if self.relearning_eligible_count <= 0:
+            return None
+        return self.relearned_count / self.relearning_eligible_count
 
     @property
     def no_input_clean(self) -> int:
@@ -569,11 +636,19 @@ class IOExperiment:
     def train_mappings(
         self,
         *,
+        repetitions: int | None = None,
         on_generation: Callable[[int], None] | None = None,
         on_step: Callable[[int, StepMetrics], None] | None = None,
     ) -> tuple[TrainingRecord, ...]:
+        repetition_count = (
+            self.experiment.teacher_repetitions
+            if repetitions is None
+            else int(repetitions)
+        )
+        if repetition_count < 1:
+            raise ValueError("training repetitions must be positive")
         records: list[TrainingRecord] = []
-        for _ in range(self.experiment.teacher_repetitions):
+        for _ in range(repetition_count):
             for mapping in self.experiment.mappings:
                 records.append(
                     self._train_mapping_once(
@@ -583,6 +658,35 @@ class IOExperiment:
                     )
                 )
         return tuple(records)
+
+    def advance_without_teacher(self, generations: int) -> None:
+        count = int(generations)
+        if count < 0:
+            raise ValueError("idle generations must be non-negative")
+        self.release_input()
+        for _ in range(count):
+            self._advance(())
+
+    def experience_input_sequence_without_teacher(
+        self,
+        input_bytes: Iterable[int],
+    ) -> None:
+        sequence = tuple(int(value) for value in input_bytes)
+        if not sequence:
+            raise ValueError("interference input sequence must not be empty")
+        for value in sequence:
+            validate_byte(value)
+        for index, input_byte in enumerate(sequence):
+            for _ in range(self.experiment.byte_hold_generations):
+                self.drive_input(input_byte)
+                self._advance(self.input_bus.signal_coordinates())
+            if index < len(sequence) - 1:
+                for _ in range(self.experiment.inter_input_generations):
+                    self.release_input()
+                    self._advance(())
+        self.release_input()
+        for _ in range(self.experiment.byte_gap_generations):
+            self._advance(())
 
     def train_a_to_b_null(
         self,
@@ -742,39 +846,61 @@ def _seed_measurement(
     baseline_state: UniverseState,
     trained_state: UniverseState,
     protocol: ExperimentConfig,
+    retention_state: UniverseState | None = None,
+    relearned_state: UniverseState | None = None,
+    retention_checkpoint_generations: tuple[int, int, int] = (),
 ) -> SeedMeasurement:
     baseline = IOExperiment(baseline_state, experiment=protocol)
     trained = IOExperiment(trained_state, experiment=protocol)
+    retention = (
+        IOExperiment(retention_state, experiment=protocol)
+        if retention_state is not None
+        else None
+    )
+    relearned = (
+        IOExperiment(relearned_state, experiment=protocol)
+        if relearned_state is not None
+        else None
+    )
     mapping_results: list[MappingSeedMeasurement] = []
+
+    def evaluate(
+        experiment: IOExperiment,
+        mapping: ProtocolMapping,
+        expected: tuple[OutputEvent, ...],
+    ) -> EvaluationResult:
+        if isinstance(mapping, ByteSequenceMapping):
+            return experiment.evaluate_autonomous_sequence(
+                input_bytes=mapping.input_bytes,
+                expected=expected,
+            )
+        return experiment.evaluate_autonomous(
+            input_byte=mapping.input_byte,
+            expected=expected,
+        )
 
     for mapping in protocol.mappings:
         expected = (
             *(OutputEvent.byte(mapping.output_byte),) * protocol.output_event_count,
             OutputEvent.null(),
         )
-        if isinstance(mapping, ByteSequenceMapping):
-            baseline_result = baseline.evaluate_autonomous_sequence(
-                input_bytes=mapping.input_bytes,
-                expected=expected,
-            )
-            trained_result = trained.evaluate_autonomous_sequence(
-                input_bytes=mapping.input_bytes,
-                expected=expected,
-            )
-        else:
-            baseline_result = baseline.evaluate_autonomous(
-                input_byte=mapping.input_byte,
-                expected=expected,
-            )
-            trained_result = trained.evaluate_autonomous(
-                input_byte=mapping.input_byte,
-                expected=expected,
-            )
+        baseline_result = evaluate(baseline, mapping, expected)
+        trained_result = evaluate(trained, mapping, expected)
         mapping_results.append(
             MappingSeedMeasurement(
                 mapping=mapping,
                 baseline=baseline_result,
                 trained=trained_result,
+                t1=(
+                    evaluate(retention, mapping, expected)
+                    if retention is not None
+                    else None
+                ),
+                t2=(
+                    evaluate(relearned, mapping, expected)
+                    if relearned is not None
+                    else None
+                ),
             )
         )
 
@@ -832,6 +958,7 @@ def _seed_measurement(
         trained_prefix=trained_prefix,
         baseline_sequence_counterfactual=baseline_sequence_counterfactual,
         trained_sequence_counterfactual=trained_sequence_counterfactual,
+        retention_checkpoint_generations=retention_checkpoint_generations,
     )
 
 
@@ -889,6 +1016,30 @@ def _assemble_learning_measurement(
     sequence_protocol = any(
         isinstance(mapping, ByteSequenceMapping)
         for mapping in mapping_values
+    )
+    retention_records = tuple(
+        mapping
+        for item in records
+        for mapping in item.mapping_results
+        if mapping.t1 is not None and mapping.t2 is not None
+    )
+    retention_eligible_count = sum(
+        mapping.t0.success for mapping in retention_records
+    )
+    retained_count = sum(
+        mapping.t0.success and bool(mapping.t1 and mapping.t1.success)
+        for mapping in retention_records
+    )
+    forgotten_count = sum(
+        mapping.t0.success and bool(mapping.t1 is not None and not mapping.t1.success)
+        for mapping in retention_records
+    )
+    relearning_eligible_count = forgotten_count
+    relearned_count = sum(
+        mapping.t0.success
+        and bool(mapping.t1 is not None and not mapping.t1.success)
+        and bool(mapping.t2 and mapping.t2.success)
+        for mapping in retention_records
     )
 
     per_mapping = tuple(
@@ -962,6 +1113,48 @@ def _assemble_learning_measurement(
         trained_sequence_counterfactual_clean=trained_sequence_counterfactual_clean,
         output_event_count=output_event_count,
         output_event_interval_generations=output_event_interval_generations,
+        retention_eligible_count=retention_eligible_count,
+        retained_count=retained_count,
+        forgotten_count=forgotten_count,
+        relearning_eligible_count=relearning_eligible_count,
+        relearned_count=relearned_count,
+    )
+
+
+
+def _retention_checkpoint_states(
+    state: UniverseState,
+    *,
+    protocol: ExperimentConfig,
+    isolate_authority: bool = False,
+) -> tuple[UniverseState, UniverseState, UniverseState, tuple[int, int, int]]:
+    if not protocol.retention_enabled:
+        raise ValueError("P6.4 retention protocol is not enabled")
+
+    working = _clone_state(state) if isolate_authority else state
+    t0_state = _clone_state(working)
+    t0_generation = working.generation
+
+    experiment = IOExperiment(working, experiment=protocol)
+    experiment.advance_without_teacher(protocol.retention_delay_generations)
+    for _ in range(protocol.retention_interference_repetitions):
+        experiment.experience_input_sequence_without_teacher(
+            protocol.counterfactual_input_sequence
+        )
+    t1_state = _clone_state(working)
+    t1_generation = working.generation
+
+    experiment.train_mappings(
+        repetitions=protocol.relearning_teacher_repetitions,
+    )
+    t2_state = _clone_state(working)
+    t2_generation = working.generation
+
+    return (
+        t0_state,
+        t1_state,
+        t2_state,
+        (t0_generation, t1_generation, t2_generation),
     )
 
 
@@ -973,12 +1166,30 @@ def measure_trained_state(
     """Measure a current authoritative training state through disposable clones."""
     protocol = experiment or ExperimentConfig()
     resolved = state.config or PhysicsConfig()
-    measurement = _seed_measurement(
-        seed=state.seed,
-        baseline_state=create_universe(seed=state.seed, config=resolved),
-        trained_state=state,
-        protocol=protocol,
-    )
+    if protocol.retention_enabled:
+        t0_state, t1_state, t2_state, checkpoint_generations = (
+            _retention_checkpoint_states(
+                state,
+                protocol=protocol,
+                isolate_authority=True,
+            )
+        )
+        measurement = _seed_measurement(
+            seed=state.seed,
+            baseline_state=create_universe(seed=state.seed, config=resolved),
+            trained_state=t0_state,
+            retention_state=t1_state,
+            relearned_state=t2_state,
+            retention_checkpoint_generations=checkpoint_generations,
+            protocol=protocol,
+        )
+    else:
+        measurement = _seed_measurement(
+            seed=state.seed,
+            baseline_state=create_universe(seed=state.seed, config=resolved),
+            trained_state=state,
+            protocol=protocol,
+        )
     return _assemble_learning_measurement(
         (measurement,),
         mappings=protocol.mappings,
@@ -1006,14 +1217,30 @@ def compare_baseline_trained(
         baseline_state = create_universe(seed=seed, config=resolved)
         trained_state = create_universe(seed=seed, config=resolved)
         IOExperiment(trained_state, experiment=protocol).train_mappings()
-        measurements.append(
-            _seed_measurement(
-                seed=seed,
-                baseline_state=baseline_state,
-                trained_state=trained_state,
-                protocol=protocol,
+        if protocol.retention_enabled:
+            t0_state, t1_state, t2_state, checkpoint_generations = (
+                _retention_checkpoint_states(trained_state, protocol=protocol)
             )
-        )
+            measurements.append(
+                _seed_measurement(
+                    seed=seed,
+                    baseline_state=baseline_state,
+                    trained_state=t0_state,
+                    retention_state=t1_state,
+                    relearned_state=t2_state,
+                    retention_checkpoint_generations=checkpoint_generations,
+                    protocol=protocol,
+                )
+            )
+        else:
+            measurements.append(
+                _seed_measurement(
+                    seed=seed,
+                    baseline_state=baseline_state,
+                    trained_state=trained_state,
+                    protocol=protocol,
+                )
+            )
     return _assemble_learning_measurement(
         measurements,
         mappings=protocol.mappings,

@@ -77,7 +77,11 @@ def growth_flags(previous: Fitness, current: Fitness) -> int:
         flags |= 1 << 3
     if current.activity_cost < previous.activity_cost:
         flags |= 1 << 4
-    if current.retention > previous.retention:
+    if (
+        previous.retention_evidence_count > 0
+        and current.retention_evidence_count > 0
+        and current.retention > previous.retention
+    ):
         flags |= 1 << GROWTH_BIT_RETENTION
     if current.noise_robustness > previous.noise_robustness:
         flags |= 1 << GROWTH_BIT_NOISE_ROBUSTNESS
