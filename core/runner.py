@@ -63,6 +63,9 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
     phase6_multi_event_timing = bool(
         config.get("features", {}).get("phase6_multi_event_timing", False)
     )
+    phase6_retention_relearning = bool(
+        config.get("features", {}).get("phase6_retention_relearning", False)
+    )
     return {
         "project": "UniverseGenome",
         "phase": (
@@ -94,6 +97,7 @@ def build_status(config: dict[str, Any]) -> dict[str, Any]:
         "phase6_multi_mapping_implemented": phase6_multi_mapping and phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase6_temporal_sequence_implemented": phase6_temporal_sequence and phase6_multi_mapping and phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "phase6_multi_event_timing_implemented": phase6_multi_event_timing and phase6_temporal_sequence and phase6_multi_mapping and phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
+        "phase6_retention_relearning_implemented": phase6_retention_relearning and phase6_multi_event_timing and phase6_temporal_sequence and phase6_multi_mapping and phase6 and phase5 and phase4 and phase3 and phase2e and phase2d and phase2c and phase2b and phase2a and phase1,
         "acceptance_state": current_state["acceptance_state"],
         "phase6_ready": current_state["phase6_ready"],
         "phase6_blocked": not current_state["phase6_ready"],

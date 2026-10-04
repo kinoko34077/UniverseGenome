@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-04 — Phase 6.4 forgetting/relearning candidate (#88 / PR #89)
+## 2026-10-04 — Phase 6.4 forgetting/relearning accepted (#88 / PR #89)
 
 - extends the accepted P6.3 timed mappings with explicit T0 immediate,
   T1 delayed/interfered and T2 post-relearning clone evaluations on one
@@ -18,11 +18,18 @@
   and explicit timeout reconstruction;
 - adds canonical and bounded-smoke configs, public T0/T1/T2 reporting, and real
   P6.4 experiment/optimizer CI smokes;
-- latest verified implementation checkpoint `fa535c6d...` passed CI #236
-  (`37204758609`) with 183 tests / OK and browser E2E SUCCESS;
-- capability acceptance remains pending exact-head canonical reconciliation,
-  review, merge and post-main Current State update; no retention success is
-  claimed when T0 produces no learned cases.
+- exact reviewed implementation head
+  `e7104fb249b7ccdf06411b6522e55d0cc7452861` passed CI #238
+  (`37204968652`) with 183 tests / OK, P6.1–P6.4 experiment/optimizer
+  smokes, and browser E2E SUCCESS;
+- squash-merged implementation main
+  `ce9e54ad9290756ca5ed57863544874989a12527`, whose exact-main push CI #239
+  (`37205180423`) also passed;
+- bounded public P6.4 smoke produced zero T0-success eligible cases, therefore
+  retention and relearning were explicitly non-evaluable (`null`) and
+  `learning_claim=false`;
+- capability acceptance is not a retention-success claim; the next bounded
+  frontier is P6.5 noise robustness.
 
 
 ## 2026-10-04 — Phase 6.3 multi-event output timing accepted (#85 / PR #86)
