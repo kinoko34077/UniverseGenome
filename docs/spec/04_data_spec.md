@@ -250,6 +250,17 @@ evaluation results/reporting and does not turn disposable evaluation clones
 into authoritative persisted state. P6.3 alone does not require a snapshot
 format increment.
 
+For Phase 6.4, the persisted `ExperimentConfig` may additionally contain
+`retention_delay_generations`, `retention_interference_repetitions`, and
+`relearning_teacher_repetitions`. These remain experiment protocol fields and
+round-trip through optimizer snapshots and explicit timeout reconstruction.
+Authoritative optimizer slot fitness may persist the growth-only current
+`retention` value together with `retention_evidence_count` so non-evaluable
+retention remains distinct from numeric zero. Detailed T0/T1/T2 disposable
+clone results and checkpoint observations are measurement/reporting evidence,
+not separately persisted authoritative clone state. P6.4 alone does not require
+a snapshot-format increment.
+
 ---
 
 ---
