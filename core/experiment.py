@@ -112,8 +112,8 @@ class ExperimentConfig:
             raise ValueError("bounded P6.3 output_event_count must be 1 or 2")
         if self.output_event_count == 1 and self.output_event_interval_generations != 0:
             raise ValueError("one-event protocols require output interval 0")
-        if self.output_event_count == 2 and self.output_event_interval_generations < 1:
-            raise ValueError("two-event P6.3 protocols require output interval >= 1")
+        if self.output_event_count == 2 and self.output_event_interval_generations < 2:
+            raise ValueError("two-event P6.3 protocols require output interval >= 2")
         if not self.mappings:
             raise ValueError("at least one byte mapping is required")
         if any(
