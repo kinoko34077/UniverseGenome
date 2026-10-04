@@ -2699,6 +2699,16 @@ class Phase5OptimizerTests(unittest.TestCase):
             for mapping_record in seed_record["mappings"]:
                 self.assertIn("noisy_success", mapping_record)
                 self.assertIn("noisy_event_generations", mapping_record)
+                self.assertIn("noise_eligible", mapping_record)
+                self.assertIn("noise_robust", mapping_record)
+                self.assertIn("noise_failed", mapping_record)
+                self.assertEqual(
+                    mapping_record["noise_failed"],
+                    bool(
+                        mapping_record["noise_eligible"]
+                        and not mapping_record["noise_robust"]
+                    ),
+                )
                 self.assertIsInstance(
                     mapping_record["noisy_event_generations"],
                     list,
