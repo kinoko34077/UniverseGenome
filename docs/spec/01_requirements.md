@@ -1218,6 +1218,95 @@ generalizes.
 
 ---
 
+# 22.6 Phase 6.6 predeclared held-out relation generalization requirements
+
+## REQ-250 — Predeclared held-out relation protocol
+**Status: accepted**
+
+Phase 6.6 shall test one relation instance that is fixed in experiment protocol
+before execution and is never selected after observing outputs.
+
+The initial bounded relation uses the accepted P6.2/P6.3 sequence/timing shape
+with fixed prefix `A` and the rule:
+
+> second input byte `x` → repeated output byte `x+1` → `NULL`
+
+Teacher-trained examples are:
+- `AA → B, B → NULL`;
+- `AC → D, D → NULL`.
+
+The held-out instance is:
+- `AE → F, F → NULL`.
+
+Every training/held-out case shall share prefix A, obey target = second byte + 1,
+and the held-out second byte/target shall be distinct from all teacher cases.
+
+---
+
+## REQ-251 — Held-out case must not be teacher-trained
+**Status: accepted**
+
+The held-out AE/F relation shall never receive teacher output during training.
+Training shall remain limited to the declared teacher mappings on one continuing
+authoritative Universe.
+
+Baseline held-out, trained mapping, and trained held-out evaluations shall use
+separate disposable clones. Evaluation shall not mutate authoritative training
+state.
+
+---
+
+## REQ-252 — Baseline-relative generalization evaluability
+**Status: accepted**
+
+A seed is training-qualified only when every teacher-trained mapping succeeds at
+trained T0, each is strictly improved relative to its corresponding baseline,
+and the required trained no-input/prefix/unmapped-sequence controls remain clean.
+
+A seed is generalization-eligible only when it is training-qualified and the
+baseline held-out case was not already successful.
+
+An eligible seed is generalized when trained held-out evaluation succeeds
+exactly; otherwise it is generalization-failed. Baseline-held-out success is not
+learned generalization and shall not enter the eligible denominator.
+
+Aggregate reporting shall expose qualification/eligibility/generalized/failed
+counts. Generalization rate is defined only when eligibility is non-zero;
+otherwise it is null/non-evaluable.
+
+---
+
+## REQ-253 — Generalization is measurement-only in P6.6
+**Status: accepted**
+
+The bounded P6.6 capability shall not add held-out generalization to canonical
+absolute fitness, shall not consume reserved growth bit 7, and shall not alter
+pruning, promising allocation, seed/category handling, or authoritative-slot
+semantics.
+
+Retention growth bit 5 and noise-robustness growth bit 6 remain independent.
+A later explicit specification may decide whether generalization becomes a
+search signal; P6.6 does not make that decision.
+
+---
+
+## REQ-254 — P6.6 persistence and public evidence
+**Status: accepted**
+
+Experiment serialization, optimizer snapshot/restore and explicit timeout
+reconstruction shall preserve the predeclared held-out relation.
+
+Public evidence shall expose baseline/trained held-out outcomes and event
+generations, per-seed training-qualified / eligible / generalized / failed
+classification, aggregate counts and nullable rate.
+
+Canonical and bounded-smoke configs shall use the same protocol surface. CI
+shall execute real P6.6 experiment and optimizer entrypoints. Implementing the
+capability does not itself constitute evidence that the current universe
+generalized.
+
+---
+
 # 23. Traceability
 
 Historical rationale: #2  
