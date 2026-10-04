@@ -833,6 +833,73 @@ evidence that learning succeeded.
 
 ---
 
+## REQ-210 — Ordered temporal sequence protocol
+**Status: accepted**
+
+The experiment layer shall support bounded ordered input-byte sequences as
+protocol data outside UniverseGenome. Phase 6.2 begins with exactly two-byte
+inputs:
+
+- `AA → B → NULL`;
+- `AC → D → NULL`.
+
+Input sequence identity includes byte order. Duplicate declared input sequences
+within one protocol are invalid.
+
+---
+
+## REQ-211 — Explicit inter-input timing and shared history
+**Status: accepted**
+
+Temporal mappings shall expose an explicit inter-input timing interval. All
+input bytes of a mapping shall be delivered in declared order before teacher
+output begins. All declared P6.2 mappings for one seed shall train the same
+continuing authoritative Universe without reset between mappings.
+
+---
+
+## REQ-212 — Sequence-specific isolated evaluation
+**Status: accepted**
+
+Each declared temporal mapping shall be evaluated on a separate disposable clone
+of the same source state. Autonomous output before the complete declared input
+sequence is delivered is an early/wrong output and cannot count as success.
+
+Cross-target output, extra events, missing expected output, missing NULL, and
+timeout remain failures. Evaluation shall not mutate authoritative training
+state or another evaluation clone.
+
+---
+
+## REQ-213 — Predeclared temporal counterfactuals
+**Status: accepted**
+
+P6.2 shall measure predeclared controls that distinguish sequence/history
+dependence from a response to the shared first byte:
+
+- no-input control;
+- prefix-only `A` control;
+- an unmapped two-byte sequence, initially `CA`.
+
+These controls shall be declared before observing results and shall remain
+independent learning-claim gates.
+
+---
+
+## REQ-214 — Truthful temporal-sequence claim and Phase 5 compatibility
+**Status: accepted**
+
+A P6.2 learning claim may be true only when every declared sequence across every
+evaluated seed satisfies the exact-output criterion, trained performance exceeds
+the corresponding baseline, and all required counterfactuals remain clean.
+
+Phase 5 evaluation/fitness shall consume every active sequence evaluation case
+deterministically without changing category isolation, seed evolution, fitness
+ordering, pruning, or promising-allocation policy merely to enable P6.2.
+Failure remains `learning_claim=false`.
+
+---
+
 # 23. Traceability
 
 Historical rationale: #2  
