@@ -467,6 +467,7 @@ class Phase5OptimizerTests(unittest.TestCase):
             retention=0,
             noise_robustness=0,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
         after = Fitness(
             success=1,
@@ -477,6 +478,7 @@ class Phase5OptimizerTests(unittest.TestCase):
             retention=1,
             noise_robustness=1,
             retention_evidence_count=1,
+            noise_robustness_evidence_count=1,
         )
         self.assertEqual(growth_flags(before, after) & 0b1111111, 0b1111111)
 
