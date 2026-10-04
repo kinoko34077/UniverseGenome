@@ -689,9 +689,11 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(all("state" in record for record in payload["slots"]))
         self.assertTrue(all("training_states" not in record for record in payload["slots"]))
 
-    def test_p5_028_promising_policy_is_not_fixed_without_approval(self):
+    def test_p5_028_promising_policy_defaults_to_approved_tiered_category_rank(self):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=109)
-        self.assertIsNone(optimizer.promising_policy)
+        self.assertEqual(optimizer.promising_policy, "tiered_category_rank")
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(restored.promising_policy, "tiered_category_rank")
 
     def test_p5_029_group_fitness_uses_all_real_seed_slots_for_parent_selection(self):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=110)
@@ -1211,6 +1213,125 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(restored.slots[0].short_health_windows, (3,))
         self.assertEqual(restored.slots[0].short_health_activity_cost, 2)
         self.assertEqual(restored.to_snapshot(), payload)
+
+
+    def test_p5_048_tiered_category_rank_uses_group_rank_and_real_seed_tiers(self):
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=126,
+            promising_policy="tiered_category_rank",
+        )
+        genomes = UniverseGenome.initial_population()
+
+        four_seed_local = []
+        index = 0
+        for rank, genome in enumerate(genomes):
+            for _ in range(4):
+                slot = make_slot(
+                    index=index,
+                    seed=2000 + index,
+                    genome=genome,
+                    fitness=Fitness(success=float(len(genomes) - rank)),
+                )
+                slot.evidence_mature = True
+                four_seed_local.append(slot)
+                index += 1
+
+        self.assertTrue(optimizer._is_promising(four_seed_local[0], four_seed_local))
+        self.assertTrue(optimizer._is_promising(four_seed_local[12], four_seed_local))
+        self.assertFalse(optimizer._is_promising(four_seed_local[16], four_seed_local))
+
+        eight_seed_local = []
+        index = 0
+        for rank, genome in enumerate(genomes[:4]):
+            for _ in range(8):
+                slot = make_slot(
+                    index=index,
+                    seed=3000 + index,
+                    genome=genome,
+                    fitness=Fitness(success=float(4 - rank)),
+                )
+                slot.evidence_mature = True
+                eight_seed_local.append(slot)
+                index += 1
+
+        self.assertTrue(optimizer._is_promising(eight_seed_local[0], eight_seed_local))
+        self.assertFalse(optimizer._is_promising(eight_seed_local[8], eight_seed_local))
+
+        full_group = [
+            make_slot(
+                index=index,
+                seed=4000 + index,
+                genome=genomes[0],
+                fitness=Fitness(success=1),
+            )
+            for index in range(32)
+        ]
+        for slot in full_group:
+            slot.evidence_mature = True
+        self.assertFalse(optimizer._is_promising(full_group[0], full_group))
+
+    def test_p5_049_promising_parent_prefers_lower_evidence_count_before_fitness(self):
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=127,
+            promising_policy="tiered_category_rank",
+        )
+        genomes = UniverseGenome.initial_population()
+        local = []
+        index = 0
+        group_specs = (
+            (genomes[0], 4, 0.8),
+            (genomes[1], 7, 0.9),
+            (genomes[2], 4, 0.2),
+            (genomes[3], 4, 0.1),
+        )
+        for genome, count, success in group_specs:
+            for _ in range(count):
+                slot = make_slot(
+                    index=index,
+                    seed=5000 + index,
+                    genome=genome,
+                    fitness=Fitness(success=success),
+                )
+                slot.evidence_mature = True
+                local.append(slot)
+                index += 1
+
+        selected = optimizer._select_promising_parent(local)
+        self.assertIsNotNone(selected)
+        self.assertEqual(selected.genome, genomes[0])
+
+    def test_p5_050_promising_and_mutation_allocation_alternate_per_category(self):
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=128,
+            promising_policy="tiered_category_rank",
+        )
+
+        self.assertEqual(
+            optimizer._next_allocation_mode("masked_copy", promising_available=False),
+            "mutation_child",
+        )
+        self.assertEqual(
+            optimizer._next_allocation_mode("masked_copy", promising_available=True),
+            "seed_evidence",
+        )
+        self.assertEqual(
+            optimizer._next_allocation_mode("masked_copy", promising_available=True),
+            "mutation_child",
+        )
+        self.assertEqual(
+            optimizer._next_allocation_mode("masked_xor", promising_available=True),
+            "seed_evidence",
+        )
+
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(
+            restored._next_allocation_mode("masked_copy", promising_available=True),
+            "seed_evidence",
+        )
+        self.assertEqual(
+            restored._next_allocation_mode("masked_xor", promising_available=True),
+            "mutation_child",
+        )
 
 
 if __name__ == "__main__":
