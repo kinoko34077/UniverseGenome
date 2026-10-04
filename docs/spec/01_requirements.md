@@ -922,7 +922,7 @@ valid with one expected byte event.
 
 P6.3 shall expose an explicit physical-generation interval between the onsets of
 the repeated expected byte events. For the bounded two-event protocol, the
-interval shall be at least one generation.
+interval shall be at least two generations so the one-generation teacher pulses are separated by at least one released physical generation.
 
 Teacher stimulation shall begin only after the complete input sequence and
 teacher delay. Both repeated teacher byte events and the terminating NULL shall
