@@ -543,8 +543,12 @@ growth/pruning state, lineage, and category-local scheduler/policy state. It
 does not serialize disposable evaluation clones. Restoring it and continuing
 the same protocol is deterministic.
 
-The headless runner uses one integrated step and an 8-generation per-candidate
-evaluation timeout by default as an explicit bounded-performance budget.
+The public headless optimizer preserves the loaded canonical experiment
+protocol by default, including its configured per-candidate evaluation timeout.
+A shorter timeout is allowed only through the explicit
+`--optimizer-timeout-generations` override and is reported as an override in
+the JSON status. CI may use such an explicit bounded override for smoke
+verification without redefining the research protocol.
 `--optimizer-iterations 4` is a bounded diagnostic run; seed evidence counts
 are derived from actual same-genome Universe-slot allocation, not from a
 CandidateSlot containing multiple hidden seed states. The result reports
