@@ -1,7 +1,7 @@
 # Phase 6+ capability handoff
 
-Status: **ready for one new bounded Phase 6 child Issue after readiness rerun #60**.
-No Phase 6+ capability has been implemented.
+Status: **P6.1 multiple independent byte mappings accepted; P6.2 is the next bounded child frontier**.
+No P6.2+ capability has been implemented.
 
 ## Current v0.1 boundary
 
@@ -12,7 +12,8 @@ via PR #70, merged to main as `3e8c8f31a1d87d3f2a7e88de731392b4f3202bd2`.
 GUI/authoritative-search integration #63 is complete via PR #73, and
 post-v0.1 residual reconciliation #61 is complete via PR #74, merged to main
 as `87de79012650b44b934651c8e1ba5a7b8d91e173`. No unresolved remediation
-owner remains. Readiness rerun #60 has passed from repaired current `main`.
+owner remains. Readiness rerun #60 passed, and P6.1 #79 / PR #80 subsequently
+added the first accepted Phase 6 experimental capability.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
 Earlier remediation established the current Phase 0–5 implementation boundary;
@@ -74,6 +75,14 @@ PR #74 completed #61 residual reconciliation. Its exact reviewed head
 (`37183145594`) with 149 tests / OK and browser E2E SUCCESS before squash
 merge to current main `87de7901...`.
 
+PR #80 completed P6.1 multiple independent byte mappings. Its exact reviewed
+head `6182fa3b615da446260b7e0ef698d7761d946e49` passed CI #165
+(`37190230270`) with 158 tests / OK, the real Phase 6.1 experiment smoke and
+browser E2E SUCCESS before squash merge to main
+`237845bb8b4512048508d8174ef328b3f36fbf52`. The bounded smoke observed
+A→B baseline 0 / trained 0 and C→D baseline 0 / trained 0; no-input and
+unmapped-input counterfactuals were clean and `learning_claim=false`.
+
 The previous #60 PASS remains historical and invalidated by the later full
 traceability audit #64 and handoff #67/#68. Remediation and residual
 reconciliation are complete, and the fresh #60 rerun has established the
@@ -92,7 +101,8 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 
 ## Phase 6 boundary
 
-Phase 6 must remain a new bounded capability layer rather than a silent change
+P6.1 is now the first accepted capability layer. Later Phase 6 work must remain
+bounded rather than becoming a silent change
 to the historical v0.1 physics/search contract.
 
 Before any Phase 6 mutation:
@@ -108,8 +118,8 @@ Before any Phase 6 mutation:
 
 Candidate order remains:
 
-1. `A→B` and `C→D` mappings;
-2. temporal sequences such as `AA→B` and `AC→D`;
+1. `A→B` and `C→D` mappings — **P6.1 complete (#79 / PR #80)**;
+2. temporal sequences such as `AA→B` and `AC→D` — **next bounded frontier**;
 3. multi-event output timing;
 4. forgetting and relearning;
 5. noise robustness;

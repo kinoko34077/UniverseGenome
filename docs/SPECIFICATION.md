@@ -1,6 +1,6 @@
 # UniverseGenome v0.1 Canonical Specification Index
 
-Status: accepted v0.1 specification basis; Phase 0 through Phase 5 are readiness-accepted after rerun #60
+Status: accepted v0.1 specification basis; Phase 0–5 readiness accepted and P6.1 capability accepted through #79 / PR #80
 Requirements source: #3  
 Detailed specification source/review history: #4  
 Historical rationale: #2  
@@ -24,12 +24,13 @@ Issue #3 and #4 remain durable review/history surfaces and must link to future a
 ## Current repository state
 
 The checked-in Phase 0–5 implementation is present and the fresh readiness
-rerun #60 passed after P1 remediation #66/#65/#63 and post-v0.1 residual
-reconciliation #61 completed. No Phase 6+ capability is implemented yet; the
-next permitted work is one new bounded Phase 6 child Issue with explicit
-acceptance criteria. This
-state statement is separate from the historical acceptance records preserved
-in the changelog and Issues.
+rerun #60 passed after remediation/reconciliation. P6.1 multiple independent
+byte mappings are now implemented/accepted through #79 / PR #80. The observed
+P6.1 public smoke remains baseline 0 / trained 0 for both mappings with
+`learning_claim=false`. The next permitted capability is one bounded P6.2
+temporal-sequence child Issue with explicit acceptance criteria. This state
+statement is separate from historical acceptance records preserved in the
+changelog and Issues.
 
 ## Status vocabulary
 
@@ -50,10 +51,11 @@ not promote `accepted-default` or `parameterized` into an immutable rule.
 
 ## Current implementation frontier
 
-Phase 0 through Phase 5 are readiness-accepted on `main`; remediation and
-residual reconciliation through #61 are complete and #60 has passed. Phase 6+
-remains a new bounded capability layer, not an already-implemented feature.
-Phase 4 recorded no learning claim, and Phase 5 consumes that explicit
-measurement rather than asserting success. See `docs/PHASE6_HANDOFF.md`.
+Phase 0 through Phase 5 are readiness-accepted on `main`; #60 has passed and
+P6.1 is implemented/accepted through #79 / PR #80. Phase 6 remains a bounded
+capability ladder: only P6.1 is implemented, while P6.2+ requires separate child
+Issues. The current multi-mapping measurement still records no learning claim,
+and Phase 5 consumes that explicit evidence rather than asserting success. See
+`docs/PHASE6_HANDOFF.md`.
 
 See `docs/ROADMAP.md`.

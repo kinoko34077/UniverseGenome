@@ -343,15 +343,16 @@ class Phase5OptimizerTests(unittest.TestCase):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
         self.assertTrue(status["phase5_optimizer_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 6+ capability ladder (handoff only)")
+        self.assertEqual(status["next_phase"], "Phase 6.2 temporal sequence discrimination (bounded child Issue required)")
         self.assertTrue(raw["features"]["multi_universe_search"])
         self.assertTrue(raw["features"]["evolution"])
-        self.assertFalse(raw["features"]["phase6_capabilities"])
+        self.assertTrue(raw["features"]["phase6_capabilities"])
+        self.assertTrue(raw["features"]["phase6_multi_mapping"])
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             experiment = json.load(handle)
         self.assertEqual(experiment["learning_claim"], False)
         handoff = (ROOT / "docs" / "PHASE6_HANDOFF.md").read_text(encoding="utf-8")
-        self.assertIn("No Phase 6+ capability has been implemented", handoff)
+        self.assertIn("No P6.2+ capability has been implemented", handoff)
 
     def test_p5_007_genome_maps_every_field_to_effective_physics(self):
         genome = UniverseGenome(
