@@ -1,5 +1,27 @@
 # Specification Changelog
 
+## 2026-10-04 — Phase 6.3 multi-event output timing candidate (#85 / PR #86)
+
+- extends the accepted P6.2 temporal mappings with a bounded repeated-output
+  protocol: AA→B,B→NULL and AC→D,D→NULL;
+- adds explicit repeated-byte event count and physical-generation onset interval
+  while preserving one-event P6.1/P6.2 compatibility;
+- keeps teacher output as one-generation external stimulation on one continuing
+  authoritative training Universe and spaces repeated events by the declared
+  onset interval before NULL;
+- makes isolated-clone success depend on exact byte content/order/count plus the
+  declared repeated-event interval; timing mismatches remain visible through the
+  existing wrong-output/error surface;
+- preserves no-input, prefix-A and unmapped-CA counterfactual gates and keeps
+  failed learning as `learning_claim=false`;
+- preserves P6.3 count/interval through ExperimentConfig, optimizer snapshot and
+  explicit timeout reconstruction without changing Phase 5 search policy;
+- adds canonical and bounded-smoke P6.3 configs, per-seed event-generation
+  reporting, and real experiment/optimizer CI smokes;
+- P6.7 arbitrary distinct output-byte sequences and P6.4+ capabilities remain
+  deferred.
+
+
 ## 2026-10-04 — Phase 6.2 temporal sequence discrimination accepted (#82 / PR #83)
 
 - extends protocol mappings with bounded ordered two-byte inputs, beginning with
