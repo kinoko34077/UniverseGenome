@@ -26,8 +26,8 @@ from search.evolution import (
 from search.fitness import Fitness, compare_fitness
 from search.genome import UniverseGenome
 from search.pruning import (
-    GROWTH_BIT_ALTERNATE_INPUT_CLEAN,
-    GROWTH_BIT_NO_INPUT_CLEAN,
+    GROWTH_BIT_NOISE_ROBUSTNESS,
+    GROWTH_BIT_RETENTION,
     GrowthHistory,
     absolute_failure_reason,
     growth_flags,
@@ -1040,11 +1040,11 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertFalse(hasattr(before, "trained_alternate_input_clean"))
         self.assertEqual(
             growth_flags(before, no_input_after),
-            1 << GROWTH_BIT_NO_INPUT_CLEAN,
+            1 << GROWTH_BIT_RETENTION,
         )
         self.assertEqual(
             growth_flags(before, alternate_after),
-            1 << GROWTH_BIT_ALTERNATE_INPUT_CLEAN,
+            1 << GROWTH_BIT_NOISE_ROBUSTNESS,
         )
 
     def test_p5_042_short_health_runs_at_authoritative_16_generation_boundaries(self):
@@ -1095,6 +1095,15 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(slot.absolute_failure)
         self.assertEqual(slot.absolute_failure_reason, "persistent_non_response")
         self.assertEqual(slot.response_windows, (0, 0, 0, 0))
+
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        restored_slot = restored.slots[slot.index]
+        self.assertEqual(restored_slot.response_windows, (0, 0, 0, 0))
+        self.assertTrue(restored_slot.absolute_failure)
+        self.assertEqual(
+            restored_slot.absolute_failure_reason,
+            "persistent_non_response",
+        )
 
 
     def test_p5_044_absolute_failure_is_prunable_without_growth_or_maturity(self):
