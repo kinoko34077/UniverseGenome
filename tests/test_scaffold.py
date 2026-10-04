@@ -120,12 +120,12 @@ class Phase0ScaffoldTests(unittest.TestCase):
         status = build_status(load_config(ROOT / "config" / "default.json"))
 
         self.assertTrue(status["phase5_optimizer_implemented"])
-        self.assertEqual(status["acceptance_state"], "remediation_in_progress")
-        self.assertFalse(status["phase6_ready"])
+        self.assertEqual(status["acceptance_state"], "accepted")
+        self.assertTrue(status["phase6_ready"])
         self.assertEqual(status["blocking_owners"], [])
         self.assertEqual(status["readiness_owner"], "#60")
-        self.assertEqual(status["next_phase"], "Readiness rerun (#60; Phase 6+ blocked)")
-        self.assertNotIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
+        self.assertEqual(status["next_phase"], "Phase 6+ capability ladder (handoff only)")
+        self.assertIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
 
     def test_post_audit_documentation_routes_to_blocked_remediation(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -152,14 +152,14 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("Phase 5 search-semantic remediation #65 is complete via PR #70", readme)
         self.assertNotIn("Phase 1 through Phase 5 are accepted on `main`", readme)
         self.assertIn("authoritative Phase 5", readme)
-        self.assertIn("readiness rerun #60 pending", specification)
+        self.assertIn("readiness-accepted after rerun #60", specification)
         self.assertIn("Phase 6+ is blocked", specification)
         self.assertIn(
-            "Phase 6+ — Capability ladder (blocked pending readiness rerun #60)",
+            "Phase 6+ — Capability ladder (ready for one new bounded child Issue after #60)",
             roadmap,
         )
         self.assertIn(
-            "Status: **blocked pending readiness rerun #60**",
+            "Status: **ready for one new bounded Phase 6 child Issue after readiness rerun #60**",
             handoff,
         )
         self.assertIn("historical v0.1 physics/search contract", handoff)
