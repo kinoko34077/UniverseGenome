@@ -16,7 +16,7 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
   },
   webServer: {
-    command: "python -m server.app --host 127.0.0.1 --port 8765 --history-length 512",
+    command: "python -m server.app --host 127.0.0.1 --port 8765 --history-length 512 --experiment-config config/experiment_e2e.json",
     url: "http://127.0.0.1:8765/",
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
