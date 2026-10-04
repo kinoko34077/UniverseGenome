@@ -205,8 +205,27 @@ hidden seed Universes. Each slot also persists whether its category/genome
 evidence group has ever reached the canonical four-real-seed minimum. That
 maturity marker is distinct from current group cardinality: a later-depleted
 mature group remains pruning/retirement-eligible while staying ineligible for
-parent selection/protection below four current seeds. Disposable evaluation
-clones are never part of the authoritative snapshot.
+parent selection/protection below four current seeds.
+
+For active outer search, lineage persistence distinguishes the reusable slot
+location from durable ancestry. `parent_index` may be retained as an immediate
+slot-reference convenience, but it is not durable lineage identity after slot
+reuse. Newly allocated seed-evidence and mutation slots therefore also persist
+the parent's canonical serialized genome key as `parent_genome_key`.
+
+The optimizer-level `prune_history` records actual retirement/replacement
+events only, not every candidate that merely became prune-eligible and not
+per-generation Universe snapshots. Each event records the completed optimizer
+generation, retired slot index/category, retired genome key, seed, and
+retirement reason. This event history is part of deterministic search
+provenance.
+
+Phase 5 optimizer snapshot format version 5 carries these fields. Version 4
+snapshots remain readable for compatibility; missing durable parent-genome
+references are restored as unknown and missing prune history as empty, after
+which the next save emits version 5.
+
+Disposable evaluation clones are never part of the authoritative snapshot.
 
 ---
 
