@@ -30,6 +30,13 @@ jobs:
           --optimizer-iterations 0
           --optimizer-timeout-generations 8
           --json
+      - name: Headless Phase 6.1 multi-mapping experiment smoke
+        run: >-
+          python -m core.runner
+          --config config/default.json
+          --experiment
+          --experiment-config config/experiment_phase6_multi_mapping_smoke.json
+          --json
       - name: Static server entrypoint smoke
         run: python -m server.app --help
 
