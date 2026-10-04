@@ -130,7 +130,7 @@ class Phase3PopulationTests(unittest.TestCase):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
         self.assertTrue(status["phase3_runtime_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 6.4 forgetting / relearning (bounded child Issue required)")
+        self.assertEqual(status["next_phase"], "Phase 6.4 forgetting/relearning (bounded child Issue required)")
         self.assertTrue(raw["features"]["multi_universe_runtime"])
         self.assertTrue(raw["features"]["io_learning"])
         self.assertTrue(raw["features"]["evolution"])
