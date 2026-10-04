@@ -223,15 +223,32 @@ def main(argv: list[str] | None = None) -> int:
             "mapping_count": measurement.mapping_count,
             "evaluation_case_count": measurement.evaluation_case_count,
             "counterfactual_input_byte": measurement.counterfactual_input_byte,
+            "counterfactual_prefix": list(measurement.counterfactual_prefix),
+            "counterfactual_input_sequence": list(
+                measurement.counterfactual_input_sequence
+            ),
             "baseline_successes": measurement.baseline_successes,
             "trained_successes": measurement.trained_successes,
             "baseline_no_input_clean": measurement.baseline_no_input_clean,
             "trained_no_input_clean": measurement.trained_no_input_clean,
             "baseline_alternate_input_clean": measurement.baseline_alternate_input_clean,
             "trained_alternate_input_clean": measurement.trained_alternate_input_clean,
+            "baseline_prefix_input_clean": measurement.baseline_prefix_input_clean,
+            "trained_prefix_input_clean": measurement.trained_prefix_input_clean,
+            "baseline_sequence_counterfactual_clean": (
+                measurement.baseline_sequence_counterfactual_clean
+            ),
+            "trained_sequence_counterfactual_clean": (
+                measurement.trained_sequence_counterfactual_clean
+            ),
             "per_mapping": [
                 {
-                    "input_byte": item.mapping.input_byte,
+                    "input_bytes": list(item.mapping.input_bytes),
+                    **(
+                        {"input_byte": item.mapping.input_byte}
+                        if hasattr(item.mapping, "input_byte")
+                        else {}
+                    ),
                     "output_byte": item.mapping.output_byte,
                     "baseline_successes": item.baseline_successes,
                     "trained_successes": item.trained_successes,
@@ -262,6 +279,13 @@ def main(argv: list[str] | None = None) -> int:
             ),
             "mapping_count": len(optimizer_experiment.mappings),
             "counterfactual_input_byte": optimizer_experiment.counterfactual_input_byte,
+            "inter_input_generations": optimizer_experiment.inter_input_generations,
+            "counterfactual_prefix": list(
+                optimizer_experiment.counterfactual_prefix
+            ),
+            "counterfactual_input_sequence": list(
+                optimizer_experiment.counterfactual_input_sequence
+            ),
             "experiment_config": args.experiment_config,
         }
         status["optimizer_measurement"] = run_optimizer_headless(
