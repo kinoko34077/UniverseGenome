@@ -1,7 +1,7 @@
 # Phase 6+ capability handoff
 
-Status: **P6.1 through P6.5 accepted; P6.6 generalization is the next bounded child frontier**.
-No P6.6+ capability has been implemented.
+Status: **P6.1 through P6.6 accepted; P6.7 multi-byte sequences is the next bounded child frontier**.
+No P6.7+ capability has been implemented.
 
 ## Current v0.1 boundary
 
@@ -13,9 +13,9 @@ GUI/authoritative-search integration #63 is complete via PR #73, and
 post-v0.1 residual reconciliation #61 is complete via PR #74, merged to main
 as `87de79012650b44b934651c8e1ba5a7b8d91e173`. No unresolved remediation
 owner remains. Readiness rerun #60 passed. P6.1 #79 / PR #80, P6.2 #82 /
-PR #83, P6.3 #85 / PR #86, P6.4 #88 / PR #89, and P6.5 #91 / PR #92
-subsequently added the first five accepted bounded Phase 6 experimental
-capabilities.
+PR #83, P6.3 #85 / PR #86, P6.4 #88 / PR #89, P6.5 #91 / PR #92, and
+P6.6 #95 / PR #96 subsequently added the first six accepted bounded Phase 6
+experimental capabilities.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
 Earlier remediation established the current Phase 0–5 implementation boundary;
@@ -125,6 +125,17 @@ smoke produced zero clean-success eligible cases, so noise robustness was
 non-evaluable (`null`) and `learning_claim=false`. Capability acceptance
 therefore does not claim learned noise robustness.
 
+PR #96 completed P6.6 predeclared held-out relation generalization. Its exact
+reviewed head `2904446564f535fe650e94bd896581a70b0ebb6b` passed CI #286
+(`37212729551`) with Phase 5 plus P6.1–P6.6 real experiment/optimizer smokes
+and browser E2E SUCCESS before squash merge to main
+`f5ac79062e35eb8206e8449ceb0a9ea015cbc961`. All 12 changed files were
+verified blob-identical between reviewed head and merged main. The bounded P6.6
+smoke produced teacher baseline/trained success 0→0, zero training-qualified
+and generalization-eligible seeds, `generalization_rate=null`, and
+`learning_claim=false`. Capability acceptance therefore does not claim
+successful generalization.
+
 The previous #60 PASS remains historical and invalidated by the later full
 traceability audit #64 and handoff #67/#68. Remediation and residual
 reconciliation are complete, and the fresh #60 rerun has established the
@@ -143,7 +154,7 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 
 ## Phase 6 boundary
 
-P6.1 through P6.5 are accepted capability layers. Later Phase 6 work
+P6.1 through P6.6 are accepted capability layers. Later Phase 6 work
 must remain bounded rather than becoming a silent change
 to the historical v0.1 physics/search contract.
 
@@ -165,8 +176,8 @@ Candidate order remains:
 3. multi-event output timing — **P6.3 complete (#85 / PR #86)**;
 4. forgetting and relearning — **P6.4 complete (#88 / PR #89)**;
 5. noise robustness — **P6.5 complete (#91 / PR #92)**;
-6. generalization — **next bounded frontier**;
-7. multi-byte sequences;
+6. generalization — **P6.6 complete (#95 / PR #96)**;
+7. multi-byte sequences — **next bounded frontier**;
 8. raw UTF-8 experiments.
 
 This ordering is a handoff sequence, not permission to implement all items in
