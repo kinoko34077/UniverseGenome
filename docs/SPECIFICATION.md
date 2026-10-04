@@ -1,6 +1,6 @@
 # UniverseGenome v0.1 Canonical Specification Index
 
-Status: accepted v0.1 specification basis; Phase 0–5 readiness accepted and P6.1 capability accepted through #79 / PR #80
+Status: accepted v0.1 specification basis; Phase 0–5 readiness accepted, P6.1 accepted through #79 / PR #80, and P6.2 capability accepted through #82 / PR #83
 Requirements source: #3  
 Detailed specification source/review history: #4  
 Historical rationale: #2  
@@ -25,12 +25,13 @@ Issue #3 and #4 remain durable review/history surfaces and must link to future a
 
 The checked-in Phase 0–5 implementation is present and the fresh readiness
 rerun #60 passed after remediation/reconciliation. P6.1 multiple independent
-byte mappings are now implemented/accepted through #79 / PR #80. The observed
-P6.1 public smoke remains baseline 0 / trained 0 for both mappings with
-`learning_claim=false`. The next permitted capability is one bounded P6.2
-temporal-sequence child Issue with explicit acceptance criteria. This state
-statement is separate from historical acceptance records preserved in the
-changelog and Issues.
+byte mappings are implemented/accepted through #79 / PR #80, and P6.2 temporal
+sequence discrimination is implemented/accepted through #82 / PR #83. The
+accepted P6.2 bounded smoke remains AA→B 0→0 and AC→D 0→0 with
+`learning_claim=false` and clean no-input/prefix-A/unmapped-CA controls. The
+next permitted capability is one bounded P6.3 multi-event-output-timing child
+Issue with explicit acceptance criteria. This state statement is separate from
+historical acceptance records preserved in the changelog and Issues.
 
 ## Status vocabulary
 
@@ -52,10 +53,10 @@ not promote `accepted-default` or `parameterized` into an immutable rule.
 ## Current implementation frontier
 
 Phase 0 through Phase 5 are readiness-accepted on `main`; #60 has passed and
-P6.1 is implemented/accepted through #79 / PR #80. Phase 6 remains a bounded
-capability ladder: only P6.1 is implemented, while P6.2+ requires separate child
-Issues. The current multi-mapping measurement still records no learning claim,
-and Phase 5 consumes that explicit evidence rather than asserting success. See
+P6.1 is implemented/accepted through #79 / PR #80 and P6.2 through #82 / PR
+#83. Phase 6 remains a bounded capability ladder: P6.3+ requires separate child
+Issues. The current temporal-sequence measurement still records no learning
+claim, and Phase 5 consumes that explicit evidence rather than asserting success. See
 `docs/PHASE6_HANDOFF.md`.
 
 See `docs/ROADMAP.md`.
