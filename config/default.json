@@ -7,7 +7,7 @@
     "phase6_ready": true,
     "blocking_owners": [],
     "readiness_owner": "#60",
-    "next_phase": "Phase 6.4 forgetting / relearning (bounded child Issue required)"
+    "next_phase": "Phase 6.4 forgetting/relearning (bounded child Issue required)"
   },
   "world": {
     "logical_size": 32,
