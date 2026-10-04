@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from core.experiment import (
+    ByteMapping,
     EvaluationResult,
     ExperimentConfig,
     LearningMeasurement,
@@ -1589,7 +1590,6 @@ class Phase5OptimizerTests(unittest.TestCase):
 
 
     def test_p6_007_phase5_authoritative_training_uses_all_declared_mappings(self):
-        ByteMapping = getattr(experiment_module, "ByteMapping")
         protocol = ExperimentConfig(
             byte_hold_generations=1,
             byte_gap_generations=0,
