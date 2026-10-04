@@ -22,6 +22,14 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Headless Phase 5 smoke
         run: python -m core.runner --config config/default.json --json
+      - name: Headless Phase 5 optimizer CLI smoke
+        run: >-
+          python -m core.runner
+          --config config/default.json
+          --optimizer
+          --optimizer-iterations 0
+          --optimizer-timeout-generations 8
+          --json
       - name: Static server entrypoint smoke
         run: python -m server.app --help
 
