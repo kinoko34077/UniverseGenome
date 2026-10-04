@@ -62,6 +62,7 @@ class UniverseSlot:
     growth_windows: tuple[int, ...] = ()
     growth_reference: Fitness | None = None
     parent_index: int | None = None
+    parent_genome_key: str | None = None
     last_mutation_field: str | None = None
     allocation_reason: str = "initial"
     evidence_mature: bool = False
@@ -80,6 +81,8 @@ class UniverseSlot:
             raise ValueError("slot seed must match authoritative UniverseState seed")
         if self.parent_index is not None and self.parent_index < 0:
             raise ValueError("slot parent_index must be non-negative")
+        if self.parent_genome_key is not None and not self.parent_genome_key:
+            raise ValueError("slot parent_genome_key must be non-empty when present")
         if any(not 0 <= int(window) <= 0xFF for window in self.growth_windows):
             raise ValueError("slot growth windows must fit uint8")
         if any(not 0 <= int(window) <= 0b11 for window in self.short_health_windows):
@@ -134,6 +137,7 @@ class UniverseSlot:
                 None if self.growth_reference is None else self.growth_reference.to_dict()
             ),
             "parent_index": self.parent_index,
+            "parent_genome_key": self.parent_genome_key,
             "last_mutation_field": self.last_mutation_field,
             "allocation_reason": self.allocation_reason,
             "evidence_mature": self.evidence_mature,
@@ -199,6 +203,11 @@ class UniverseSlot:
                 if payload.get("parent_index") is None
                 else int(payload["parent_index"])
             ),
+            parent_genome_key=(
+                None
+                if payload.get("parent_genome_key") is None
+                else str(payload["parent_genome_key"])
+            ),
             last_mutation_field=(
                 None
                 if payload.get("last_mutation_field") is None
@@ -226,6 +235,7 @@ class SteadyStateOptimizer:
         generation: int = 0,
         scheduler: Mapping[str, Any] | None = None,
         promising_policy: str | None = PROMISING_POLICY_TIERED_CATEGORY_RANK,
+        prune_history: Iterable[Mapping[str, Any]] = (),
     ) -> None:
         if generation < 0:
             raise ValueError("optimizer generation must be non-negative")
@@ -235,6 +245,27 @@ class SteadyStateOptimizer:
         self.base_config = base_config or PhysicsConfig()
         self.experiment = experiment or ExperimentConfig()
         self.generation = int(generation)
+        self.prune_history: list[dict[str, Any]] = []
+        for raw_event in prune_history:
+            if not isinstance(raw_event, Mapping):
+                raise ValueError("prune history entries must be objects")
+            event = {
+                "optimizer_generation": int(raw_event["optimizer_generation"]),
+                "index": int(raw_event["index"]),
+                "category": str(raw_event["category"]),
+                "genome_key": str(raw_event["genome_key"]),
+                "seed": int(raw_event["seed"]),
+                "retirement_reason": str(raw_event["retirement_reason"]),
+            }
+            if event["optimizer_generation"] < 1:
+                raise ValueError("prune history generation must be positive")
+            if not 0 <= event["index"] < OPTIMIZER_POPULATION_SIZE:
+                raise ValueError("prune history index must be within the fixed population")
+            if event["category"] not in CATEGORY_OPERATORS:
+                raise ValueError("prune history category is unsupported")
+            if not event["genome_key"] or not event["retirement_reason"]:
+                raise ValueError("prune history genome/reason must be non-empty")
+            self.prune_history.append(event)
         self.scheduler: dict[str, Any] = {
             "mutation_cursor": 0,
             "allocation_cursor": 0,
@@ -482,6 +513,7 @@ class SteadyStateOptimizer:
             seed=seed,
             state=state,
             parent_index=parent.index,
+            parent_genome_key=parent.genome_key,
             allocation_reason="seed_evidence",
             evidence_mature=parent.evidence_mature,
         )
@@ -533,6 +565,7 @@ class SteadyStateOptimizer:
             seed=seed,
             state=state,
             parent_index=parent.index,
+            parent_genome_key=parent.genome_key,
             last_mutation_field=mutation_field,
             allocation_reason="mutation_child",
             evidence_mature=False,
@@ -856,6 +889,20 @@ class SteadyStateOptimizer:
                         free_index=target.index,
                         parent=parent,
                     )
+            retirement_reason = (
+                target.absolute_failure_reason
+                or ("absolute_failure" if target.absolute_failure else "growth_pruned")
+            )
+            self.prune_history.append(
+                {
+                    "optimizer_generation": self.generation + 1,
+                    "index": target.index,
+                    "category": target.category,
+                    "genome_key": target.genome_key,
+                    "seed": target.seed,
+                    "retirement_reason": retirement_reason,
+                }
+            )
             self.slots[target.index] = child
             self._refresh_evidence_maturity(child.evidence_group)
             replacements.append(
@@ -925,19 +972,21 @@ class SteadyStateOptimizer:
                 f"integrated optimizer requires {OPTIMIZER_POPULATION_SIZE} authoritative slots"
             )
         return {
-            "format_version": 4,
+            "format_version": 5,
             "kind": "UniverseGenomePhase5SteadyStateOptimizer",
             "generation": self.generation,
             "base_config": self.base_config.to_dict(),
             "experiment": self.experiment.to_dict(),
             "scheduler": dict(self.scheduler),
+            "prune_history": [dict(event) for event in self.prune_history],
             "slots": [slot.to_dict() for slot in self.slots],
         }
 
     @classmethod
     def from_snapshot(cls, payload: Mapping[str, Any]) -> "SteadyStateOptimizer":
+        format_version = int(payload.get("format_version", -1))
         if (
-            payload.get("format_version") != 4
+            format_version not in (4, 5)
             or payload.get("kind") != "UniverseGenomePhase5SteadyStateOptimizer"
         ):
             raise ValueError("unsupported authoritative Phase 5 optimizer snapshot")
@@ -971,6 +1020,11 @@ class SteadyStateOptimizer:
             if isinstance(scheduler, Mapping)
             else None
         )
+        raw_prune_history = payload.get("prune_history", ())
+        if format_version >= 5 and not isinstance(raw_prune_history, list):
+            raise ValueError("optimizer prune_history must be an array")
+        if format_version == 4:
+            raw_prune_history = ()
         return cls(
             slots,
             base_config=base_config,
@@ -978,6 +1032,7 @@ class SteadyStateOptimizer:
             generation=int(payload["generation"]),
             scheduler=scheduler if isinstance(scheduler, Mapping) else {},
             promising_policy=promising_policy,
+            prune_history=raw_prune_history,
         )
 
 
