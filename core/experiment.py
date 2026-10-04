@@ -7,9 +7,42 @@ import json
 from pathlib import Path
 from typing import Any, Callable, Iterable, Mapping
 
-from .io_bus import FixedOrgans, InputBus, OutputEdgeDetector, OutputEvent, read_output_signal
+from .io_bus import (
+    FixedOrgans,
+    InputBus,
+    OutputEdgeDetector,
+    OutputEvent,
+    read_output_signal,
+    validate_byte,
+)
 from .physics import PhysicsConfig, StepMetrics, create_universe, destination_footprint, step
 from .state import UniverseState
+
+
+@dataclass(frozen=True, order=True)
+class ByteMapping:
+    input_byte: int
+    output_byte: int
+
+    def __post_init__(self) -> None:
+        validate_byte(self.input_byte)
+        validate_byte(self.output_byte)
+
+    def to_dict(self) -> dict[str, int]:
+        return {
+            "input_byte": int(self.input_byte),
+            "output_byte": int(self.output_byte),
+        }
+
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, Any]) -> "ByteMapping":
+        return cls(
+            input_byte=int(mapping["input_byte"]),
+            output_byte=int(mapping["output_byte"]),
+        )
+
+
+DEFAULT_BYTE_MAPPINGS = (ByteMapping(65, 66),)
 
 
 @dataclass(frozen=True)
@@ -19,6 +52,8 @@ class ExperimentConfig:
     teacher_delay_generations: int = 4
     teacher_repetitions: int = 1
     evaluation_timeout_generations: int = 1024
+    mappings: tuple[ByteMapping, ...] = DEFAULT_BYTE_MAPPINGS
+    counterfactual_input_byte: int = 66
 
     def __post_init__(self) -> None:
         for name in (
@@ -29,19 +64,36 @@ class ExperimentConfig:
                 raise ValueError(f"{name} must be non-negative")
         if self.teacher_repetitions < 1:
             raise ValueError("teacher_repetitions must be positive")
+        if not self.mappings:
+            raise ValueError("at least one byte mapping is required")
+        if any(not isinstance(item, ByteMapping) for item in self.mappings):
+            raise ValueError("mappings must contain ByteMapping values")
+        inputs = tuple(item.input_byte for item in self.mappings)
+        if len(set(inputs)) != len(inputs):
+            raise ValueError("mapping input bytes must be unique")
+        validate_byte(self.counterfactual_input_byte)
+        if self.counterfactual_input_byte in set(inputs):
+            raise ValueError("counterfactual input byte must be unmapped")
 
-    def to_dict(self) -> dict[str, int]:
-        return {
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
             "byte_hold_generations": self.byte_hold_generations,
             "byte_gap_generations": self.byte_gap_generations,
             "teacher_delay_generations": self.teacher_delay_generations,
             "teacher_repetitions": self.teacher_repetitions,
             "evaluation_timeout_generations": self.evaluation_timeout_generations,
         }
+        if (
+            self.mappings != DEFAULT_BYTE_MAPPINGS
+            or self.counterfactual_input_byte != 66
+        ):
+            payload["mappings"] = [item.to_dict() for item in self.mappings]
+            payload["counterfactual_input_byte"] = self.counterfactual_input_byte
+        return payload
 
     @classmethod
     def from_mapping(cls, mapping: Mapping[str, Any]) -> "ExperimentConfig":
-        values = {
+        values: dict[str, Any] = {
             name: mapping[name]
             for name in (
                 "byte_hold_generations", "byte_gap_generations",
@@ -50,6 +102,18 @@ class ExperimentConfig:
             )
             if mapping.get(name) is not None
         }
+        if mapping.get("mappings") is not None:
+            raw_mappings = mapping["mappings"]
+            if not isinstance(raw_mappings, (list, tuple)):
+                raise ValueError("mappings must be an array")
+            values["mappings"] = tuple(
+                ByteMapping.from_mapping(item)
+                for item in raw_mappings
+            )
+        if mapping.get("counterfactual_input_byte") is not None:
+            values["counterfactual_input_byte"] = int(
+                mapping["counterfactual_input_byte"]
+            )
         return cls(**values)
 
 
@@ -109,6 +173,20 @@ class EvaluationResult:
 
 
 @dataclass(frozen=True)
+class MappingSeedMeasurement:
+    mapping: ByteMapping
+    baseline: EvaluationResult
+    trained: EvaluationResult
+
+
+@dataclass(frozen=True)
+class MappingMeasurement:
+    mapping: ByteMapping
+    baseline_successes: int
+    trained_successes: int
+
+
+@dataclass(frozen=True)
 class SeedMeasurement:
     seed: int
     baseline: EvaluationResult
@@ -117,6 +195,19 @@ class SeedMeasurement:
     trained_no_input: EvaluationResult
     baseline_alternate: EvaluationResult
     trained_alternate: EvaluationResult
+    mapping_results: tuple[MappingSeedMeasurement, ...] = ()
+
+    @property
+    def baseline_evaluations(self) -> tuple[EvaluationResult, ...]:
+        if self.mapping_results:
+            return tuple(item.baseline for item in self.mapping_results)
+        return (self.baseline,)
+
+    @property
+    def trained_evaluations(self) -> tuple[EvaluationResult, ...]:
+        if self.mapping_results:
+            return tuple(item.trained for item in self.mapping_results)
+        return (self.trained,)
 
 
 @dataclass(frozen=True)
@@ -131,6 +222,9 @@ class LearningMeasurement:
     criterion: str
     learning_claim: bool
     per_seed: tuple[SeedMeasurement, ...]
+    mapping_count: int = 1
+    counterfactual_input_byte: int = 66
+    per_mapping: tuple[MappingMeasurement, ...] = ()
 
     @property
     def no_input_clean(self) -> int:
@@ -141,9 +235,17 @@ class LearningMeasurement:
         return self.trained_alternate_input_clean
 
     @property
+    def evaluation_case_count(self) -> int:
+        return self.seed_count * self.mapping_count
+
+    @property
     def evaluation_generations(self) -> int:
         return max(
-            (item.trained.evaluation_generations for item in self.per_seed),
+            (
+                result.evaluation_generations
+                for item in self.per_seed
+                for result in item.trained_evaluations
+            ),
             default=0,
         )
 
