@@ -126,13 +126,14 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertTrue(status["phase6_multi_event_timing_implemented"])
         self.assertTrue(status["phase6_retention_relearning_implemented"])
         self.assertTrue(status["phase6_noise_robustness_implemented"])
+        self.assertTrue(status["phase6_generalization_implemented"])
         self.assertEqual(status["phase"], 6)
         self.assertEqual(status["acceptance_state"], "accepted")
         self.assertTrue(status["phase6_ready"])
         self.assertEqual(status["blocking_owners"], [])
         self.assertEqual(status["readiness_owner"], "#60")
-        self.assertEqual(status["next_phase"], "Phase 6.6 generalization (bounded child Issue required)")
-        self.assertIn("Phase 6.6 generalization (bounded child Issue required)", status["next_phase"])
+        self.assertEqual(status["next_phase"], "Phase 6.7 multi-byte sequences (bounded child Issue required)")
+        self.assertIn("Phase 6.7 multi-byte sequences (bounded child Issue required)", status["next_phase"])
 
     def test_post_audit_documentation_routes_to_phase6_handoff(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -162,11 +163,11 @@ class Phase0ScaffoldTests(unittest.TestCase):
             readme,
         )
         self.assertIn("authoritative Phase 5", readme)
-        self.assertIn("P6.5 capability accepted through #91 / PR #92", specification)
-        self.assertIn("P6.5", specification)
-        self.assertIn("P6.5 controlled physical-noise robustness is implemented/accepted", roadmap)
+        self.assertIn("P6.6 predeclared held-out relation generalization through #95 / PR #96", specification)
+        self.assertIn("P6.6", specification)
+        self.assertIn("P6.6 predeclared held-out relation generalization is implemented/accepted", roadmap)
         self.assertIn(
-            "Status: **P6.1 through P6.5 accepted; P6.6 generalization is the next bounded child frontier**",
+            "Status: **P6.1 through P6.6 accepted; P6.7 multi-byte sequences is the next bounded child frontier**",
             handoff,
         )
         self.assertIn("historical v0.1 physics/search contract", handoff)
