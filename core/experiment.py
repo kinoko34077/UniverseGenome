@@ -334,6 +334,66 @@ class IOExperiment:
         if on_generation is not None:
             on_generation(self.state.generation)
 
+    def _train_mapping_once(
+        self,
+        mapping: ByteMapping,
+        *,
+        on_generation: Callable[[int], None] | None = None,
+        on_step: Callable[[int, StepMetrics], None] | None = None,
+    ) -> TrainingRecord:
+        def advance(anchors: Iterable[tuple[int, int]]) -> None:
+            metrics = self._advance(anchors)
+            if on_step is not None:
+                on_step(self.state.generation, metrics)
+            if on_generation is not None:
+                on_generation(self.state.generation)
+
+        for _ in range(self.experiment.byte_hold_generations):
+            self.drive_input(mapping.input_byte)
+            advance(self.input_bus.signal_coordinates())
+        for _ in range(self.experiment.byte_gap_generations):
+            self.release_input()
+            advance(())
+        for _ in range(self.experiment.teacher_delay_generations):
+            self.release_input()
+            advance(())
+        byte_event = OutputEvent.byte(mapping.output_byte)
+        null_event = OutputEvent.null()
+        self.teacher_output(
+            byte_event,
+            on_generation=on_generation,
+            on_step=on_step,
+        )
+        self.teacher_output(
+            null_event,
+            on_generation=on_generation,
+            on_step=on_step,
+        )
+        return TrainingRecord(
+            input_byte=mapping.input_byte,
+            output_byte=mapping.output_byte,
+            teacher_events=(byte_event, null_event),
+            generation=self.state.generation,
+        )
+
+    def train_mappings(
+        self,
+        *,
+        on_generation: Callable[[int], None] | None = None,
+        on_step: Callable[[int, StepMetrics], None] | None = None,
+    ) -> tuple[TrainingRecord, ...]:
+        records: list[TrainingRecord] = []
+        for _ in range(self.experiment.teacher_repetitions):
+            for mapping in self.experiment.mappings:
+                records.append(
+                    self._train_mapping_once(
+                        mapping,
+                        on_generation=on_generation,
+                        on_step=on_step,
+                    )
+                )
+        return tuple(records)
+
     def train_a_to_b_null(
         self,
         *,
@@ -342,43 +402,22 @@ class IOExperiment:
         on_generation: Callable[[int], None] | None = None,
         on_step: Callable[[int, StepMetrics], None] | None = None,
     ) -> TrainingRecord:
+        mapping = ByteMapping(input_byte, output_byte)
         teacher_events: list[OutputEvent] = []
-
-        def advance(anchors: Iterable[tuple[int, int]]) -> None:
-            metrics = self._advance(anchors)
-            if on_step is not None:
-                on_step(self.state.generation, metrics)
-            if on_generation is not None:
-                on_generation(self.state.generation)
-
+        last_generation = self.state.generation
         for _ in range(self.experiment.teacher_repetitions):
-            for _ in range(self.experiment.byte_hold_generations):
-                self.drive_input(input_byte)
-                advance(self.input_bus.signal_coordinates())
-            for _ in range(self.experiment.byte_gap_generations):
-                self.release_input()
-                advance(())
-            for _ in range(self.experiment.teacher_delay_generations):
-                self.release_input()
-                advance(())
-            byte_event = OutputEvent.byte(output_byte)
-            null_event = OutputEvent.null()
-            self.teacher_output(
-                byte_event,
+            record = self._train_mapping_once(
+                mapping,
                 on_generation=on_generation,
                 on_step=on_step,
             )
-            self.teacher_output(
-                null_event,
-                on_generation=on_generation,
-                on_step=on_step,
-            )
-            teacher_events.extend((byte_event, null_event))
+            teacher_events.extend(record.teacher_events)
+            last_generation = record.generation
         return TrainingRecord(
             input_byte=input_byte,
             output_byte=output_byte,
             teacher_events=tuple(teacher_events),
-            generation=self.state.generation,
+            generation=last_generation,
         )
 
     def evaluate_autonomous(
@@ -435,23 +474,122 @@ class IOExperiment:
         )
 
 
-def _assemble_learning_measurement(measurements: Iterable[SeedMeasurement]) -> LearningMeasurement:
+def _seed_measurement(
+    *,
+    seed: int,
+    baseline_state: UniverseState,
+    trained_state: UniverseState,
+    protocol: ExperimentConfig,
+) -> SeedMeasurement:
+    baseline = IOExperiment(baseline_state, experiment=protocol)
+    trained = IOExperiment(trained_state, experiment=protocol)
+    mapping_results: list[MappingSeedMeasurement] = []
+
+    for mapping in protocol.mappings:
+        expected = (OutputEvent.byte(mapping.output_byte), OutputEvent.null())
+        mapping_results.append(
+            MappingSeedMeasurement(
+                mapping=mapping,
+                baseline=baseline.evaluate_autonomous(
+                    input_byte=mapping.input_byte,
+                    expected=expected,
+                ),
+                trained=trained.evaluate_autonomous(
+                    input_byte=mapping.input_byte,
+                    expected=expected,
+                ),
+            )
+        )
+
+    first = mapping_results[0]
+    baseline_no_input = baseline.evaluate_autonomous(
+        input_byte=protocol.mappings[0].input_byte,
+        input_valid=False,
+        expected=(),
+    )
+    trained_no_input = trained.evaluate_autonomous(
+        input_byte=protocol.mappings[0].input_byte,
+        input_valid=False,
+        expected=(),
+    )
+    baseline_alternate = baseline.evaluate_autonomous(
+        input_byte=protocol.counterfactual_input_byte,
+        expected=(),
+    )
+    trained_alternate = trained.evaluate_autonomous(
+        input_byte=protocol.counterfactual_input_byte,
+        expected=(),
+    )
+    return SeedMeasurement(
+        seed=seed,
+        baseline=first.baseline,
+        trained=first.trained,
+        baseline_no_input=baseline_no_input,
+        trained_no_input=trained_no_input,
+        baseline_alternate=baseline_alternate,
+        trained_alternate=trained_alternate,
+        mapping_results=tuple(mapping_results),
+    )
+
+
+def _assemble_learning_measurement(
+    measurements: Iterable[SeedMeasurement],
+    *,
+    mappings: Iterable[ByteMapping] = DEFAULT_BYTE_MAPPINGS,
+    counterfactual_input_byte: int = 66,
+) -> LearningMeasurement:
     records = tuple(measurements)
     if not records:
         raise ValueError("at least one seed measurement is required")
-    baseline_successes = sum(item.baseline.success for item in records)
-    trained_successes = sum(item.trained.success for item in records)
+    mapping_values = tuple(mappings)
+    if not mapping_values:
+        raise ValueError("at least one byte mapping is required")
+
+    baseline_successes = sum(
+        result.success
+        for item in records
+        for result in item.baseline_evaluations
+    )
+    trained_successes = sum(
+        result.success
+        for item in records
+        for result in item.trained_evaluations
+    )
     baseline_no_input_clean = sum(item.baseline_no_input.success for item in records)
     trained_no_input_clean = sum(item.trained_no_input.success for item in records)
     baseline_alternate_input_clean = sum(item.baseline_alternate.success for item in records)
     trained_alternate_input_clean = sum(item.trained_alternate.success for item in records)
-    required = len(records)
-    criterion = (
-        "all seeds must autonomously emit B then NULL after training, trained successes must exceed baseline, "
-        "and no-input/alternate-input counterfactuals must remain output-clean"
+    seed_count = len(records)
+    required_cases = seed_count * len(mapping_values)
+
+    per_mapping = tuple(
+        MappingMeasurement(
+            mapping=mapping,
+            baseline_successes=sum(
+                item.mapping_results[index].baseline.success
+                for item in records
+            ),
+            trained_successes=sum(
+                item.mapping_results[index].trained.success
+                for item in records
+            ),
+        )
+        for index, mapping in enumerate(mapping_values)
     )
+
+    if len(mapping_values) == 1:
+        criterion = (
+            "all seeds must autonomously emit B then NULL after training, trained successes must exceed baseline, "
+            "and no-input/alternate-input counterfactuals must remain output-clean"
+        )
+    else:
+        criterion = (
+            "all mappings across all seeds must autonomously emit each declared output byte then NULL after training, "
+            "trained successes must exceed baseline, and no-input/unmapped-input counterfactuals must remain output-clean"
+        )
+
     return LearningMeasurement(
-        seed_count=required,
+        seed_count=seed_count,
         baseline_successes=baseline_successes,
         trained_successes=trained_successes,
         baseline_no_input_clean=baseline_no_input_clean,
@@ -460,12 +598,15 @@ def _assemble_learning_measurement(measurements: Iterable[SeedMeasurement]) -> L
         trained_alternate_input_clean=trained_alternate_input_clean,
         criterion=criterion,
         learning_claim=(
-            trained_successes >= required
+            trained_successes >= required_cases
             and trained_successes > baseline_successes
-            and trained_no_input_clean >= required
-            and trained_alternate_input_clean >= required
+            and trained_no_input_clean >= seed_count
+            and trained_alternate_input_clean >= seed_count
         ),
         per_seed=records,
+        mapping_count=len(mapping_values),
+        counterfactual_input_byte=counterfactual_input_byte,
+        per_mapping=per_mapping,
     )
 
 
@@ -477,24 +618,18 @@ def measure_trained_state(
     """Measure a current authoritative training state through disposable clones."""
     protocol = experiment or ExperimentConfig()
     resolved = state.config or PhysicsConfig()
-    expected = (OutputEvent.byte(66), OutputEvent.null())
-    baseline = IOExperiment(create_universe(seed=state.seed, config=resolved), experiment=protocol)
-    baseline_result = baseline.evaluate_autonomous(input_byte=65, expected=expected)
-    baseline_no_input = baseline.evaluate_autonomous(input_byte=65, input_valid=False, expected=())
-    baseline_alternate = baseline.evaluate_autonomous(input_byte=66, expected=())
-    trained = IOExperiment(state, experiment=protocol)
-    trained_result = trained.evaluate_autonomous(input_byte=65, expected=expected)
-    trained_no_input = trained.evaluate_autonomous(input_byte=65, input_valid=False, expected=())
-    trained_alternate = trained.evaluate_autonomous(input_byte=66, expected=())
-    return _assemble_learning_measurement((SeedMeasurement(
+    measurement = _seed_measurement(
         seed=state.seed,
-        baseline=baseline_result,
-        trained=trained_result,
-        baseline_no_input=baseline_no_input,
-        trained_no_input=trained_no_input,
-        baseline_alternate=baseline_alternate,
-        trained_alternate=trained_alternate,
-    ),))
+        baseline_state=create_universe(seed=state.seed, config=resolved),
+        trained_state=state,
+        protocol=protocol,
+    )
+    return _assemble_learning_measurement(
+        (measurement,),
+        mappings=protocol.mappings,
+        counterfactual_input_byte=protocol.counterfactual_input_byte,
+    )
+
 
 def compare_baseline_trained(
     *,
@@ -507,25 +642,21 @@ def compare_baseline_trained(
         raise ValueError("at least one seed is required")
     resolved = config or PhysicsConfig()
     protocol = experiment or ExperimentConfig()
-    expected = (OutputEvent.byte(66), OutputEvent.null())
     measurements: list[SeedMeasurement] = []
     for seed in seed_values:
-        baseline = IOExperiment(create_universe(seed=seed, config=resolved), experiment=protocol)
-        baseline_result = baseline.evaluate_autonomous(input_byte=65, expected=expected)
-        baseline_no_input = baseline.evaluate_autonomous(input_byte=65, input_valid=False, expected=())
-        baseline_alternate = baseline.evaluate_autonomous(input_byte=66, expected=())
-        trained = IOExperiment(create_universe(seed=seed, config=resolved), experiment=protocol)
-        trained.train_a_to_b_null(input_byte=65, output_byte=66)
-        trained_result = trained.evaluate_autonomous(input_byte=65, expected=expected)
-        trained_no_input = trained.evaluate_autonomous(input_byte=65, input_valid=False, expected=())
-        trained_alternate = trained.evaluate_autonomous(input_byte=66, expected=())
-        measurements.append(SeedMeasurement(
-            seed,
-            baseline_result,
-            trained_result,
-            baseline_no_input,
-            trained_no_input,
-            baseline_alternate,
-            trained_alternate,
-        ))
-    return _assemble_learning_measurement(measurements)
+        baseline_state = create_universe(seed=seed, config=resolved)
+        trained_state = create_universe(seed=seed, config=resolved)
+        IOExperiment(trained_state, experiment=protocol).train_mappings()
+        measurements.append(
+            _seed_measurement(
+                seed=seed,
+                baseline_state=baseline_state,
+                trained_state=trained_state,
+                protocol=protocol,
+            )
+        )
+    return _assemble_learning_measurement(
+        measurements,
+        mappings=protocol.mappings,
+        counterfactual_input_byte=protocol.counterfactual_input_byte,
+    )
