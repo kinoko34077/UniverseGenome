@@ -298,6 +298,17 @@ class Phase4IOTests(unittest.TestCase):
         self.assertEqual(payload["counterfactual_input_byte"], 66)
         self.assertEqual(ExperimentConfig.from_mapping(payload), protocol)
 
+        canonical = experiment_module.load_experiment_config(
+            ROOT / "config" / "experiment_phase6_multi_event_timing.json"
+        )
+        self.assertEqual(canonical.output_event_count, 2)
+        self.assertEqual(canonical.output_event_interval_generations, 4)
+        self.assertEqual(canonical.evaluation_timeout_generations, 1024)
+        self.assertEqual(
+            [item.input_bytes for item in canonical.mappings],
+            [(65, 65), (65, 67)],
+        )
+
         with self.assertRaises(ValueError):
             ExperimentConfig(
                 mappings=(
