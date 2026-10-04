@@ -295,4 +295,48 @@ real optimizer CLI smoke with the shortened timeout supplied explicitly.
 The Phase 5 boundary records the Phase 4 outcome and a durable Phase 6+
 handoff; no Phase 6+ capability is activated by the v0.1 Work Order.
 
+## Phase 6.1 acceptance tests
+
+### TEST-P6-001 Ordered mapping protocol
+
+The explicit Phase 6.1 protocol serializes ordered A→B and C→D mappings,
+rejects duplicate mapped input bytes, rejects an unmapped-input control that is
+actually mapped, and preserves the legacy single A→B default when Phase 6
+fields are absent.
+
+### TEST-P6-002 Shared authoritative training state
+
+One authoritative training Universe receives all declared mappings in
+deterministic order for each teacher repetition without reset between mappings.
+Teacher byte/NULL stimulation remains external and excluded from autonomous
+scoring.
+
+### TEST-P6-003 Mapping-specific isolated evaluation
+
+Each mapping is evaluated on its own disposable clone of the same source state.
+A mapping succeeds only for its exact output-byte then NULL event tuple; wrong
+mapping bytes, extra events, missing events or missing NULL remain failures.
+Evaluation does not mutate authoritative state.
+
+### TEST-P6-004 Multi-mapping learning measurement
+
+Baseline/trained results remain visible per mapping and per seed. The aggregate
+criterion requires every mapping across every seed, trained improvement over
+baseline, no-input cleanliness and a declared unmapped-input cleanliness gate.
+A failed experiment remains `learning_claim=false`.
+
+### TEST-P6-005 Phase 5 integration
+
+When a multi-mapping protocol is active, Phase 5 task fitness/error/timeout/
+latency/activity measurements are normalized across all mapping evaluation
+cases. Counterfactual cleanliness remains per-seed. The integration must not
+change category isolation, pruning, seed evolution or promising-allocation
+semantics.
+
+### TEST-P6-006 Explicit protocol entry point
+
+`config/experiment_phase6_multi_mapping.json` loads the declared A→B and C→D
+protocol with the canonical evaluation timeout. Existing Phase 0–5 tests,
+headless/optimizer CLI smoke and browser E2E remain GREEN.
+
 ---
