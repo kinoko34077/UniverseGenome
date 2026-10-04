@@ -1,7 +1,8 @@
 # Phase 6+ capability handoff
 
-Status: **P6.1 through P6.7 accepted; P6.8 raw UTF-8 experiments is the next bounded child frontier**.
-No P6.8 capability has been implemented.
+Status: **P6.1 through P6.8 accepted; no later capability is currently selected**.
+Further Phase 6+ work requires an explicit roadmap/research decision under #78
+and a new bounded child Issue. No automatic P6.9 is authorized.
 
 ## Current v0.1 boundary
 
@@ -14,8 +15,9 @@ post-v0.1 residual reconciliation #61 is complete via PR #74, merged to main
 as `87de79012650b44b934651c8e1ba5a7b8d91e173`. No unresolved remediation
 owner remains. Readiness rerun #60 passed. P6.1 #79 / PR #80, P6.2 #82 /
 PR #83, P6.3 #85 / PR #86, P6.4 #88 / PR #89, P6.5 #91 / PR #92,
-P6.6 #95 / PR #96, and P6.7 #98 / PR #99 subsequently added the first seven
-accepted bounded Phase 6 experimental capabilities.
+P6.6 #95 / PR #96, P6.7 #98 / PR #99, and P6.8 #101 / PR #102
+subsequently added the first eight accepted bounded Phase 6 experimental
+capabilities.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
 Earlier remediation established the current Phase 0–5 implementation boundary;
@@ -146,6 +148,16 @@ smoke produced zero trained mapped successes and `learning_claim=false`;
 capability acceptance therefore does not claim successful distinct-sequence
 learning.
 
+PR #102 completed P6.8 bounded raw UTF-8 byte experiments. Its exact reviewed
+head `d8d84fd64ad5af3804207dae5bf42e7409a7a223` passed CI #317
+(`37218913896`) with 217 tests / OK, real P6.1–P6.8 experiment/optimizer
+smokes and browser E2E SUCCESS before squash merge to main
+`f203eb3c15d57c9b387a29b1ba8b493b82b7ad93`. The reviewed head and merged
+main have identical Git trees. P6.8 added no Unicode/tokenizer runtime; the
+accepted experiment uses numeric bytes only. The bounded smoke produced zero
+trained mapped successes and `learning_claim=false`; capability acceptance
+therefore does not claim successful UTF-8 learning.
+
 The previous #60 PASS remains historical and invalidated by the later full
 traceability audit #64 and handoff #67/#68. Remediation and residual
 reconciliation are complete, and the fresh #60 rerun has established the
@@ -164,9 +176,10 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 
 ## Phase 6 boundary
 
-P6.1 through P6.7 are accepted capability layers. Later Phase 6 work
-must remain bounded rather than becoming a silent change
-to the historical v0.1 physics/search contract.
+P6.1 through P6.8 are accepted capability layers. No later capability is
+currently selected. Any further Phase 6+ work must first be explicitly chosen
+under roadmap #78 and remain bounded rather than becoming a silent change to
+the historical v0.1 physics/search contract.
 
 Before any Phase 6 mutation:
 
@@ -188,10 +201,11 @@ Candidate order remains:
 5. noise robustness — **P6.5 complete (#91 / PR #92)**;
 6. generalization — **P6.6 complete (#95 / PR #96)**;
 7. multi-byte sequences — **P6.7 complete (#98 / PR #99)**;
-8. raw UTF-8 experiments — **next bounded frontier**.
+8. raw UTF-8 experiments — **P6.8 complete (#101 / PR #102)**.
 
-This ordering is a handoff sequence, not permission to implement all items in
-one work unit. Start with one bounded child Issue.
+The originally listed capability ladder is complete through P6.8. This list is
+not permission to invent P6.9. A further experiment requires an explicit
+roadmap/research decision in #78 and one new bounded child Issue.
 
 ## Completed post-v0.1 residual boundary
 
