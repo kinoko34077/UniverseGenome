@@ -109,6 +109,23 @@ Required controls:
 - Save Snapshot
 - Load Snapshot
 
+After Phase 5 becomes the authoritative automated-search owner, the same
+surface has the following cross-phase semantics:
+
+- Run / Pause control the outer `SteadyStateOptimizer` search loop;
+- one outer search iteration is exposed separately from one physical
+  observation step;
+- physical 1 Step is allowed only on an isolated observation clone and never
+  advances an authoritative search slot;
+- Reset recreates the authoritative optimizer from the current reset
+  configuration;
+- universe selection may be performed directly by the 128 overview thumbnails;
+  a redundant standalone selector that only re-selects the current index is not
+  required;
+- Clone for Observation copies the selected authoritative optimizer slot;
+- Save / Load serialize and restore the authoritative Phase 5 optimizer
+  snapshot, not a parallel Phase 3 population.
+
 ---
 
 ## SPEC-UI-021 — Rewind capacity
@@ -137,24 +154,41 @@ snapshot round-trips.
 Manual parameter changes do not mutate the constants of an already-running authoritative experiment.
 
 Apply on next reset/spawn/new universe unless a future explicit live-edit mode is specified.
+For the integrated v0.1 browser surface, exposed manual edits are staged as
+pending reset parameters and are applied when Reset creates a new authoritative
+optimizer. They are never written into already-running slot configurations.
 
 ---
 
-# 37. Current Phase 3 implementation contract
+# 37. Current observer implementation contract
 
 The accepted observer surface is implemented through the server-owned runtime
-payload:
+payload. After Phase 5 integration, that runtime owns the single authoritative
+`SteadyStateOptimizer`; it must not create a second authoritative
+`core.population.Population`.
 
-- every overview summary contains a bounded 8×8 spatial projection with
+- every overview summary is projected from one of the 128 authoritative
+  optimizer slots and contains a bounded 8×8 spatial projection with visual
   activity, highest hierarchy, and occupancy values;
-- detail cells expose HP, hierarchy level, latent, activity, and bond/contact
-  values;
-- overview polling is 500 ms and detail polling is 125 ms;
+- overview/detail metadata exposes the actual category, genome, seed,
+  absolute fitness, growth history, evidence-group size/maturity, current
+  lineage fields, allocation reason, and latest replacement/prune event when
+  available;
+- detail cells expose HP, hierarchy level, latent, visual activity, and
+  bond/contact values;
+- the current activity rendering value is explicitly a display-only proxy
+  `min(255, bond_strength + 16 * popcount(latent))`; it is not the optimizer
+  `activity_cost` fitness observable;
+- overview polling is 500 ms and detail polling is 125 ms; those render timers
+  only read state and never advance search or physical time;
 - HP/hierarchy automatic alternation occurs every four detail frames and can
   be manually locked;
-- clone observation is an explicit selected observation target and does not
-  mutate or advance the authoritative slot;
-- the server history policy is bounded to 128, 256, or 512 generations, with
-  the default observer runtime configured for 512.
+- clone observation is an explicit selected observation target; physical
+  stepping/rewind on that clone does not mutate or advance the authoritative
+  slot;
+- authoritative Save/Load uses
+  `UniverseGenomePhase5SteadyStateOptimizer` snapshots;
+- observation-clone rewind capacity is bounded to 128, 256, or 512 physical
+  generations, with 512 as the default.
 
 ---
