@@ -256,6 +256,20 @@ def main(argv: list[str] | None = None) -> int:
                 measurement.counterfactual_input_sequence
             ),
             "output_event_count": measurement.output_event_count,
+            "mapping_input_lengths": [
+                len(item.mapping.input_bytes)
+                for item in measurement.per_mapping
+            ],
+            "mapping_output_event_counts": [
+                len(
+                    getattr(item.mapping, "output_bytes", ())
+                    or (
+                        (item.mapping.output_byte,)
+                        * measurement.output_event_count
+                    )
+                )
+                for item in measurement.per_mapping
+            ],
             "output_event_interval_generations": (
                 measurement.output_event_interval_generations
             ),
@@ -493,6 +507,20 @@ def main(argv: list[str] | None = None) -> int:
                 optimizer_experiment.counterfactual_input_sequence
             ),
             "output_event_count": optimizer_experiment.output_event_count,
+            "mapping_input_lengths": [
+                len(mapping.input_bytes)
+                for mapping in optimizer_experiment.mappings
+            ],
+            "mapping_output_event_counts": [
+                len(
+                    getattr(mapping, "output_bytes", ())
+                    or (
+                        (mapping.output_byte,)
+                        * optimizer_experiment.output_event_count
+                    )
+                )
+                for mapping in optimizer_experiment.mappings
+            ],
             "output_event_interval_generations": (
                 optimizer_experiment.output_event_interval_generations
             ),

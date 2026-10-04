@@ -294,6 +294,14 @@ experiment protocol and optimizer snapshot. Host-side UTF-8 validity checks and
 human-readable character annotations are test/documentation evidence only.
 P6.8 alone does not require a snapshot-format increment.
 
+For Phase 6.9, the same experiment protocol may contain mixed one-, two- and
+three-byte mapping lengths. Exact input/output arrays, the legacy fallback
+output-event count and the common inter-event timing must round-trip without
+padding or truncation through `ExperimentConfig`, optimizer snapshots and
+explicit timeout reconstruction. Mapping-specific observed events remain
+disposable measurement/reporting evidence. P6.9 alone does not require a
+snapshot-format increment.
+
 ---
 
 ---
