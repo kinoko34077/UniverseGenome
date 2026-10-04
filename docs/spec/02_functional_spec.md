@@ -920,3 +920,69 @@ success and event generations. Canonical config uses delta 256; the bounded smok
 uses an explicitly stronger delta 65535 while preserving the same semantics.
 CI executes both P6.5 experiment and optimizer entrypoints.
 
+---
+
+# 39. Phase 6.6 predeclared held-out relation generalization
+
+## SPEC-P6GEN-001 — Held-out protocol field and relation validation
+**Status: accepted**
+
+`ExperimentConfig.held_out_mapping` is an optional
+`ByteSequenceMapping`. Legacy protocols leave it absent and therefore keep
+P6.6 disabled. When present, all teacher mappings and the held-out mapping are
+two-byte sequences, share one prefix, and obey
+`output_byte = second_input_byte + 1`.
+
+The bounded canonical teacher set is AA→B and AC→D; AE→F is held out. The
+held-out input, second byte and target must not overlap the teacher set.
+`output_event_count=2` remains the accepted P6.3 repeated-event protocol.
+
+## SPEC-P6GEN-002 — No-teacher held-out evaluation
+**Status: accepted**
+
+`train_mappings()` iterates only the declared teacher `mappings`; the held-out
+mapping is never teacher-stimulated. Measurement evaluates the held-out relation
+separately on baseline and trained disposable clones using the same exact timed
+F,F,NULL success criterion as the active P6.3 protocol.
+
+Phase 5 `measure_trained_state` performs the held-out probe without mutating
+the authoritative optimizer Universe.
+
+## SPEC-P6GEN-003 — Baseline-relative classification and null evaluability
+**Status: accepted**
+
+Per seed, training qualification requires all teacher mappings to be trained
+successes, the corresponding baselines to be failures, and the active trained
+counterfactual controls to remain clean. Generalization eligibility additionally
+requires held-out baseline failure.
+
+Eligible trained held-out success is generalized; eligible held-out failure is
+generalization-failed. Measurement exposes
+`training_qualified_count`, `generalization_eligible_count`,
+`generalized_count`, `generalization_failed_count` and
+`generalization_rate`. The rate is null when eligibility is zero.
+
+## SPEC-P6GEN-004 — Phase 5 search boundary
+**Status: accepted**
+
+Held-out/generalization evidence is not added to `Fitness.sort_key()`, does not
+change the existing mapped-task fitness aggregation, and does not consume
+reserved growth bit 7. P6.4 retention bit5 and P6.5 noise-robustness bit6 remain
+unchanged.
+
+No P6.6 field changes category isolation, pruning, promising allocation, seed
+evidence or authoritative-slot semantics.
+
+## SPEC-P6GEN-005 — Persistence, reporting, configs and CI
+**Status: accepted**
+
+The held-out mapping serializes inside the existing `ExperimentConfig` and
+round-trips through optimizer snapshots and explicit timeout reconstruction
+without a snapshot-format increment solely for P6.6.
+
+Public experiment and optimizer diagnostics expose held-out protocol identity,
+baseline/trained held-out outcomes and event generations, per-seed
+classification and aggregate null-aware evidence. Canonical and bounded-smoke
+P6.6 configs use the same relation. CI executes both P6.6 experiment and
+optimizer entrypoints.
+

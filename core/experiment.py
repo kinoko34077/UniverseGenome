@@ -101,6 +101,7 @@ class ExperimentConfig:
     retention_interference_repetitions: int = 0
     relearning_teacher_repetitions: int = 0
     noise_robustness_rate_delta: int = 0
+    held_out_mapping: ByteSequenceMapping | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -182,6 +183,37 @@ class ExperimentConfig:
             if counterfactual_sequence in set(input_sequences):
                 raise ValueError("counterfactual input sequence must be unmapped")
 
+        if self.held_out_mapping is not None:
+            held_out = self.held_out_mapping
+            if not isinstance(held_out, ByteSequenceMapping):
+                raise ValueError("P6.6 held_out_mapping must be a two-byte sequence mapping")
+            if len(sequence_mappings) != len(self.mappings):
+                raise ValueError("P6.6 requires all teacher mappings to be two-byte sequences")
+            if self.output_event_count != 2:
+                raise ValueError("P6.6 requires the accepted two-event output protocol")
+            relation_mappings = (*sequence_mappings, held_out)
+            relation_prefix = held_out.input_bytes[0]
+            if any(item.input_bytes[0] != relation_prefix for item in relation_mappings):
+                raise ValueError("P6.6 relation mappings must share one fixed prefix")
+            if any(
+                item.input_bytes[1] >= 0xFF
+                or item.output_byte != item.input_bytes[1] + 1
+                for item in relation_mappings
+            ):
+                raise ValueError(
+                    "P6.6 relation requires output byte = second input byte + 1"
+                )
+            if held_out.input_bytes in set(input_sequences):
+                raise ValueError("P6.6 held-out input must not be teacher-trained")
+            training_second_bytes = {
+                item.input_bytes[1] for item in sequence_mappings
+            }
+            if held_out.input_bytes[1] in training_second_bytes:
+                raise ValueError("P6.6 held-out second byte must be distinct")
+            training_targets = {item.output_byte for item in sequence_mappings}
+            if held_out.output_byte in training_targets:
+                raise ValueError("P6.6 held-out target must not be a teacher target")
+
     @property
     def retention_enabled(self) -> bool:
         return bool(
@@ -193,6 +225,10 @@ class ExperimentConfig:
     @property
     def noise_robustness_enabled(self) -> bool:
         return self.noise_robustness_rate_delta > 0
+
+    @property
+    def generalization_enabled(self) -> bool:
+        return self.held_out_mapping is not None
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -229,6 +265,8 @@ class ExperimentConfig:
             )
         if self.noise_robustness_rate_delta:
             payload["noise_robustness_rate_delta"] = self.noise_robustness_rate_delta
+        if self.held_out_mapping is not None:
+            payload["held_out_mapping"] = self.held_out_mapping.to_dict()
         if (
             self.mappings != DEFAULT_BYTE_MAPPINGS
             or self.counterfactual_input_byte != 66
@@ -295,6 +333,11 @@ class ExperimentConfig:
         ):
             if mapping.get(name) is not None:
                 values[name] = int(mapping[name])
+        if mapping.get("held_out_mapping") is not None:
+            raw_held_out = mapping["held_out_mapping"]
+            if not isinstance(raw_held_out, Mapping):
+                raise ValueError("held_out_mapping must be an object")
+            values["held_out_mapping"] = ByteSequenceMapping.from_mapping(raw_held_out)
         return cls(**values)
 
 
@@ -422,6 +465,8 @@ class SeedMeasurement:
     trained_prefix: EvaluationResult | None = None
     baseline_sequence_counterfactual: EvaluationResult | None = None
     trained_sequence_counterfactual: EvaluationResult | None = None
+    baseline_held_out: EvaluationResult | None = None
+    trained_held_out: EvaluationResult | None = None
     retention_checkpoint_generations: tuple[int, int, int] = ()
     noisy_no_input: EvaluationResult | None = None
     noisy_alternate: EvaluationResult | None = None
@@ -462,6 +507,48 @@ class SeedMeasurement:
             and self.noisy_controls_clean
         )
         return eligible, robust, bool(eligible and not robust)
+
+    @property
+    def generalization_controls_clean(self) -> bool:
+        if self.trained_prefix is not None or self.trained_sequence_counterfactual is not None:
+            return bool(
+                self.trained_no_input.success
+                and self.trained_prefix is not None
+                and self.trained_prefix.success
+                and self.trained_sequence_counterfactual is not None
+                and self.trained_sequence_counterfactual.success
+            )
+        return bool(
+            self.trained_no_input.success
+            and self.trained_alternate.success
+        )
+
+    def generalization_classification(self) -> tuple[bool, bool, bool, bool]:
+        training_qualified = bool(
+            self.mapping_results
+            and all(
+                record.trained.success and not record.baseline.success
+                for record in self.mapping_results
+            )
+            and self.generalization_controls_clean
+        )
+        eligible = bool(
+            training_qualified
+            and self.baseline_held_out is not None
+            and self.trained_held_out is not None
+            and not self.baseline_held_out.success
+        )
+        generalized = bool(
+            eligible
+            and self.trained_held_out is not None
+            and self.trained_held_out.success
+        )
+        return (
+            training_qualified,
+            eligible,
+            generalized,
+            bool(eligible and not generalized),
+        )
 
     @property
     def baseline_evaluations(self) -> tuple[EvaluationResult, ...]:
@@ -507,6 +594,11 @@ class LearningMeasurement:
     noise_robustness_eligible_count: int = 0
     noise_robust_count: int = 0
     noise_failed_count: int = 0
+    held_out_mapping: ByteSequenceMapping | None = None
+    training_qualified_count: int = 0
+    generalization_eligible_count: int = 0
+    generalized_count: int = 0
+    generalization_failed_count: int = 0
 
     @property
     def retention_rate(self) -> float | None:
@@ -525,6 +617,12 @@ class LearningMeasurement:
         if self.noise_robustness_eligible_count <= 0:
             return None
         return self.noise_robust_count / self.noise_robustness_eligible_count
+
+    @property
+    def generalization_rate(self) -> float | None:
+        if self.generalization_eligible_count <= 0:
+            return None
+        return self.generalized_count / self.generalization_eligible_count
 
     @property
     def no_input_clean(self) -> int:
@@ -1039,6 +1137,25 @@ def _seed_measurement(
             expected=(),
         )
 
+    baseline_held_out = None
+    trained_held_out = None
+    if protocol.held_out_mapping is not None:
+        held_out_expected = (
+            *(OutputEvent.byte(protocol.held_out_mapping.output_byte),)
+            * protocol.output_event_count,
+            OutputEvent.null(),
+        )
+        baseline_held_out = evaluate(
+            baseline,
+            protocol.held_out_mapping,
+            held_out_expected,
+        )
+        trained_held_out = evaluate(
+            trained,
+            protocol.held_out_mapping,
+            held_out_expected,
+        )
+
     noisy_no_input = None
     noisy_alternate = None
     noisy_prefix = None
@@ -1077,6 +1194,8 @@ def _seed_measurement(
         trained_prefix=trained_prefix,
         baseline_sequence_counterfactual=baseline_sequence_counterfactual,
         trained_sequence_counterfactual=trained_sequence_counterfactual,
+        baseline_held_out=baseline_held_out,
+        trained_held_out=trained_held_out,
         retention_checkpoint_generations=retention_checkpoint_generations,
         noisy_no_input=noisy_no_input,
         noisy_alternate=noisy_alternate,
@@ -1096,6 +1215,7 @@ def _assemble_learning_measurement(
     counterfactual_input_sequence: tuple[int, ...] = (),
     output_event_count: int = 1,
     output_event_interval_generations: int = 0,
+    held_out_mapping: ByteSequenceMapping | None = None,
 ) -> LearningMeasurement:
     records = tuple(measurements)
     if not records:
@@ -1183,6 +1303,28 @@ def _assemble_learning_measurement(
         failed for _, _, failed in noise_classifications
     )
 
+    generalization_classifications = tuple(
+        item.generalization_classification()
+        for item in records
+        if held_out_mapping is not None
+    )
+    training_qualified_count = sum(
+        qualified
+        for qualified, _, _, _ in generalization_classifications
+    )
+    generalization_eligible_count = sum(
+        eligible
+        for _, eligible, _, _ in generalization_classifications
+    )
+    generalized_count = sum(
+        generalized
+        for _, _, generalized, _ in generalization_classifications
+    )
+    generalization_failed_count = sum(
+        failed
+        for _, _, _, failed in generalization_classifications
+    )
+
     per_mapping = tuple(
         MappingMeasurement(
             mapping=mapping,
@@ -1262,6 +1404,11 @@ def _assemble_learning_measurement(
         noise_robustness_eligible_count=noise_robustness_eligible_count,
         noise_robust_count=noise_robust_count,
         noise_failed_count=noise_failed_count,
+        held_out_mapping=held_out_mapping,
+        training_qualified_count=training_qualified_count,
+        generalization_eligible_count=generalization_eligible_count,
+        generalized_count=generalized_count,
+        generalization_failed_count=generalization_failed_count,
     )
 
 
@@ -1364,6 +1511,7 @@ def measure_trained_state(
         counterfactual_input_sequence=protocol.counterfactual_input_sequence,
         output_event_count=protocol.output_event_count,
         output_event_interval_generations=protocol.output_event_interval_generations,
+        held_out_mapping=protocol.held_out_mapping,
     )
 
 
@@ -1437,4 +1585,5 @@ def compare_baseline_trained(
         counterfactual_input_sequence=protocol.counterfactual_input_sequence,
         output_event_count=protocol.output_event_count,
         output_event_interval_generations=protocol.output_event_interval_generations,
+        held_out_mapping=protocol.held_out_mapping,
     )

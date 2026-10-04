@@ -2765,5 +2765,434 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(optimizer_payload["noise_robustness_enabled"])
 
 
+    def test_p66_001_held_out_relation_roundtrips_without_changing_legacy_default(self):
+        legacy = ExperimentConfig()
+        self.assertIsNone(legacy.held_out_mapping)
+        self.assertFalse(legacy.generalization_enabled)
+
+        protocol = ExperimentConfig(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            held_out_mapping=ByteSequenceMapping((65, 69), 70),
+        )
+        restored = ExperimentConfig.from_mapping(protocol.to_dict())
+
+        self.assertTrue(protocol.generalization_enabled)
+        self.assertEqual(restored, protocol)
+        self.assertEqual(
+            protocol.to_dict()["held_out_mapping"],
+            {"input_bytes": [65, 69], "output_byte": 70},
+        )
+
+    def test_p66_002_held_out_relation_validates_shared_prefix_and_second_byte_plus_one(self):
+        base = dict(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                **base,
+                held_out_mapping=ByteSequenceMapping((66, 69), 70),
+            )
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                **base,
+                held_out_mapping=ByteSequenceMapping((65, 69), 71),
+            )
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                **base,
+                held_out_mapping=ByteSequenceMapping((65, 67), 68),
+            )
+
+    def test_p66_003_generalization_rejects_training_mapping_outside_predeclared_relation(self):
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                mappings=(
+                    ByteSequenceMapping((65, 65), 66),
+                    ByteSequenceMapping((65, 67), 69),
+                ),
+                counterfactual_prefix=(65,),
+                counterfactual_input_sequence=(67, 65),
+                output_event_count=2,
+                output_event_interval_generations=2,
+                held_out_mapping=ByteSequenceMapping((65, 69), 70),
+            )
+
+
+    def test_p66_004_training_curriculum_never_teacher_trains_held_out_case(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            held_out_mapping=ByteSequenceMapping((65, 69), 70),
+        )
+        state = create_universe(seed=901, config=PhysicsConfig(max_cells=8))
+        experiment = IOExperiment(state, experiment=protocol)
+
+        records = experiment.train_mappings()
+
+        self.assertEqual(
+            [(record.input_bytes, record.output_byte) for record in records],
+            [((65, 65), 66), ((65, 67), 68)],
+        )
+        teacher_bytes = [
+            event.value
+            for event in experiment.teacher_events
+            if event.kind == "byte"
+        ]
+        self.assertNotIn(70, teacher_bytes)
+
+    def test_p66_005_held_out_baseline_and_trained_evaluation_are_separate_clone_evidence(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            held_out_mapping=ByteSequenceMapping((65, 69), 70),
+        )
+        state = create_universe(seed=902, config=PhysicsConfig(max_cells=8))
+        IOExperiment(state, experiment=protocol).train_mappings()
+        before = state.to_snapshot()
+
+        measurement = measure_trained_state(state, experiment=protocol)
+        seed_record = measurement.per_seed[0]
+
+        self.assertEqual(state.to_snapshot(), before)
+        self.assertEqual(len(seed_record.mapping_results), 2)
+        self.assertIsNotNone(seed_record.baseline_held_out)
+        self.assertIsNotNone(seed_record.trained_held_out)
+        self.assertEqual(
+            seed_record.baseline_held_out.expected_events,
+            (
+                OutputEvent.byte(70),
+                OutputEvent.byte(70),
+                OutputEvent.null(),
+            ),
+        )
+        self.assertEqual(
+            seed_record.trained_held_out.expected_events,
+            seed_record.baseline_held_out.expected_events,
+        )
+        self.assertIsInstance(seed_record.baseline_held_out.event_generations, tuple)
+        self.assertIsInstance(seed_record.trained_held_out.event_generations, tuple)
+
+
+    def test_p66_006_generalization_classification_is_baseline_relative_and_null_aware(self):
+        expected = (
+            OutputEvent.byte(70),
+            OutputEvent.byte(70),
+            OutputEvent.null(),
+        )
+
+        def result(success: bool) -> EvaluationResult:
+            return EvaluationResult(
+                expected_events=expected,
+                autonomous_events=expected if success else (),
+                success=success,
+                clone_generation=4,
+                evaluation_generations=4,
+                timed_out=not success,
+            )
+
+        clean_control = EvaluationResult(
+            expected_events=(),
+            autonomous_events=(),
+            success=True,
+            clone_generation=4,
+            evaluation_generations=4,
+            timed_out=False,
+        )
+        training_mappings = (
+            ByteSequenceMapping((65, 65), 66),
+            ByteSequenceMapping((65, 67), 68),
+        )
+
+        def seed_record(
+            seed: int,
+            *,
+            held_baseline: bool,
+            held_trained: bool,
+            second_baseline_success: bool = False,
+        ) -> SeedMeasurement:
+            mapping_results = (
+                MappingSeedMeasurement(
+                    mapping=training_mappings[0],
+                    baseline=result(False),
+                    trained=result(True),
+                ),
+                MappingSeedMeasurement(
+                    mapping=training_mappings[1],
+                    baseline=result(second_baseline_success),
+                    trained=result(True),
+                ),
+            )
+            return SeedMeasurement(
+                seed=seed,
+                baseline=mapping_results[0].baseline,
+                trained=mapping_results[0].trained,
+                baseline_no_input=clean_control,
+                trained_no_input=clean_control,
+                baseline_alternate=clean_control,
+                trained_alternate=clean_control,
+                mapping_results=mapping_results,
+                baseline_prefix=clean_control,
+                trained_prefix=clean_control,
+                baseline_sequence_counterfactual=clean_control,
+                trained_sequence_counterfactual=clean_control,
+                baseline_held_out=result(held_baseline),
+                trained_held_out=result(held_trained),
+            )
+
+        generalized = seed_record(1, held_baseline=False, held_trained=True)
+        failed = seed_record(2, held_baseline=False, held_trained=False)
+        innate = seed_record(3, held_baseline=True, held_trained=True)
+        not_improved = seed_record(
+            4,
+            held_baseline=False,
+            held_trained=True,
+            second_baseline_success=True,
+        )
+
+        measurement = experiment_module._assemble_learning_measurement(
+            (generalized, failed, innate, not_improved),
+            mappings=training_mappings,
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            held_out_mapping=ByteSequenceMapping((65, 69), 70),
+        )
+
+        self.assertEqual(generalized.generalization_classification(), (True, True, True, False))
+        self.assertEqual(failed.generalization_classification(), (True, True, False, True))
+        self.assertEqual(innate.generalization_classification(), (True, False, False, False))
+        self.assertEqual(not_improved.generalization_classification(), (False, False, False, False))
+        self.assertEqual(measurement.training_qualified_count, 3)
+        self.assertEqual(measurement.generalization_eligible_count, 2)
+        self.assertEqual(measurement.generalized_count, 1)
+        self.assertEqual(measurement.generalization_failed_count, 1)
+        self.assertEqual(measurement.generalization_rate, 0.5)
+
+    def test_p66_007_zero_generalization_eligible_cases_report_none(self):
+        measurement = LearningMeasurement(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(),
+            training_qualified_count=0,
+            generalization_eligible_count=0,
+            generalized_count=0,
+            generalization_failed_count=0,
+        )
+        self.assertIsNone(measurement.generalization_rate)
+
+
+    def test_p66_008_canonical_and_smoke_generalization_configs_are_explicit(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_generalization.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_generalization_smoke.json"
+        )
+
+        for protocol in (canonical, smoke):
+            self.assertTrue(protocol.generalization_enabled)
+            self.assertEqual(
+                protocol.held_out_mapping,
+                ByteSequenceMapping((65, 69), 70),
+            )
+            self.assertEqual(
+                tuple((item.input_bytes, item.output_byte) for item in protocol.mappings),
+                (((65, 65), 66), ((65, 67), 68)),
+            )
+            self.assertEqual(protocol.output_event_count, 2)
+
+    def test_p66_009_runner_reports_public_generalization_evidence(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_generalization_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertTrue(payload["generalization_enabled"])
+        self.assertEqual(
+            payload["held_out_mapping"],
+            {"input_bytes": [65, 69], "output_byte": 70},
+        )
+        for name in (
+            "training_qualified_count",
+            "generalization_eligible_count",
+            "generalized_count",
+            "generalization_failed_count",
+            "generalization_rate",
+        ):
+            self.assertIn(name, payload)
+        self.assertEqual(len(payload["per_seed"]), 3)
+        for seed_record in payload["per_seed"]:
+            self.assertIn("baseline_held_out_success", seed_record)
+            self.assertIn("trained_held_out_success", seed_record)
+            self.assertIn("baseline_held_out_event_generations", seed_record)
+            self.assertIn("trained_held_out_event_generations", seed_record)
+            self.assertIn("training_qualified", seed_record)
+            self.assertIn("generalization_eligible", seed_record)
+            self.assertIn("generalized", seed_record)
+            self.assertIn("generalization_failed", seed_record)
+
+    def test_p66_010_snapshot_and_timeout_override_preserve_held_out_protocol(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_generalization_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=903,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(
+            payload["experiment"]["held_out_mapping"],
+            {"input_bytes": [65, 69], "output_byte": 70},
+        )
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_generalization_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        overridden = captured[-1]
+        optimizer_payload = json.loads(stdout.getvalue())["optimizer_protocol"]
+        self.assertEqual(overridden.evaluation_timeout_generations, 1)
+        self.assertEqual(
+            overridden.held_out_mapping,
+            ByteSequenceMapping((65, 69), 70),
+        )
+        self.assertTrue(optimizer_payload["generalization_enabled"])
+        self.assertEqual(
+            optimizer_payload["held_out_mapping"],
+            {"input_bytes": [65, 69], "output_byte": 70},
+        )
+
+    def test_p66_011_generalization_evidence_does_not_change_phase5_fitness_or_growth_bit7(self):
+        result = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(),
+            success=False,
+            clone_generation=1,
+            evaluation_generations=1,
+            timed_out=True,
+        )
+        mapping_record = MappingSeedMeasurement(
+            mapping=ByteMapping(65, 66),
+            baseline=result,
+            trained=result,
+        )
+        seed_record = SeedMeasurement(
+            seed=1,
+            baseline=result,
+            trained=result,
+            baseline_no_input=result,
+            trained_no_input=result,
+            baseline_alternate=result,
+            trained_alternate=result,
+            mapping_results=(mapping_record,),
+        )
+        base = dict(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=0,
+            trained_no_input_clean=0,
+            baseline_alternate_input_clean=0,
+            trained_alternate_input_clean=0,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(seed_record,),
+            mapping_count=1,
+        )
+        without_generalization = LearningMeasurement(**base)
+        with_generalization = LearningMeasurement(
+            **base,
+            training_qualified_count=1,
+            generalization_eligible_count=1,
+            generalized_count=1,
+            generalization_failed_count=0,
+        )
+
+        before = SteadyStateOptimizer._fitness_from_measurement(without_generalization)
+        after = SteadyStateOptimizer._fitness_from_measurement(with_generalization)
+        self.assertEqual(after, before)
+        self.assertEqual(growth_flags(before, after) & (1 << 7), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

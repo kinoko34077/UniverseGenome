@@ -571,3 +571,64 @@ Optimizer snapshot round-trip preserves the P6.5 protocol field. Explicit
 timeout override changes only evaluation timeout and preserves the noise delta.
 CI executes the bounded P6.5 optimizer integration path.
 
+---
+
+## Phase 6.6 acceptance tests
+
+### TEST-P66-001 Held-out protocol serialization and legacy compatibility
+
+Legacy protocols leave P6.6 disabled. An enabled protocol round-trips one
+predeclared two-byte held-out mapping.
+
+### TEST-P66-002 Held-out relation validation
+
+Teacher and held-out cases share the fixed prefix, obey second-byte+1, and reject
+held-out input/second-byte/target overlap or malformed relation targets.
+
+### TEST-P66-003 Teacher-relation validation
+
+P6.6 rejects teacher mappings that do not obey the same predeclared relation.
+
+### TEST-P66-004 Held-out teacher exclusion
+
+The training curriculum contains only AA→B and AC→D; no F teacher event is
+generated for held-out AE.
+
+### TEST-P66-005 Held-out clone evaluation isolation
+
+Baseline and trained held-out results are distinct disposable-clone evidence
+with exact F,F,NULL expectations, and Phase 5 measurement does not mutate the
+authoritative state.
+
+### TEST-P66-006 Baseline-relative classification
+
+Synthetic seeds separately prove training-qualified, generalization-eligible,
+generalized, generalization-failed, innate-baseline and no-trained-improvement
+cases.
+
+### TEST-P66-007 Null-aware generalization rate
+
+Zero eligible cases produce null/non-evaluable generalization; positive
+eligibility produces generalized/eligible normalized rate.
+
+### TEST-P66-008 Canonical and bounded-smoke configs
+
+Canonical and smoke configs predeclare the same AA/AC training relation and
+AE→F held-out relation while retaining the accepted timed two-event semantics.
+
+### TEST-P66-009 Public held-out reporting and real experiment smoke
+
+Public JSON exposes aggregate generalization evidence and per-seed held-out
+success/event generations/classification. CI executes the real P6.6 experiment
+entrypoint.
+
+### TEST-P66-010 Snapshot / timeout reconstruction and optimizer smoke
+
+Optimizer snapshot round-trip and explicit timeout reconstruction preserve the
+held-out relation. CI executes the bounded P6.6 optimizer integration path.
+
+### TEST-P66-011 Phase 5 search-objective isolation
+
+Generalization evidence does not alter Phase 5 Fitness equality or set reserved
+growth bit 7.
+

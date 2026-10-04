@@ -270,6 +270,14 @@ and noisy counterfactual outcomes are measurement/reporting evidence and are not
 authoritative clone state. P6.5 alone does not require a snapshot-format
 increment.
 
+For Phase 6.6, persisted `ExperimentConfig` may additionally contain one
+predeclared `held_out_mapping`. The held-out relation is experiment protocol
+data and round-trips through optimizer snapshots and explicit timeout
+reconstruction. Baseline/trained held-out clone results, event generations and
+generalization classifications are measurement/reporting evidence only; they
+are not authoritative clone state and are not new Phase 5 Fitness fields.
+P6.6 alone does not require a snapshot-format increment.
+
 ---
 
 ---
