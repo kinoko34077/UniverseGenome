@@ -3196,5 +3196,78 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(growth_flags(before, after) & (1 << 7), 0)
 
 
+    def test_p67_001_explicit_output_sequence_roundtrips_without_changing_legacy_shape(self):
+        legacy = ByteSequenceMapping((65, 65), 66)
+        self.assertEqual(legacy.output_bytes, ())
+        self.assertEqual(
+            legacy.to_dict(),
+            {"input_bytes": [65, 65], "output_byte": 66},
+        )
+        self.assertEqual(
+            ByteSequenceMapping.from_mapping(legacy.to_dict()),
+            legacy,
+        )
+
+        explicit = ByteSequenceMapping(
+            (65, 65),
+            66,
+            output_bytes=(66, 67),
+        )
+        self.assertEqual(explicit.output_bytes, (66, 67))
+        self.assertEqual(
+            explicit.to_dict(),
+            {
+                "input_bytes": [65, 65],
+                "output_byte": 66,
+                "output_bytes": [66, 67],
+            },
+        )
+        self.assertEqual(
+            ByteSequenceMapping.from_mapping(explicit.to_dict()),
+            explicit,
+        )
+
+    def test_p67_002_explicit_output_sequence_is_bounded_distinct_and_matches_event_count(self):
+        with self.assertRaises(ValueError):
+            ByteSequenceMapping(
+                (65, 65),
+                66,
+                output_bytes=(66,),
+            )
+        with self.assertRaises(ValueError):
+            ByteSequenceMapping(
+                (65, 65),
+                66,
+                output_bytes=(66, 66),
+            )
+
+        protocol = ExperimentConfig(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=4,
+        )
+        self.assertEqual(
+            tuple(item.output_bytes for item in protocol.mappings),
+            ((66, 67), (68, 69)),
+        )
+
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
+                mappings=(
+                    ByteSequenceMapping((65, 65), 66, output_bytes=(66, 67)),
+                    ByteSequenceMapping((65, 67), 68, output_bytes=(68, 69)),
+                ),
+                counterfactual_prefix=(65,),
+                counterfactual_input_sequence=(67, 65),
+                output_event_count=1,
+                output_event_interval_generations=0,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
