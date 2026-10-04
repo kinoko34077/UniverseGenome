@@ -108,7 +108,7 @@ test("observer clone rewind, optimizer snapshot load, modes, and reset edits rem
     () => window.universeGenomeState.reset_config.collision_damage,
   )).not.toBe(16);
 
-  await page.getByRole("button", { name: "Reset" }).click();
+  await page.getByRole("button", { name: "Reset", exact: true }).click();
   await expect.poll(
     () => page.evaluate(() => window.universeGenomeState.reset_config.collision_damage),
   ).toBe(16);
