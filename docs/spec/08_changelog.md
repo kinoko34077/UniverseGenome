@@ -18,8 +18,9 @@
   that seed is free locally, without cross-category selection coupling;
 - upgrades Phase 5 optimizer snapshots to format v5 with a durable
   `parent_genome_key` separate from reusable `parent_index`, plus explicit
-  event-level history for targets actually retired/replaced; legacy v4
-  snapshots remain readable and upgrade on the next save;
+  event-level history for targets actually retired/replaced; malformed v5
+  allocated children without durable parent-genome lineage are rejected, while
+  legacy v4 snapshots remain readable and upgrade on the next save;
 - records the existing fixed-length Python-list authoritative state as an
   explicit SPEC-IMPL-001 implementation-default deviation; NumPy/Numba
   migration is deferred until profiling or a concrete performance target shows
