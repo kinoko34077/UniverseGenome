@@ -1,5 +1,22 @@
 # Specification Changelog
 
+## 2026-10-04 — Issue #61 residual reconciliation candidate
+
+- preserves the canonical Phase 4 evaluation timeout on the public optimizer
+  CLI by default and labels any explicit timeout override in JSON output;
+- adds a bounded real-entry optimizer CLI smoke to CI using an explicit
+  timeout-8 override rather than silently changing the research protocol;
+- replaces reusable storage-slot fragmentation probability addressing with
+  physical event addressing under SPEC-RNG-002 while keeping deterministic
+  split-mask addressing separate;
+- clarifies the 256 MiB rewind figure as measured guidance while 128/256/512
+  history cardinality remains the normative bound;
+- expands browser E2E across observation-clone rewind, optimizer Save/Load,
+  locked detail mode, and staged Reset parameters;
+- preserves post-initial matched genome/seed comparison where practical by
+  preferring a same-genome seed already represented in another category when
+  that seed is free locally, without cross-category selection coupling.
+
 ## 2026-10-04 — Issue #63 authoritative Phase 5 browser integration
 
 - replaces the browser server's parallel Phase 3 population authority with the
