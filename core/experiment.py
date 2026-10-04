@@ -1398,7 +1398,18 @@ def _assemble_learning_measurement(
         for index, mapping in enumerate(mapping_values)
     )
 
-    if sequence_protocol and output_event_count > 1:
+    explicit_output_sequence_protocol = any(
+        isinstance(mapping, ByteSequenceMapping) and bool(mapping.output_bytes)
+        for mapping in mapping_values
+    )
+
+    if explicit_output_sequence_protocol:
+        criterion = (
+            "all sequences across all seeds must autonomously emit each declared ordered output-byte sequence "
+            f"at the declared {output_event_interval_generations}-generation onset interval then NULL only after the full input sequence, "
+            "trained successes must exceed baseline, and no-input/prefix-only/unmapped-sequence counterfactuals must remain output-clean"
+        )
+    elif sequence_protocol and output_event_count > 1:
         criterion = (
             "all sequences across all seeds must autonomously emit the declared output byte "
             f"{output_event_count} times at the declared {output_event_interval_generations}-generation onset interval then NULL only after the full input sequence, "
