@@ -174,7 +174,7 @@ class Phase2DFragmentationTests(unittest.TestCase):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
         status = build_status(raw)
         self.assertTrue(status["phase2d_fragmentation_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 6.7 multi-byte sequences (bounded child Issue required)")
+        self.assertEqual(status["next_phase"], "Phase 6.8 raw UTF-8 experiments (bounded child Issue required)")
         self.assertTrue(raw["features"]["aging"])
 
         proc = subprocess.run(
