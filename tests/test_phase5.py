@@ -2225,5 +2225,117 @@ class Phase5OptimizerTests(unittest.TestCase):
             self.assertIsNotNone(mapping_record.t2)
 
 
+    def test_p64_008_canonical_and_smoke_retention_configs_are_explicit(self):
+        canonical = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_forgetting_relearning.json"
+        )
+        smoke = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_forgetting_relearning_smoke.json"
+        )
+
+        self.assertTrue(canonical.retention_enabled)
+        self.assertEqual(canonical.retention_delay_generations, 128)
+        self.assertEqual(canonical.retention_interference_repetitions, 1)
+        self.assertEqual(canonical.relearning_teacher_repetitions, 1)
+        self.assertEqual(canonical.output_event_count, 2)
+        self.assertEqual(canonical.output_event_interval_generations, 4)
+
+        self.assertTrue(smoke.retention_enabled)
+        self.assertEqual(smoke.retention_delay_generations, 2)
+        self.assertEqual(smoke.retention_interference_repetitions, 1)
+        self.assertEqual(smoke.relearning_teacher_repetitions, 1)
+        self.assertEqual(smoke.output_event_count, 2)
+        self.assertEqual(smoke.output_event_interval_generations, 2)
+
+    def test_p64_009_runner_reports_public_retention_checkpoints_and_classification(self):
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            self.assertEqual(
+                runner_main([
+                    "--config",
+                    "config/default.json",
+                    "--experiment",
+                    "--experiment-config",
+                    "config/experiment_phase6_forgetting_relearning_smoke.json",
+                    "--json",
+                ]),
+                0,
+            )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertEqual(payload["retention_delay_generations"], 2)
+        self.assertEqual(payload["retention_interference_repetitions"], 1)
+        self.assertEqual(payload["relearning_teacher_repetitions"], 1)
+        self.assertIn("retention_eligible_count", payload)
+        self.assertIn("retained_count", payload)
+        self.assertIn("forgotten_count", payload)
+        self.assertIn("relearning_eligible_count", payload)
+        self.assertIn("relearned_count", payload)
+        self.assertIn("retention_rate", payload)
+        self.assertIn("relearning_rate", payload)
+        self.assertEqual(len(payload["per_seed"]), 3)
+        for seed_record in payload["per_seed"]:
+            self.assertEqual(len(seed_record["retention_checkpoint_generations"]), 3)
+            for mapping_record in seed_record["mappings"]:
+                for name in ("t0", "t1", "t2"):
+                    self.assertIn(f"{name}_success", mapping_record)
+                    self.assertIn(f"{name}_event_generations", mapping_record)
+                    self.assertIsInstance(
+                        mapping_record[f"{name}_event_generations"],
+                        list,
+                    )
+
+    def test_p64_010_snapshot_and_timeout_override_preserve_retention_protocol(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_forgetting_relearning_smoke.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=703,
+            base_config=PhysicsConfig(max_cells=8),
+            experiment=protocol,
+        )
+        payload = optimizer.to_snapshot()
+        restored = SteadyStateOptimizer.from_snapshot(payload)
+        self.assertEqual(restored.experiment, protocol)
+        self.assertEqual(payload["experiment"]["retention_delay_generations"], 2)
+        self.assertEqual(payload["experiment"]["retention_interference_repetitions"], 1)
+        self.assertEqual(payload["experiment"]["relearning_teacher_repetitions"], 1)
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment-config",
+                        "config/experiment_phase6_forgetting_relearning_smoke.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--optimizer-timeout-generations",
+                        "1",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        overridden = captured[-1]
+        optimizer_payload = json.loads(stdout.getvalue())["optimizer_protocol"]
+        self.assertEqual(overridden.evaluation_timeout_generations, 1)
+        self.assertEqual(overridden.retention_delay_generations, 2)
+        self.assertEqual(overridden.retention_interference_repetitions, 1)
+        self.assertEqual(overridden.relearning_teacher_repetitions, 1)
+        self.assertEqual(optimizer_payload["retention_delay_generations"], 2)
+        self.assertEqual(optimizer_payload["retention_interference_repetitions"], 1)
+        self.assertEqual(optimizer_payload["relearning_teacher_repetitions"], 1)
+
+
 if __name__ == "__main__":
     unittest.main()
