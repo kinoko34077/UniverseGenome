@@ -5,9 +5,11 @@
   "current_state": {
     "acceptance_state": "remediation_in_progress",
     "phase6_ready": false,
-    "blocking_owners": ["#65", "#63"],
+    "blocking_owners": [
+      "#63"
+    ],
     "readiness_owner": "#60",
-    "next_phase": "Phase 5 acceptance remediation (Phase 6+ blocked)"
+    "next_phase": "GUI/search integration remediation (#63; Phase 6+ blocked)"
   },
   "world": {
     "logical_size": 32,
@@ -23,8 +25,26 @@
     "permanent_cell_id": false
   },
   "movement": {
-    "logical_speeds": ["0", "1/8", "1/4", "1/2", "1", "2", "4", "8"],
-    "internal_step_magnitudes": [0, 1, 2, 4, 8, 16, 32, 64],
+    "logical_speeds": [
+      "0",
+      "1/8",
+      "1/4",
+      "1/2",
+      "1",
+      "2",
+      "4",
+      "8"
+    ],
+    "internal_step_magnitudes": [
+      0,
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64
+    ],
     "directions": 8,
     "destination_only_collision": true
   },
