@@ -350,11 +350,12 @@ class Phase5OptimizerTests(unittest.TestCase):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
         self.assertTrue(status["phase5_optimizer_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 6.4 forgetting/relearning (bounded child Issue required)")
+        self.assertEqual(status["next_phase"], "Phase 6.5 noise robustness (bounded child Issue required)")
         self.assertTrue(raw["features"]["multi_universe_search"])
         self.assertTrue(raw["features"]["evolution"])
         self.assertTrue(raw["features"]["phase6_capabilities"])
         self.assertTrue(raw["features"]["phase6_multi_mapping"])
+        self.assertTrue(raw["features"]["phase6_retention_relearning"])
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             experiment = json.load(handle)
         self.assertEqual(experiment["learning_claim"], False)
