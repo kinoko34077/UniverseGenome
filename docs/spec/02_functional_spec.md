@@ -694,7 +694,7 @@ P6.3 extends the active experiment protocol with two fields:
 
 The backwards-compatible default is one byte event with interval zero. The
 initial bounded P6.3 capability permits exactly two repeated byte events with an
-interval of at least one generation. It does not generalize arbitrary distinct
+interval of at least two generations, leaving at least one released physical generation between the one-generation teacher pulses. It does not generalize arbitrary distinct
 output-byte sequences.
 
 The initial declared mappings remain the P6.2 input sequences:
