@@ -2833,5 +2833,82 @@ class Phase5OptimizerTests(unittest.TestCase):
             )
 
 
+    def test_p66_004_training_curriculum_never_teacher_trains_held_out_case(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            held_out_mapping=ByteSequenceMapping((65, 69), 70),
+        )
+        state = create_universe(seed=901, config=PhysicsConfig(max_cells=8))
+        experiment = IOExperiment(state, experiment=protocol)
+
+        records = experiment.train_mappings()
+
+        self.assertEqual(
+            [(record.input_bytes, record.output_byte) for record in records],
+            [((65, 65), 66), ((65, 67), 68)],
+        )
+        teacher_bytes = [
+            event.value
+            for event in experiment.teacher_events
+            if event.kind == "byte"
+        ]
+        self.assertNotIn(70, teacher_bytes)
+
+    def test_p66_005_held_out_baseline_and_trained_evaluation_are_separate_clone_evidence(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            held_out_mapping=ByteSequenceMapping((65, 69), 70),
+        )
+        state = create_universe(seed=902, config=PhysicsConfig(max_cells=8))
+        IOExperiment(state, experiment=protocol).train_mappings()
+        before = state.to_snapshot()
+
+        measurement = measure_trained_state(state, experiment=protocol)
+        seed_record = measurement.per_seed[0]
+
+        self.assertEqual(state.to_snapshot(), before)
+        self.assertEqual(len(seed_record.mapping_results), 2)
+        self.assertIsNotNone(seed_record.baseline_held_out)
+        self.assertIsNotNone(seed_record.trained_held_out)
+        self.assertEqual(
+            seed_record.baseline_held_out.expected_events,
+            (
+                OutputEvent.byte(70),
+                OutputEvent.byte(70),
+                OutputEvent.null(),
+            ),
+        )
+        self.assertEqual(
+            seed_record.trained_held_out.expected_events,
+            seed_record.baseline_held_out.expected_events,
+        )
+        self.assertIsInstance(seed_record.baseline_held_out.event_generations, tuple)
+        self.assertIsInstance(seed_record.trained_held_out.event_generations, tuple)
+
+
 if __name__ == "__main__":
     unittest.main()
