@@ -208,9 +208,10 @@ counterfactual measurements must not be silently substituted for those fields.
 Category-relative low-growth eligibility uses four windows and protects the
 absolute-fitness top 1/8 from growth-only pruning. Authoritative 16-generation
 health boundaries detect all-active-cell loss as an absolute-failure reason,
-including for a provisional slot. Activity telemetry is persisted, but no
-automatic persistent-non-response rule is accepted without a protocol
-decision.
+including for a provisional slot. Activity telemetry is persisted but is not
+used as a task-response proxy. Persistent non-response is task-level and
+requires four consecutive no-autonomous-output observations at real
+128-generation growth boundaries while active cells remain.
 
 ### TEST-P5-004 Steady-state escalation
 
