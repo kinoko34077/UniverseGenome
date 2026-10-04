@@ -101,6 +101,7 @@ class ExperimentConfig:
     retention_interference_repetitions: int = 0
     relearning_teacher_repetitions: int = 0
     noise_robustness_rate_delta: int = 0
+    held_out_mapping: ByteSequenceMapping | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -182,6 +183,37 @@ class ExperimentConfig:
             if counterfactual_sequence in set(input_sequences):
                 raise ValueError("counterfactual input sequence must be unmapped")
 
+        if self.held_out_mapping is not None:
+            held_out = self.held_out_mapping
+            if not isinstance(held_out, ByteSequenceMapping):
+                raise ValueError("P6.6 held_out_mapping must be a two-byte sequence mapping")
+            if len(sequence_mappings) != len(self.mappings):
+                raise ValueError("P6.6 requires all teacher mappings to be two-byte sequences")
+            if self.output_event_count != 2:
+                raise ValueError("P6.6 requires the accepted two-event output protocol")
+            relation_mappings = (*sequence_mappings, held_out)
+            relation_prefix = held_out.input_bytes[0]
+            if any(item.input_bytes[0] != relation_prefix for item in relation_mappings):
+                raise ValueError("P6.6 relation mappings must share one fixed prefix")
+            if any(
+                item.input_bytes[1] >= 0xFF
+                or item.output_byte != item.input_bytes[1] + 1
+                for item in relation_mappings
+            ):
+                raise ValueError(
+                    "P6.6 relation requires output byte = second input byte + 1"
+                )
+            if held_out.input_bytes in set(input_sequences):
+                raise ValueError("P6.6 held-out input must not be teacher-trained")
+            training_second_bytes = {
+                item.input_bytes[1] for item in sequence_mappings
+            }
+            if held_out.input_bytes[1] in training_second_bytes:
+                raise ValueError("P6.6 held-out second byte must be distinct")
+            training_targets = {item.output_byte for item in sequence_mappings}
+            if held_out.output_byte in training_targets:
+                raise ValueError("P6.6 held-out target must not be a teacher target")
+
     @property
     def retention_enabled(self) -> bool:
         return bool(
@@ -193,6 +225,10 @@ class ExperimentConfig:
     @property
     def noise_robustness_enabled(self) -> bool:
         return self.noise_robustness_rate_delta > 0
+
+    @property
+    def generalization_enabled(self) -> bool:
+        return self.held_out_mapping is not None
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -229,6 +265,8 @@ class ExperimentConfig:
             )
         if self.noise_robustness_rate_delta:
             payload["noise_robustness_rate_delta"] = self.noise_robustness_rate_delta
+        if self.held_out_mapping is not None:
+            payload["held_out_mapping"] = self.held_out_mapping.to_dict()
         if (
             self.mappings != DEFAULT_BYTE_MAPPINGS
             or self.counterfactual_input_byte != 66
@@ -295,6 +333,11 @@ class ExperimentConfig:
         ):
             if mapping.get(name) is not None:
                 values[name] = int(mapping[name])
+        if mapping.get("held_out_mapping") is not None:
+            raw_held_out = mapping["held_out_mapping"]
+            if not isinstance(raw_held_out, Mapping):
+                raise ValueError("held_out_mapping must be an object")
+            values["held_out_mapping"] = ByteSequenceMapping.from_mapping(raw_held_out)
         return cls(**values)
 
 
