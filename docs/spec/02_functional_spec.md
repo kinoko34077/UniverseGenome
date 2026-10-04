@@ -470,10 +470,66 @@ When multiple promising groups can receive a real seed, prefer:
 3. stable genome key.
 
 A pruned/free target cannot count as progress for its own evidence group: the
-target's group is excluded from promising evidence allocation for that
-replacement. Allocation still occurs only into a real free/prune-eligible slot;
-this policy does not authorize forced replacement.
+target's group is excluded from the promising ranking and evidence allocation
+for that replacement. Allocation still occurs only into a real
+free/prune-eligible slot; this policy does not authorize forced replacement.
 
 The policy is persisted by name and does not add fields to the absolute-fitness
 tuple, evolve seed, or permit cross-category elimination.
+
+## SPEC-EVOL-003 — Minimum evidence eligibility
+**Status: accepted**
+
+**Invariant:** the minimum-evidence gate below is required for selection safety.
+
+A category/genome group must have at least four currently allocated real seed
+Universes before any of its slots may participate in parent selection or
+absolute-fitness protection. This is the minimum evidence tier from the
+canonical `4 → 8 → 16 → 32` real-slot ladder, not a new promising threshold
+and not a change to the five-field absolute fitness ordering.
+
+A newly inserted mutation child therefore remains selection-ineligible while
+its group has fewer than four real seed slots. When a later pruning decision
+frees another slot, the optimizer may allocate that slot as additional seed
+evidence for an incomplete mutation-child group until the four-seed minimum
+is reached. Only after that gate is satisfied can the still-open promising
+allocation policy govern any later evidence expansion.
+
+Minimum-evidence **selection eligibility** is distinct from pruning lifecycle.
+A never-matured mutation group with fewer than four real seeds is provisional
+and is temporarily excluded from growth pruning while its initial evidence is
+being completed. Once a category/genome group has reached four real seed
+Universes at least once, that maturity is persistent search metadata. If later
+pruning reduces the group below four seeds, its remaining slots are no longer
+eligible for parent selection or absolute-fitness protection, but they remain
+eligible for growth pruning/retirement. A depleted mature group must not become
+a permanently occupied, non-selectable and non-prunable population fragment.
+This maturity state is included in optimizer persistence.
+
+At generation 0, 128, 256, 384, and 512, the slot has an observed fitness
+measurement. Each 128-generation interval derives one growth flag set from the
+two real boundary measurements. No unobserved interval is represented by a
+synthetic zero window. Parents are selected only within the same category.
+When a slot becomes free, the outer optimizer either allocates another actual
+seed Universe to a promising genome or creates a separate mutation-child
+Universe in that free slot. A logical CandidateSlot must not contain multiple
+authoritative seed Universes. Mutation fields are selected from the complete
+genome field set rather than being hard-coded to a single parameter.
+
+An integrated optimizer snapshot includes the effective `PhysicsConfig`,
+`ExperimentConfig`, all 128 authoritative slot records and their complete
+`UniverseState` arrays, physical generations, observed fitness references,
+growth/pruning state, lineage, and category-local scheduler/policy state. It
+does not serialize disposable evaluation clones. Restoring it and continuing
+the same protocol is deterministic.
+
+The headless runner uses one integrated step and an 8-generation per-candidate
+evaluation timeout by default as an explicit bounded-performance budget.
+`--optimizer-iterations 4` is a bounded diagnostic run; seed evidence counts
+are derived from actual same-genome Universe-slot allocation, not from a
+CandidateSlot containing multiple hidden seed states. The result reports
+authoritative slot counts, replacement/allocation counts, mutation fields,
+seed-group counts, and generations per second. No unapproved promising
+threshold is implied by this diagnostic output.
+
 ---
