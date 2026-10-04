@@ -130,7 +130,7 @@ class Phase3PopulationTests(unittest.TestCase):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
         self.assertTrue(status["phase3_runtime_implemented"])
-        self.assertEqual(status["next_phase"], "GUI/search integration remediation (#63; Phase 6+ blocked)")
+        self.assertEqual(status["next_phase"], "Post-v0.1 residual reconciliation (#61; then readiness rerun #60; Phase 6+ blocked)")
         self.assertTrue(raw["features"]["multi_universe_runtime"])
         self.assertTrue(raw["features"]["io_learning"])
         self.assertTrue(raw["features"]["evolution"])
