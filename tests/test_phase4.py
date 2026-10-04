@@ -429,5 +429,21 @@ class Phase4IOTests(unittest.TestCase):
         self.assertEqual(len(measurement.per_seed[0].mapping_results), 2)
 
 
+    def test_p6_006_phase6_multi_mapping_config_is_explicit_and_loadable(self):
+        loader = getattr(experiment_module, "load_experiment_config")
+        ByteMapping = getattr(experiment_module, "ByteMapping")
+        config = loader(ROOT / "config" / "experiment_phase6_multi_mapping.json")
+
+        self.assertEqual(
+            config.mappings,
+            (
+                ByteMapping(65, 66),
+                ByteMapping(67, 68),
+            ),
+        )
+        self.assertEqual(config.counterfactual_input_byte, 66)
+        self.assertEqual(config.evaluation_timeout_generations, 1024)
+
+
 if __name__ == "__main__":
     unittest.main()
