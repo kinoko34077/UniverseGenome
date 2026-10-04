@@ -770,3 +770,76 @@ Canonical and bounded-smoke P6.3 experiment configs use this same protocol
 surface. Public and CI entry points report failed learning without
 reinterpretation.
 
+---
+
+# 37. Phase 6.4 forgetting / relearning retention
+
+## SPEC-P6RET-001 — Retention protocol fields and defaults
+**Status: accepted**
+
+`ExperimentConfig` adds:
+
+- `retention_delay_generations`;
+- `retention_interference_repetitions`;
+- `relearning_teacher_repetitions`.
+
+All three default to zero so P6.1/P6.2/P6.3 protocols remain unchanged.
+P6.4 is enabled only when the retention protocol is explicitly populated; an
+enabled protocol requires positive values and a declared unmapped interference
+sequence. The canonical P6.4 values are 128 physical generations, one
+deterministic unmapped `CA` interference episode, and one relearning
+curriculum pass.
+
+## SPEC-P6RET-002 — T0 / T1 / T2 continuing-state execution
+**Status: accepted**
+
+T0 evaluates the initially trained state on disposable clones. The authoritative
+training Universe then advances for the declared no-teacher retention delay and
+receives the declared interference episode without desired teacher output. T1
+evaluates that continuing state on new disposable clones. The same authoritative
+Universe then receives the declared relearning curriculum without reset or
+rollback and T2 evaluates new clones.
+
+Standalone experiments advance their actual trained state through this
+protocol. Phase 5 measurement executes the same protocol on an isolated probe
+clone so authoritative optimizer slot state is not advanced by evaluation.
+
+## SPEC-P6RET-003 — Retention classification and null evaluability
+**Status: accepted**
+
+Per mapping and seed, measurement retains T0, T1 and T2 evaluation results.
+T0 success creates retention eligibility. T0+T1 success is retained; T0 success
+with T1 failure is forgotten. Forgotten cases are relearning-eligible and T2
+success on such a case is relearned.
+
+Aggregates expose eligible, retained, forgotten, relearning-eligible and
+relearned counts. Retention/relearning rates are null when their denominator is
+zero. A numeric zero rate and a non-evaluable result are distinct states.
+
+## SPEC-P6RET-004 — Phase 5 retention growth boundary
+**Status: accepted**
+
+An evaluable P6.4 retention rate is projected to the existing growth-only
+`Fitness.retention` field together with explicit
+`retention_evidence_count`. Growth bit 5 is comparable only when both the
+previous and current measurements carry retention evidence; becoming newly
+measurable is not itself an improvement.
+
+The absolute `Fitness.sort_key()` remains unchanged. Counterfactual
+cleanliness is not relabeled as retention, relearning is not added to absolute
+fitness, and P6.4 does not alter Phase 5 category/pruning/seed/promising-policy
+semantics.
+
+## SPEC-P6RET-005 — Persistence, configs, reporting and CI
+**Status: accepted**
+
+P6.4 fields serialize inside the existing `ExperimentConfig`; optimizer
+snapshot round-trip and explicit timeout reconstruction preserve them without a
+snapshot-format increment solely for P6.4.
+
+The public experiment report exposes protocol fields, aggregate
+retention/relearning counts and nullable rates, per-seed checkpoint generations,
+and per-mapping T0/T1/T2 success plus event generations. Canonical and bounded
+smoke configs use the same semantics. CI executes both the real bounded P6.4
+experiment entrypoint and the optimizer reconstruction entrypoint.
+
