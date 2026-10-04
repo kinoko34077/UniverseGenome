@@ -338,7 +338,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)
         self.assertTrue(status["phase5_optimizer_implemented"])
-        self.assertEqual(status["next_phase"], "Phase 5 acceptance remediation (Phase 6+ blocked)")
+        self.assertEqual(status["next_phase"], "GUI/search integration remediation (#63; Phase 6+ blocked)")
         self.assertTrue(raw["features"]["multi_universe_search"])
         self.assertTrue(raw["features"]["evolution"])
         self.assertFalse(raw["features"]["phase6_capabilities"])
