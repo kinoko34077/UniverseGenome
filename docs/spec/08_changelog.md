@@ -1,5 +1,23 @@
 # Specification Changelog
 
+## 2026-10-04 — Phase 6.2 temporal sequence discrimination candidate (#82 / PR #83)
+
+- extends protocol mappings with bounded ordered two-byte inputs, beginning with
+  AA→B and AC→D while preserving P6.1 one-byte compatibility;
+- adds explicit inter-input timing and guarantees teacher output begins only
+  after complete sequence delivery on one continuing authoritative training
+  Universe;
+- evaluates each sequence on isolated clones and rejects autonomous output that
+  occurs before the full sequence is delivered;
+- adds predeclared prefix-only A and unmapped CA controls alongside no-input,
+  and gates the learning claim on all sequence mappings/all seeds plus controls;
+- preserves sequence mappings/timing/controls through optimizer snapshot and
+  explicit timeout reconstruction without changing Phase 5 search policy;
+- adds canonical and bounded-smoke P6.2 configs plus sequence-aware public
+  reporting and CI experiment/optimizer smoke coverage;
+- capability implementation is not a learning-success claim; bounded observed
+  results remain to be recorded at exact-head acceptance.
+
 ## 2026-10-04 — Phase 6.1 multiple independent byte mappings accepted (#79 / PR #80)
 
 - establishes roadmap #78 and bounded child #79 as the first post-readiness
