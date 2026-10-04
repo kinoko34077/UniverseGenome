@@ -220,7 +220,13 @@ mutation children are separate real slots with fresh state. The integrated loop
 maintains all 128 authoritative Universe states, measures normalized fitness
 from evaluation clones of those states, aggregates evidence across each real
 same-genome seed group, advances growth only at real 128-generation boundaries,
-leaves promising allocation policy selection open until explicitly approved,
+applies the accepted category-local `tiered_category_rank` policy: aggregate
+canonical fitness ranks evidence groups, 4→8 uses the top 1/2, 8→16 the top
+1/4, and 16→32 the top 1/8; fractional cutoffs use floor division with a
+minimum of one group. Never-matured mutation groups still complete to four
+real seeds first; otherwise each category persistently alternates promising
+evidence and mutation 1:1 when both are available, preferring lower evidence
+count then better aggregate fitness then stable genome key. It
 does not replace a live slot without a real free/prune-eligible target, keeps
 groups below four real seed slots out of parent/protection selection, completes
 never-matured mutation evidence through later freed slots, keeps provisional
@@ -244,9 +250,9 @@ uninterrupted continuation.
 
 The headless performance path reports bounded optimizer iterations, evaluated
 slots, replacements, mutation fields, actual same-genome slot-group counts,
-and throughput. It does not report a promising-allocation threshold or
-seed-escalation level without an explicit approved policy and corresponding
-real authoritative slots.
+and throughput. Promising-allocation state reports the accepted persisted
+policy name and only reports evidence growth represented by corresponding real
+authoritative slots.
 
 ### TEST-P5-006 Phase 6+ handoff boundary
 
