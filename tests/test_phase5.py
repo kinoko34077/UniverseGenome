@@ -3350,5 +3350,47 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
 
 
+    def test_p67_003_teacher_emits_declared_distinct_bytes_in_order(self):
+        protocol = ExperimentConfig(
+            byte_hold_generations=1,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=2,
+            mappings=(
+                ByteSequenceMapping(
+                    (65, 65),
+                    66,
+                    output_bytes=(66, 67),
+                ),
+                ByteSequenceMapping(
+                    (65, 67),
+                    68,
+                    output_bytes=(68, 69),
+                ),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+        )
+        state = create_universe(seed=1001, config=PhysicsConfig(max_cells=8))
+        experiment = IOExperiment(state, experiment=protocol)
+
+        records = experiment.train_mappings()
+
+        self.assertEqual(
+            [event.value for event in experiment.teacher_events if event.kind == "byte"],
+            [66, 67, 68, 69],
+        )
+        self.assertEqual(
+            [
+                tuple(event.value for event in record.teacher_events if event.kind == "byte")
+                for record in records
+            ],
+            [(66, 67), (68, 69)],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
