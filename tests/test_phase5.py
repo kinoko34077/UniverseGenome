@@ -1904,5 +1904,137 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertFalse(payload["learning_claim"])
 
 
+    def test_p64_001_retention_protocol_fields_roundtrip_without_changing_legacy_defaults(self):
+        legacy = ExperimentConfig()
+        self.assertEqual(legacy.retention_delay_generations, 0)
+        self.assertEqual(legacy.retention_interference_repetitions, 0)
+        self.assertEqual(legacy.relearning_teacher_repetitions, 0)
+
+        protocol = ExperimentConfig(
+            mappings=(
+                ByteSequenceMapping((65, 65), 66),
+                ByteSequenceMapping((65, 67), 68),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            output_event_count=2,
+            output_event_interval_generations=2,
+            retention_delay_generations=128,
+            retention_interference_repetitions=1,
+            relearning_teacher_repetitions=1,
+        )
+        restored = ExperimentConfig.from_mapping(protocol.to_dict())
+
+        self.assertEqual(restored, protocol)
+        self.assertEqual(restored.retention_delay_generations, 128)
+        self.assertEqual(restored.retention_interference_repetitions, 1)
+        self.assertEqual(restored.relearning_teacher_repetitions, 1)
+
+    def test_p64_002_retention_rates_are_none_without_eligible_cases(self):
+        base = dict(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(),
+        )
+        unavailable = LearningMeasurement(
+            **base,
+            retention_eligible_count=0,
+            retained_count=0,
+            forgotten_count=0,
+            relearning_eligible_count=0,
+            relearned_count=0,
+        )
+        self.assertIsNone(unavailable.retention_rate)
+        self.assertIsNone(unavailable.relearning_rate)
+
+        measured = LearningMeasurement(
+            **base,
+            retention_eligible_count=2,
+            retained_count=1,
+            forgotten_count=1,
+            relearning_eligible_count=1,
+            relearned_count=1,
+        )
+        self.assertEqual(measured.retention_rate, 0.5)
+        self.assertEqual(measured.relearning_rate, 1.0)
+
+    def test_p64_003_growth_bit5_requires_comparable_retention_evidence(self):
+        unavailable_before = Fitness(retention=0.0, retention_evidence_count=0)
+        newly_evaluable = Fitness(retention=1.0, retention_evidence_count=2)
+        self.assertEqual(
+            growth_flags(unavailable_before, newly_evaluable)
+            & (1 << GROWTH_BIT_RETENTION),
+            0,
+        )
+
+        comparable_before = Fitness(retention=0.25, retention_evidence_count=2)
+        comparable_after = Fitness(retention=0.5, retention_evidence_count=2)
+        self.assertEqual(
+            growth_flags(comparable_before, comparable_after)
+            & (1 << GROWTH_BIT_RETENTION),
+            1 << GROWTH_BIT_RETENTION,
+        )
+        self.assertEqual(
+            Fitness(
+                success=1,
+                retention=0.0,
+                retention_evidence_count=0,
+            ).sort_key(),
+            Fitness(
+                success=1,
+                retention=1.0,
+                retention_evidence_count=2,
+            ).sort_key(),
+        )
+
+    def test_p64_004_phase5_fitness_uses_only_evaluable_retention_rate(self):
+        result = EvaluationResult(
+            expected_events=(OutputEvent.byte(66), OutputEvent.null()),
+            autonomous_events=(),
+            success=False,
+            clone_generation=4,
+            evaluation_generations=4,
+            timed_out=True,
+        )
+        seed_measurement = SeedMeasurement(
+            seed=1,
+            baseline=result,
+            trained=result,
+            baseline_no_input=result,
+            trained_no_input=result,
+            baseline_alternate=result,
+            trained_alternate=result,
+        )
+        measurement = LearningMeasurement(
+            seed_count=1,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=1,
+            trained_no_input_clean=1,
+            baseline_alternate_input_clean=1,
+            trained_alternate_input_clean=1,
+            criterion="test",
+            learning_claim=False,
+            per_seed=(seed_measurement,),
+            retention_eligible_count=2,
+            retained_count=1,
+            forgotten_count=1,
+            relearning_eligible_count=1,
+            relearned_count=0,
+        )
+
+        fitness = SteadyStateOptimizer._fitness_from_measurement(measurement)
+        self.assertEqual(fitness.retention, 0.5)
+        self.assertEqual(fitness.retention_evidence_count, 2)
+        self.assertEqual(fitness.sort_key(), Fitness().sort_key())
+
+
 if __name__ == "__main__":
     unittest.main()
