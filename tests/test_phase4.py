@@ -667,6 +667,11 @@ class Phase4IOTests(unittest.TestCase):
             )
         with self.assertRaises(ValueError):
             ExperimentConfig(
+                output_event_count=2,
+                output_event_interval_generations=1,
+            )
+        with self.assertRaises(ValueError):
+            ExperimentConfig(
                 output_event_count=3,
                 output_event_interval_generations=1,
             )
