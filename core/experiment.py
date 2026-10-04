@@ -28,6 +28,10 @@ class ByteMapping:
         validate_byte(self.input_byte)
         validate_byte(self.output_byte)
 
+    @property
+    def input_bytes(self) -> tuple[int, ...]:
+        return (int(self.input_byte),)
+
     def to_dict(self) -> dict[str, int]:
         return {
             "input_byte": int(self.input_byte),
@@ -42,6 +46,40 @@ class ByteMapping:
         )
 
 
+@dataclass(frozen=True, order=True)
+class ByteSequenceMapping:
+    input_bytes: tuple[int, ...]
+    output_byte: int
+
+    def __post_init__(self) -> None:
+        values = tuple(int(value) for value in self.input_bytes)
+        object.__setattr__(self, "input_bytes", values)
+        if len(values) != 2:
+            raise ValueError("P6.2 sequence mappings require exactly two input bytes")
+        for value in values:
+            validate_byte(value)
+        validate_byte(self.output_byte)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "input_bytes": [int(value) for value in self.input_bytes],
+            "output_byte": int(self.output_byte),
+        }
+
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, Any]) -> "ByteSequenceMapping":
+        raw = mapping["input_bytes"]
+        if not isinstance(raw, (list, tuple)):
+            raise ValueError("input_bytes must be an array")
+        return cls(
+            input_bytes=tuple(int(value) for value in raw),
+            output_byte=int(mapping["output_byte"]),
+        )
+
+
+ProtocolMapping = ByteMapping | ByteSequenceMapping
+
+
 DEFAULT_BYTE_MAPPINGS = (ByteMapping(65, 66),)
 
 
@@ -52,13 +90,17 @@ class ExperimentConfig:
     teacher_delay_generations: int = 4
     teacher_repetitions: int = 1
     evaluation_timeout_generations: int = 1024
-    mappings: tuple[ByteMapping, ...] = DEFAULT_BYTE_MAPPINGS
+    mappings: tuple[ProtocolMapping, ...] = DEFAULT_BYTE_MAPPINGS
     counterfactual_input_byte: int = 66
+    inter_input_generations: int = 0
+    counterfactual_prefix: tuple[int, ...] = ()
+    counterfactual_input_sequence: tuple[int, ...] = ()
 
     def __post_init__(self) -> None:
         for name in (
             "byte_hold_generations", "byte_gap_generations", "teacher_delay_generations",
             "teacher_repetitions", "evaluation_timeout_generations",
+            "inter_input_generations",
         ):
             if getattr(self, name) < 0:
                 raise ValueError(f"{name} must be non-negative")
@@ -66,14 +108,51 @@ class ExperimentConfig:
             raise ValueError("teacher_repetitions must be positive")
         if not self.mappings:
             raise ValueError("at least one byte mapping is required")
-        if any(not isinstance(item, ByteMapping) for item in self.mappings):
-            raise ValueError("mappings must contain ByteMapping values")
-        inputs = tuple(item.input_byte for item in self.mappings)
-        if len(set(inputs)) != len(inputs):
-            raise ValueError("mapping input bytes must be unique")
+        if any(
+            not isinstance(item, (ByteMapping, ByteSequenceMapping))
+            for item in self.mappings
+        ):
+            raise ValueError("mappings must contain protocol mapping values")
+        input_sequences = tuple(item.input_bytes for item in self.mappings)
+        if len(set(input_sequences)) != len(input_sequences):
+            raise ValueError("mapping input sequences must be unique")
         validate_byte(self.counterfactual_input_byte)
-        if self.counterfactual_input_byte in set(inputs):
+        one_byte_inputs = {
+            item.input_bytes[0]
+            for item in self.mappings
+            if len(item.input_bytes) == 1
+        }
+        if self.counterfactual_input_byte in one_byte_inputs:
             raise ValueError("counterfactual input byte must be unmapped")
+
+        prefix = tuple(int(value) for value in self.counterfactual_prefix)
+        counterfactual_sequence = tuple(
+            int(value) for value in self.counterfactual_input_sequence
+        )
+        object.__setattr__(self, "counterfactual_prefix", prefix)
+        object.__setattr__(
+            self,
+            "counterfactual_input_sequence",
+            counterfactual_sequence,
+        )
+        for value in (*prefix, *counterfactual_sequence):
+            validate_byte(value)
+
+        sequence_mappings = tuple(
+            item for item in self.mappings
+            if isinstance(item, ByteSequenceMapping)
+        )
+        if sequence_mappings:
+            if len(prefix) != 1:
+                raise ValueError("P6.2 counterfactual_prefix must contain one byte")
+            if not all(item.input_bytes[:1] == prefix for item in sequence_mappings):
+                raise ValueError("counterfactual_prefix must match the shared sequence prefix")
+            if len(counterfactual_sequence) != 2:
+                raise ValueError(
+                    "P6.2 counterfactual_input_sequence must contain two bytes"
+                )
+            if counterfactual_sequence in set(input_sequences):
+                raise ValueError("counterfactual input sequence must be unmapped")
 
     def to_dict(self) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -83,6 +162,14 @@ class ExperimentConfig:
             "teacher_repetitions": self.teacher_repetitions,
             "evaluation_timeout_generations": self.evaluation_timeout_generations,
         }
+        if self.inter_input_generations:
+            payload["inter_input_generations"] = self.inter_input_generations
+        if self.counterfactual_prefix:
+            payload["counterfactual_prefix"] = list(self.counterfactual_prefix)
+        if self.counterfactual_input_sequence:
+            payload["counterfactual_input_sequence"] = list(
+                self.counterfactual_input_sequence
+            )
         if (
             self.mappings != DEFAULT_BYTE_MAPPINGS
             or self.counterfactual_input_byte != 66
@@ -106,13 +193,34 @@ class ExperimentConfig:
             raw_mappings = mapping["mappings"]
             if not isinstance(raw_mappings, (list, tuple)):
                 raise ValueError("mappings must be an array")
-            values["mappings"] = tuple(
-                ByteMapping.from_mapping(item)
-                for item in raw_mappings
-            )
+            parsed_mappings: list[ProtocolMapping] = []
+            for item in raw_mappings:
+                if not isinstance(item, Mapping):
+                    raise ValueError("mapping records must be objects")
+                if item.get("input_bytes") is not None:
+                    parsed_mappings.append(ByteSequenceMapping.from_mapping(item))
+                else:
+                    parsed_mappings.append(ByteMapping.from_mapping(item))
+            values["mappings"] = tuple(parsed_mappings)
         if mapping.get("counterfactual_input_byte") is not None:
             values["counterfactual_input_byte"] = int(
                 mapping["counterfactual_input_byte"]
+            )
+        if mapping.get("inter_input_generations") is not None:
+            values["inter_input_generations"] = int(
+                mapping["inter_input_generations"]
+            )
+        if mapping.get("counterfactual_prefix") is not None:
+            raw_prefix = mapping["counterfactual_prefix"]
+            if not isinstance(raw_prefix, (list, tuple)):
+                raise ValueError("counterfactual_prefix must be an array")
+            values["counterfactual_prefix"] = tuple(int(value) for value in raw_prefix)
+        if mapping.get("counterfactual_input_sequence") is not None:
+            raw_sequence = mapping["counterfactual_input_sequence"]
+            if not isinstance(raw_sequence, (list, tuple)):
+                raise ValueError("counterfactual_input_sequence must be an array")
+            values["counterfactual_input_sequence"] = tuple(
+                int(value) for value in raw_sequence
             )
         return cls(**values)
 
@@ -131,6 +239,7 @@ class TrainingRecord:
     output_byte: int
     teacher_events: tuple[OutputEvent, ...]
     generation: int
+    input_bytes: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -143,6 +252,16 @@ class EvaluationResult:
     evaluation_generations: int = 0
     activity_cost: int = 0
     timed_out: bool = False
+    input_complete_generation: int = 0
+
+    @property
+    def early_output_count(self) -> int:
+        if self.input_complete_generation <= 0:
+            return 0
+        return sum(
+            generation < self.input_complete_generation
+            for generation in self.event_generations
+        )
 
     @property
     def wrong_output_count(self) -> int:
@@ -174,14 +293,14 @@ class EvaluationResult:
 
 @dataclass(frozen=True)
 class MappingSeedMeasurement:
-    mapping: ByteMapping
+    mapping: ProtocolMapping
     baseline: EvaluationResult
     trained: EvaluationResult
 
 
 @dataclass(frozen=True)
 class MappingMeasurement:
-    mapping: ByteMapping
+    mapping: ProtocolMapping
     baseline_successes: int
     trained_successes: int
 
@@ -196,6 +315,10 @@ class SeedMeasurement:
     baseline_alternate: EvaluationResult
     trained_alternate: EvaluationResult
     mapping_results: tuple[MappingSeedMeasurement, ...] = ()
+    baseline_prefix: EvaluationResult | None = None
+    trained_prefix: EvaluationResult | None = None
+    baseline_sequence_counterfactual: EvaluationResult | None = None
+    trained_sequence_counterfactual: EvaluationResult | None = None
 
     @property
     def baseline_evaluations(self) -> tuple[EvaluationResult, ...]:
@@ -225,6 +348,12 @@ class LearningMeasurement:
     mapping_count: int = 1
     counterfactual_input_byte: int = 66
     per_mapping: tuple[MappingMeasurement, ...] = ()
+    counterfactual_prefix: tuple[int, ...] = ()
+    counterfactual_input_sequence: tuple[int, ...] = ()
+    baseline_prefix_input_clean: int = 0
+    trained_prefix_input_clean: int = 0
+    baseline_sequence_counterfactual_clean: int = 0
+    trained_sequence_counterfactual_clean: int = 0
 
     @property
     def no_input_clean(self) -> int:
@@ -336,7 +465,7 @@ class IOExperiment:
 
     def _train_mapping_once(
         self,
-        mapping: ByteMapping,
+        mapping: ProtocolMapping,
         *,
         on_generation: Callable[[int], None] | None = None,
         on_step: Callable[[int, StepMetrics], None] | None = None,
@@ -348,9 +477,15 @@ class IOExperiment:
             if on_generation is not None:
                 on_generation(self.state.generation)
 
-        for _ in range(self.experiment.byte_hold_generations):
-            self.drive_input(mapping.input_byte)
-            advance(self.input_bus.signal_coordinates())
+        input_bytes = mapping.input_bytes
+        for index, input_byte in enumerate(input_bytes):
+            for _ in range(self.experiment.byte_hold_generations):
+                self.drive_input(input_byte)
+                advance(self.input_bus.signal_coordinates())
+            if index < len(input_bytes) - 1:
+                for _ in range(self.experiment.inter_input_generations):
+                    self.release_input()
+                    advance(())
         for _ in range(self.experiment.byte_gap_generations):
             self.release_input()
             advance(())
@@ -370,10 +505,11 @@ class IOExperiment:
             on_step=on_step,
         )
         return TrainingRecord(
-            input_byte=mapping.input_byte,
+            input_byte=mapping.input_bytes[0],
             output_byte=mapping.output_byte,
             teacher_events=(byte_event, null_event),
             generation=self.state.generation,
+            input_bytes=mapping.input_bytes,
         )
 
     def train_mappings(
@@ -418,15 +554,23 @@ class IOExperiment:
             output_byte=output_byte,
             teacher_events=tuple(teacher_events),
             generation=last_generation,
+            input_bytes=(input_byte,),
         )
 
-    def evaluate_autonomous(
+    def _evaluate_input_sequence(
         self,
         *,
-        input_byte: int = 65,
+        input_bytes: Iterable[int],
         input_valid: bool = True,
         expected: Iterable[OutputEvent] = (),
+        enforce_full_sequence: bool = False,
     ) -> EvaluationResult:
+        sequence = tuple(int(value) for value in input_bytes)
+        if not sequence:
+            raise ValueError("input sequence must not be empty")
+        for value in sequence:
+            validate_byte(value)
+
         clone = _clone_state(self.state)
         clone_experiment = IOExperiment(clone, experiment=self.experiment)
         clone_experiment.output_detector.prime_signal(read_output_signal(clone))
@@ -434,6 +578,7 @@ class IOExperiment:
         event_generations: list[int] = []
         evaluation_generations = 0
         activity_cost = 0
+        input_complete_generation = 0
 
         def advance_and_observe(anchors: Iterable[tuple[int, int]]) -> None:
             nonlocal evaluation_generations, activity_cost
@@ -444,33 +589,77 @@ class IOExperiment:
             observed.extend(events)
             event_generations.extend([evaluation_generations] * len(events))
 
-        for _ in range(self.experiment.byte_hold_generations):
-            if input_valid:
-                clone_experiment.drive_input(input_byte)
-            else:
-                clone_experiment.release_input()
-            advance_and_observe(clone_experiment.input_bus.signal_coordinates())
+        for index, input_byte in enumerate(sequence):
+            for _ in range(self.experiment.byte_hold_generations):
+                if input_valid:
+                    clone_experiment.drive_input(input_byte)
+                else:
+                    clone_experiment.release_input()
+                advance_and_observe(clone_experiment.input_bus.signal_coordinates())
+            if index < len(sequence) - 1:
+                for _ in range(self.experiment.inter_input_generations):
+                    clone_experiment.release_input()
+                    advance_and_observe(())
+        if enforce_full_sequence:
+            input_complete_generation = evaluation_generations
         for _ in range(self.experiment.byte_gap_generations):
             clone_experiment.release_input()
             advance_and_observe(())
         for _ in range(self.experiment.evaluation_timeout_generations):
             clone_experiment.release_input()
             advance_and_observe(())
+
         actual = tuple(observed)
         expected_tuple = tuple(expected)
         expected_index = 0
         for event in actual:
             if expected_index < len(expected_tuple) and event == expected_tuple[expected_index]:
                 expected_index += 1
+        early_output_count = (
+            sum(
+                generation < input_complete_generation
+                for generation in event_generations
+            )
+            if enforce_full_sequence
+            else 0
+        )
         return EvaluationResult(
             expected_events=expected_tuple,
             autonomous_events=actual,
-            success=actual == expected_tuple,
+            success=actual == expected_tuple and early_output_count == 0,
             clone_generation=clone.generation,
             event_generations=tuple(event_generations),
             evaluation_generations=evaluation_generations,
             activity_cost=activity_cost,
             timed_out=expected_index < len(expected_tuple),
+            input_complete_generation=input_complete_generation,
+        )
+
+    def evaluate_autonomous(
+        self,
+        *,
+        input_byte: int = 65,
+        input_valid: bool = True,
+        expected: Iterable[OutputEvent] = (),
+    ) -> EvaluationResult:
+        return self._evaluate_input_sequence(
+            input_bytes=(input_byte,),
+            input_valid=input_valid,
+            expected=expected,
+            enforce_full_sequence=False,
+        )
+
+    def evaluate_autonomous_sequence(
+        self,
+        *,
+        input_bytes: Iterable[int],
+        expected: Iterable[OutputEvent] = (),
+    ) -> EvaluationResult:
+        sequence = tuple(int(value) for value in input_bytes)
+        return self._evaluate_input_sequence(
+            input_bytes=sequence,
+            expected=expected,
+            enforce_full_sequence=len(sequence) > 1,
         )
 
 
@@ -487,28 +676,40 @@ def _seed_measurement(
 
     for mapping in protocol.mappings:
         expected = (OutputEvent.byte(mapping.output_byte), OutputEvent.null())
+        if isinstance(mapping, ByteSequenceMapping):
+            baseline_result = baseline.evaluate_autonomous_sequence(
+                input_bytes=mapping.input_bytes,
+                expected=expected,
+            )
+            trained_result = trained.evaluate_autonomous_sequence(
+                input_bytes=mapping.input_bytes,
+                expected=expected,
+            )
+        else:
+            baseline_result = baseline.evaluate_autonomous(
+                input_byte=mapping.input_byte,
+                expected=expected,
+            )
+            trained_result = trained.evaluate_autonomous(
+                input_byte=mapping.input_byte,
+                expected=expected,
+            )
         mapping_results.append(
             MappingSeedMeasurement(
                 mapping=mapping,
-                baseline=baseline.evaluate_autonomous(
-                    input_byte=mapping.input_byte,
-                    expected=expected,
-                ),
-                trained=trained.evaluate_autonomous(
-                    input_byte=mapping.input_byte,
-                    expected=expected,
-                ),
+                baseline=baseline_result,
+                trained=trained_result,
             )
         )
 
     first = mapping_results[0]
     baseline_no_input = baseline.evaluate_autonomous(
-        input_byte=protocol.mappings[0].input_byte,
+        input_byte=protocol.mappings[0].input_bytes[0],
         input_valid=False,
         expected=(),
     )
     trained_no_input = trained.evaluate_autonomous(
-        input_byte=protocol.mappings[0].input_byte,
+        input_byte=protocol.mappings[0].input_bytes[0],
         input_valid=False,
         expected=(),
     )
@@ -520,6 +721,28 @@ def _seed_measurement(
         input_byte=protocol.counterfactual_input_byte,
         expected=(),
     )
+    baseline_prefix = None
+    trained_prefix = None
+    baseline_sequence_counterfactual = None
+    trained_sequence_counterfactual = None
+    if protocol.counterfactual_prefix:
+        baseline_prefix = baseline.evaluate_autonomous_sequence(
+            input_bytes=protocol.counterfactual_prefix,
+            expected=(),
+        )
+        trained_prefix = trained.evaluate_autonomous_sequence(
+            input_bytes=protocol.counterfactual_prefix,
+            expected=(),
+        )
+    if protocol.counterfactual_input_sequence:
+        baseline_sequence_counterfactual = baseline.evaluate_autonomous_sequence(
+            input_bytes=protocol.counterfactual_input_sequence,
+            expected=(),
+        )
+        trained_sequence_counterfactual = trained.evaluate_autonomous_sequence(
+            input_bytes=protocol.counterfactual_input_sequence,
+            expected=(),
+        )
     return SeedMeasurement(
         seed=seed,
         baseline=first.baseline,
@@ -529,14 +752,20 @@ def _seed_measurement(
         baseline_alternate=baseline_alternate,
         trained_alternate=trained_alternate,
         mapping_results=tuple(mapping_results),
+        baseline_prefix=baseline_prefix,
+        trained_prefix=trained_prefix,
+        baseline_sequence_counterfactual=baseline_sequence_counterfactual,
+        trained_sequence_counterfactual=trained_sequence_counterfactual,
     )
 
 
 def _assemble_learning_measurement(
     measurements: Iterable[SeedMeasurement],
     *,
-    mappings: Iterable[ByteMapping] = DEFAULT_BYTE_MAPPINGS,
+    mappings: Iterable[ProtocolMapping] = DEFAULT_BYTE_MAPPINGS,
     counterfactual_input_byte: int = 66,
+    counterfactual_prefix: tuple[int, ...] = (),
+    counterfactual_input_sequence: tuple[int, ...] = (),
 ) -> LearningMeasurement:
     records = tuple(measurements)
     if not records:
@@ -561,6 +790,28 @@ def _assemble_learning_measurement(
     trained_alternate_input_clean = sum(item.trained_alternate.success for item in records)
     seed_count = len(records)
     required_cases = seed_count * len(mapping_values)
+    baseline_prefix_input_clean = sum(
+        item.baseline_prefix is not None and item.baseline_prefix.success
+        for item in records
+    )
+    trained_prefix_input_clean = sum(
+        item.trained_prefix is not None and item.trained_prefix.success
+        for item in records
+    )
+    baseline_sequence_counterfactual_clean = sum(
+        item.baseline_sequence_counterfactual is not None
+        and item.baseline_sequence_counterfactual.success
+        for item in records
+    )
+    trained_sequence_counterfactual_clean = sum(
+        item.trained_sequence_counterfactual is not None
+        and item.trained_sequence_counterfactual.success
+        for item in records
+    )
+    sequence_protocol = any(
+        isinstance(mapping, ByteSequenceMapping)
+        for mapping in mapping_values
+    )
 
     per_mapping = tuple(
         MappingMeasurement(
@@ -577,7 +828,12 @@ def _assemble_learning_measurement(
         for index, mapping in enumerate(mapping_values)
     )
 
-    if len(mapping_values) == 1:
+    if sequence_protocol:
+        criterion = (
+            "all sequences across all seeds must autonomously emit each declared output byte then NULL only after the full input sequence, "
+            "trained successes must exceed baseline, and no-input/prefix-only/unmapped-sequence counterfactuals must remain output-clean"
+        )
+    elif len(mapping_values) == 1:
         criterion = (
             "all seeds must autonomously emit B then NULL after training, trained successes must exceed baseline, "
             "and no-input/alternate-input counterfactuals must remain output-clean"
@@ -601,12 +857,25 @@ def _assemble_learning_measurement(
             trained_successes >= required_cases
             and trained_successes > baseline_successes
             and trained_no_input_clean >= seed_count
-            and trained_alternate_input_clean >= seed_count
+            and (
+                (
+                    trained_prefix_input_clean >= seed_count
+                    and trained_sequence_counterfactual_clean >= seed_count
+                )
+                if sequence_protocol
+                else trained_alternate_input_clean >= seed_count
+            )
         ),
         per_seed=records,
         mapping_count=len(mapping_values),
         counterfactual_input_byte=counterfactual_input_byte,
         per_mapping=per_mapping,
+        counterfactual_prefix=counterfactual_prefix,
+        counterfactual_input_sequence=counterfactual_input_sequence,
+        baseline_prefix_input_clean=baseline_prefix_input_clean,
+        trained_prefix_input_clean=trained_prefix_input_clean,
+        baseline_sequence_counterfactual_clean=baseline_sequence_counterfactual_clean,
+        trained_sequence_counterfactual_clean=trained_sequence_counterfactual_clean,
     )
 
 
@@ -628,6 +897,8 @@ def measure_trained_state(
         (measurement,),
         mappings=protocol.mappings,
         counterfactual_input_byte=protocol.counterfactual_input_byte,
+        counterfactual_prefix=protocol.counterfactual_prefix,
+        counterfactual_input_sequence=protocol.counterfactual_input_sequence,
     )
 
 
@@ -659,4 +930,6 @@ def compare_baseline_trained(
         measurements,
         mappings=protocol.mappings,
         counterfactual_input_byte=protocol.counterfactual_input_byte,
+        counterfactual_prefix=protocol.counterfactual_prefix,
+        counterfactual_input_sequence=protocol.counterfactual_input_sequence,
     )
