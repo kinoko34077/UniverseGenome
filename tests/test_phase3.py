@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 
+from core.experiment import ExperimentConfig
 from core.physics import PhysicsConfig, step
 from core.population import (
     CATEGORY_OPERATORS,
@@ -16,6 +17,7 @@ from core.population import (
     save_population,
 )
 from core.runner import build_status, load_config
+from search.evolution import SteadyStateOptimizer
 from server.runtime import PopulationRuntime
 
 
@@ -135,8 +137,20 @@ class Phase3PopulationTests(unittest.TestCase):
 
         html = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
         js = (ROOT / "ui" / "sim_view.js").read_text(encoding="utf-8")
-        for control in ("Run", "Pause", "1 Step", "Reset", "Select Universe", "Clone for Observation", "Rewind", "Save Snapshot", "Load Snapshot"):
+        for control in (
+            "Run Search",
+            "Pause Search",
+            "1 Search Iteration",
+            "Reset",
+            "Clone for Observation",
+            "1 Observation Step",
+            "Rewind Observation",
+            "Save Optimizer Snapshot",
+            "Load Optimizer Snapshot",
+            "Apply on Reset",
+        ):
             self.assertIn(control, html)
+        self.assertNotIn(">Select Universe<", html)
         self.assertIn("16×8", html)
         self.assertIn("authoritative simulation clock is external", js)
         controls = (ROOT / "ui" / "controls.js").read_text(encoding="utf-8")
@@ -147,21 +161,82 @@ class Phase3PopulationTests(unittest.TestCase):
         self.assertIn("--surface", html)
 
     def test_p3f_visual_observer_contract_is_authoritative_and_bounded(self):
-        runtime = PopulationRuntime(history_length=512, config=population_config(initial_density=4))
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        runtime = PopulationRuntime(
+            history_length=128,
+            config=population_config(initial_density=4),
+            experiment=protocol,
+        )
         initial = runtime.state()
 
-        self.assertEqual(initial["history_length"], 512)
+        self.assertIsInstance(runtime.optimizer, SteadyStateOptimizer)
+        self.assertEqual(initial["authority"], "phase5_optimizer")
+        self.assertEqual(initial["slot_count"], 128)
+        self.assertEqual(initial["history_length"], 128)
+        self.assertEqual(len(initial["summaries"]), 128)
         self.assertEqual(len(initial["summaries"][0]["overview"]), 64)
         self.assertTrue({"activity", "hierarchy", "occupied"} <= set(initial["summaries"][0]["overview"][0]))
+        self.assertTrue(
+            {
+                "genome",
+                "fitness",
+                "growth_windows",
+                "evidence_group_size",
+                "evidence_mature",
+                "parent_index",
+                "last_mutation_field",
+                "allocation_reason",
+            }
+            <= set(initial["summaries"][0])
+        )
         self.assertTrue({"activity", "hierarchy", "latent", "hp", "bond"} <= set(initial["selected"]["cells"][0]))
+        self.assertIn("display-only proxy", initial["activity_semantics"])
 
+        authoritative_before = runtime.optimizer.slots[0].state.to_snapshot()
         clone = runtime.control("clone")
         self.assertEqual(clone["observation_target"], "clone")
         clone_generation = clone["selected"]["generation"]
+
         runtime.control("step")
-        observed = runtime.state()
-        self.assertEqual(observed["observation_target"], "clone")
-        self.assertEqual(observed["selected"]["generation"], clone_generation)
+        stepped = runtime.state()
+        self.assertEqual(stepped["selected"]["generation"], clone_generation + 1)
+        self.assertEqual(runtime.optimizer.slots[0].state.to_snapshot(), authoritative_before)
+
+        runtime.control("rewind", generations=1)
+        rewound = runtime.state()
+        self.assertEqual(rewound["selected"]["generation"], clone_generation)
+        self.assertEqual(runtime.optimizer.slots[0].state.to_snapshot(), authoritative_before)
+
+        saved = runtime.control("save")["snapshot"]
+        self.assertEqual(saved["kind"], "UniverseGenomePhase5SteadyStateOptimizer")
+
+        runtime.optimizer.slots[0].absolute_failure = True
+        runtime.optimizer.slots[0].absolute_failure_reason = "all_active_cells_gone"
+        search = runtime.control("search_step")
+        self.assertEqual(search["optimizer_generation"], 1)
+        self.assertTrue(any(item["index"] == 0 for item in search["last_search"]["replacements"]))
+        self.assertEqual(search["summaries"][0]["last_event"]["index"], 0)
+
+        pending = runtime.control(
+            "set_parameters",
+            parameters={"collision_damage": 16, "noise_attempts": 1},
+        )
+        self.assertEqual(pending["pending_reset_parameters"]["collision_damage"], 16)
+        self.assertNotEqual(runtime.optimizer.base_config.collision_damage, 16)
+        reset = runtime.control("reset")
+        self.assertEqual(reset["pending_reset_parameters"], {})
+        self.assertEqual(runtime.optimizer.base_config.collision_damage, 16)
+        self.assertEqual(runtime.optimizer.base_config.noise_attempts, 1)
+
+        runtime.control("load", snapshot=saved)
+        restored = runtime.state()
+        self.assertEqual(restored["optimizer_generation"], saved["generation"])
 
         html = (ROOT / "ui" / "index.html").read_text(encoding="utf-8")
         js = (ROOT / "ui" / "sim_view.js").read_text(encoding="utf-8")
@@ -169,7 +244,8 @@ class Phase3PopulationTests(unittest.TestCase):
         self.assertIn("mode-lock", html)
         self.assertIn("125", js)
         self.assertIn("500", js)
-        self.assertIn("observation_target", js)
+        self.assertIn("optimizer_generation", js)
+        runtime.close()
 
     def test_p3f_view_model_modes_and_visual_values_are_executable(self):
         node = shutil.which("node")
