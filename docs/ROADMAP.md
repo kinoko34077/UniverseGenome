@@ -5,9 +5,9 @@
 Phase 0 through Phase 5 implementation is present on `main`, but current
 status reconciliation #66 is complete via PR #69 and Phase 5 search-semantic
 remediation #65 is complete via PR #70 and GUI/authoritative-search
-integration #63 is complete via PR #73. No P1 remediation owner remains.
-Phase 0–5 residual reconciliation continues under #61, then readiness owner #60
-must rerun the audit from repaired `main`.
+integration #63 is complete via PR #73. Post-v0.1 residual reconciliation #61
+is complete via PR #74. No remediation owner remains; readiness owner #60 must
+rerun the audit from repaired `main`.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -70,9 +70,9 @@ cross-phase GUI/authoritative-search remediation #63 is complete via PR #73.
 Earlier implementation/remediation history: #24 / PR #25, #30 / PR #34,
 #36 / PR #39, #37 / PR #40, #38 / PR #41, #44 / PR #50, #56 / PR #57.
 
-## Phase 6+ — Capability ladder (blocked pending #61 reconciliation; readiness rerun #60)
+## Phase 6+ — Capability ladder (blocked pending readiness rerun #60)
 No Phase 6 capability is implemented yet. Candidate work includes multiple
 mappings, sequence discrimination, multi-event output, forgetting/relearning,
 robustness, generalization, multi-byte sequences and raw UTF-8 experiments.
-Phase 0–5 residuals are tracked in #61. No Phase 6 child work may start until
-the still-relevant residuals are reconciled and #60 reruns from repaired main.
+Phase 0–5 residual reconciliation is complete through #61 / PR #74. No Phase 6
+child work may start until #60 reruns readiness from repaired main and passes.
