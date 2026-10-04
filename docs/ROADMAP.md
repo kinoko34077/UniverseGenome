@@ -7,8 +7,9 @@ reconciliation #66, Phase 5 remediation #65, GUI/search integration #63, and
 post-v0.1 residual reconciliation #61 are complete; readiness rerun #60 passed.
 Phase 6 roadmap #78 is active. P6.1 multiple independent byte mappings are
 accepted through #79 / PR #80, P6.2 temporal sequence discrimination through
-#82 / PR #83, and P6.3 multi-event output timing through #85 / PR #86 on main;
-the next bounded frontier is P6.4 forgetting/relearning.
+#82 / PR #83, P6.3 multi-event output timing through #85 / PR #86, and P6.4
+forgetting/relearning retention through #88 / PR #89 on main; the next bounded
+frontier is P6.5 noise robustness.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -76,15 +77,18 @@ Earlier implementation/remediation history: #24 / PR #25, #30 / PR #34,
 P6.1 multiple independent byte mappings is implemented/accepted through #79 /
 PR #80. P6.2 temporal sequence discrimination is implemented/accepted through
 #82 / PR #83. P6.3 multi-event output timing is implemented/accepted through
-#85 / PR #86: the protocol can require two repeated autonomous byte events at
-a declared physical-generation onset interval before NULL, evaluate exact
-content/order/count/timing on isolated clones, preserve P6.2 controls, and
-round-trip the timing contract through Phase 5 optimizer snapshots.
+#85 / PR #86. P6.4 forgetting/relearning is implemented/accepted through #88 /
+PR #89: the protocol measures T0 immediate retention eligibility, advances the
+same trained state through a declared no-teacher delay plus deterministic
+unmapped-CA interference, evaluates T1, applies one relearning curriculum pass
+without reset, then evaluates T2. Evaluable retention is growth-only Phase 5
+evidence and does not alter absolute fitness ordering.
 
-The accepted bounded P6.3 smoke observed AA→B,B 0→0 and AC→D,D 0→0 across
-three seeds; no-input, prefix-A and unmapped-CA controls were clean, so
-`learning_claim=false` remains the truthful result.
+The accepted bounded P6.4 smoke produced no T0-success cases across its three
+seeds × two mappings. Therefore retention/relearning were explicitly
+non-evaluable (`null`) and `learning_claim=false`; capability acceptance is
+not a learning or retention-success claim.
 
-Next frontier: **P6.4 forgetting/relearning** as one new bounded child Issue.
-P6.5+ remains deferred: noise robustness, generalization, multi-byte sequences,
-and raw UTF-8 experiments.
+Next frontier: **P6.5 noise robustness** as one new bounded child Issue.
+P6.6+ remains deferred: generalization, multi-byte sequences, and raw UTF-8
+experiments.
