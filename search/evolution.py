@@ -436,8 +436,26 @@ class SteadyStateOptimizer:
         self.scheduler["mutation_cursor"] = cursor + 1
         return field
 
-    def _next_seed(self, category: str) -> int:
+    def _next_seed(
+        self,
+        category: str,
+        *,
+        genome: UniverseGenome | None = None,
+    ) -> int:
         occupied = {slot.seed for slot in self.slots if slot.category == category}
+        if genome is not None:
+            matched = sorted(
+                {
+                    slot.seed
+                    for slot in self.slots
+                    if slot.category != category
+                    and slot.genome == genome
+                    and slot.seed not in occupied
+                }
+            )
+            if matched:
+                return matched[0]
+
         candidate = int(self.scheduler["allocation_cursor"])
         while candidate in occupied:
             candidate += 1
@@ -454,7 +472,7 @@ class SteadyStateOptimizer:
             raise ValueError("free_index must be within the fixed population")
         if parent.index == free_index:
             raise ValueError("seed evidence must use a free slot distinct from parent")
-        seed = self._next_seed(parent.category)
+        seed = self._next_seed(parent.category, genome=parent.genome)
         config = self._effective_config(parent.genome, parent.category, self.base_config)
         state = create_universe(seed=seed, config=config)
         return UniverseSlot(
@@ -505,7 +523,7 @@ class SteadyStateOptimizer:
             direction=preferred_direction,
             base=self.base_config,
         )
-        seed = self._next_seed(parent.category)
+        seed = self._next_seed(parent.category, genome=child_genome)
         config = self._effective_config(child_genome, parent.category, self.base_config)
         state = create_universe(seed=seed, config=config)
         return UniverseSlot(
