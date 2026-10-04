@@ -17,8 +17,14 @@
   and explicit timeout reconstruction;
 - adds canonical/smoke P6.6 configs, public per-seed/aggregate evidence and real
   P6.6 experiment/optimizer CI entrypoints;
-- capability acceptance does not imply that the current universe generalized;
-  observed smoke outcome and final verification are recorded at acceptance.
+- bounded public P6.6 smoke produced baseline/trained teacher successes 0→0,
+  `training_qualified_count=0`, `generalization_eligible_count=0` and
+  `generalization_rate=null`; all three held-out baseline/trained evaluations
+  were unsuccessful and `learning_claim=false`;
+- this is explicitly non-evaluable generalization because the prerequisite
+  teacher learning did not qualify, not a generalized or generalization-failed
+  claim; capability acceptance does not imply that the current universe
+  generalized.
 
 ## 2026-10-04 — Phase 6.5 controlled physical-noise robustness accepted (#91 / PR #92)
 
