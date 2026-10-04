@@ -37,7 +37,7 @@ def _current_state(config: dict[str, Any]) -> dict[str, Any]:
         "blocking_owners": list(owners),
         "readiness_owner": str(configured.get("readiness_owner", "#60")),
         "next_phase": str(
-            configured.get("next_phase", "Post-v0.1 residual reconciliation (#61; then readiness rerun #60; Phase 6+ blocked)")
+            configured.get("next_phase", "Readiness rerun (#60; Phase 6+ blocked)")
         ),
     }
 

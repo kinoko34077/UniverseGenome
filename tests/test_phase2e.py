@@ -107,7 +107,7 @@ class Phase2EAgingTests(unittest.TestCase):
         raw = json.loads((ROOT / "config" / "default.json").read_text(encoding="utf-8"))
         status = build_status(raw)
         self.assertTrue(status["phase2e_aging_implemented"])
-        self.assertEqual(status["next_phase"], "Post-v0.1 residual reconciliation (#61; then readiness rerun #60; Phase 6+ blocked)")
+        self.assertEqual(status["next_phase"], "Readiness rerun (#60; Phase 6+ blocked)")
         self.assertTrue(raw["features"]["aging"])
         self.assertTrue(raw["features"]["multi_universe_search"])
 

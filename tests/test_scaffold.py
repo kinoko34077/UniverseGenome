@@ -124,7 +124,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertFalse(status["phase6_ready"])
         self.assertEqual(status["blocking_owners"], [])
         self.assertEqual(status["readiness_owner"], "#60")
-        self.assertIn("Post-v0.1 residual reconciliation", status["next_phase"])
+        self.assertEqual(status["next_phase"], "Readiness rerun (#60; Phase 6+ blocked)")
         self.assertNotIn("Phase 6+ capability ladder (handoff only)", status["next_phase"])
 
     def test_post_audit_documentation_routes_to_blocked_remediation(self):
@@ -152,14 +152,14 @@ class Phase0ScaffoldTests(unittest.TestCase):
         self.assertIn("Phase 5 search-semantic remediation #65 is complete via PR #70", readme)
         self.assertNotIn("Phase 1 through Phase 5 are accepted on `main`", readme)
         self.assertIn("authoritative Phase 5", readme)
-        self.assertIn("acceptance reconciliation is active", specification)
+        self.assertIn("readiness rerun #60 pending", specification)
         self.assertIn("Phase 6+ is blocked", specification)
         self.assertIn(
-            "Phase 6+ — Capability ladder (blocked pending #61 reconciliation; readiness rerun #60)",
+            "Phase 6+ — Capability ladder (blocked pending readiness rerun #60)",
             roadmap,
         )
         self.assertIn(
-            "Status: **blocked pending #61 residual reconciliation; readiness rerun #60**",
+            "Status: **blocked pending readiness rerun #60**",
             handoff,
         )
         self.assertIn("historical v0.1 physics/search contract", handoff)

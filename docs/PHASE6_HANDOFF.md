@@ -1,6 +1,6 @@
 # Phase 6+ capability handoff
 
-Status: **blocked pending #61 residual reconciliation; readiness rerun #60**.
+Status: **blocked pending readiness rerun #60**.
 No Phase 6+ capability has been implemented.
 
 ## Current v0.1 boundary
@@ -9,15 +9,17 @@ Phase 0 through Phase 5 implementation is present on `main`, but full current
 acceptance/readiness remains invalidated. Status-truth remediation #66 is
 complete via PR #69 and Phase 5 search-semantics remediation #65 is complete
 via PR #70, merged to main as `3e8c8f31a1d87d3f2a7e88de731392b4f3202bd2`.
-GUI/authoritative-search integration #63 is complete via PR #73. No unresolved
-P1 owner remains. Still-relevant Phase 0–5 residuals must be reconciled under
-#61, then readiness owner #60 must rerun the audit from repaired current
+GUI/authoritative-search integration #63 is complete via PR #73, and
+post-v0.1 residual reconciliation #61 is complete via PR #74, merged to main
+as `87de79012650b44b934651c8e1ba5a7b8d91e173`. No unresolved remediation
+owner remains. Readiness owner #60 must rerun the audit from repaired current
 `main`.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
 Earlier remediation established the current Phase 0–5 implementation boundary;
-the later #64 audit found cross-phase acceptance gaps that remain open. The
-historical implementation boundary is documented by:
+the later #64 audit found cross-phase acceptance gaps that were subsequently
+repaired through #66/#65/#63/#61. Current readiness still requires the #60
+rerun. The historical implementation boundary is documented by:
 
 - original Phase 1–5 implementation PRs;
 - completeness audit #27;
@@ -27,6 +29,7 @@ historical implementation boundary is documented by:
 - Phase 5 architecture restoration #58 / PR #59;
 - Phase 5 search-semantics remediation #65 / PR #70;
 - GUI/authoritative-search integration #63 / PR #73;
+- post-v0.1 residual reconciliation #61 / PR #74;
 - readiness audit #60.
 
 PR #59 restored the original Phase 5 architecture and merged as
@@ -68,9 +71,14 @@ PR #70 completed #65 search-semantics remediation. Its exact reviewed head
 (`37177555446`) with 142 tests / OK and browser E2E SUCCESS before squash
 merge to current main `3e8c8f31...`.
 
+PR #74 completed #61 residual reconciliation. Its exact reviewed head
+`1441d0bf2b7faa58e265efdc263a8bbf4b3a5414` passed CI #138
+(`37183145594`) with 149 tests / OK and browser E2E SUCCESS before squash
+merge to current main `87de7901...`.
+
 The previous #60 PASS is historical and invalidated by the later full
-traceability audit #64 and handoff #67/#68. P1 remediation is now complete;
-P2/P3 residuals remain tracked in #61 and must be reconciled before #60 reruns.
+traceability audit #64 and handoff #67/#68. Remediation and residual
+reconciliation are now complete; #60 must rerun readiness from current main.
 
 ## Phase 4 outcome
 
@@ -91,12 +99,11 @@ to the historical v0.1 physics/search contract.
 Before any Phase 6 mutation:
 
 1. reread live devflow Control #314;
-2. resolve or explicitly reclassify still-relevant #61 residuals;
-3. rerun readiness owner #60 from current `main`;
-4. create a new explicit repository-local child Issue with measurable
+2. rerun readiness owner #60 from current `main`;
+3. create a new explicit repository-local child Issue with measurable
    acceptance criteria only after readiness passes;
-5. keep any new capability behind the Phase 6 boundary;
-6. preserve deterministic replay, authoritative-state separation and the
+4. keep any new capability behind the Phase 6 boundary;
+5. preserve deterministic replay, authoritative-state separation and the
    no-semantic-shortcut rule.
 
 ## Candidate capability order
@@ -115,14 +122,12 @@ Candidate order remains:
 This ordering is a handoff sequence, not permission to implement all items in
 one work unit. Start with one bounded child Issue.
 
-## Non-blocking follow-up boundary
+## Completed post-v0.1 residual boundary
 
-Issue #61 tracks Phase 0–5 residuals that did not rise to P0/P1 during readiness
-audit #60, including:
+Issue #61 / PR #74 resolved or explicitly reclassified the remaining Phase 0–5
+P2/P3 residuals, including post-initial matched seeds, rewind memory semantics,
+browser E2E depth, fragmentation RNG addressing, optimizer CLI protocol,
+snapshot lineage/prune history, and implementation-default performance debt.
 
-- post-initial matched-seed preservation where practical;
-- rewind memory-budget semantics;
-- deeper browser E2E coverage.
-
-Those follow-ups remain separate from the first bounded Phase 6 capability
-unless a concrete dependency is identified.
+These items no longer form an active remediation queue. Readiness #60 is the
+only remaining gate before any Phase 6 child work.

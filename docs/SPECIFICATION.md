@@ -1,6 +1,6 @@
 # UniverseGenome v0.1 Canonical Specification Index
 
-Status: accepted v0.1 specification basis; Phase 0 through Phase 5 implementation is present, with current acceptance remediation active
+Status: accepted v0.1 specification basis; Phase 0 through Phase 5 implementation is present, with readiness rerun #60 pending
 Requirements source: #3  
 Detailed specification source/review history: #4  
 Historical rationale: #2  
@@ -24,10 +24,10 @@ Issue #3 and #4 remain durable review/history surfaces and must link to future a
 ## Current repository state
 
 The checked-in Phase 0–5 implementation is present, but full current
-acceptance/readiness is not complete. P1 remediation #66, #65, and #63 is
-complete. Post-v0.1 residual reconciliation remains under #61, and readiness
-owner #60 must rerun the audit from repaired current `main`. Phase 6+ is
-blocked until that sequence is complete. This
+readiness is not yet re-established. P1 remediation #66, #65, and #63 and
+post-v0.1 residual reconciliation #61 are complete. Readiness owner #60 must
+rerun the audit from repaired current `main`. Phase 6+ remains blocked until
+that rerun passes. This
 state statement is separate from the historical acceptance records preserved
 in the changelog and Issues.
 
@@ -50,9 +50,9 @@ not promote `accepted-default` or `parameterized` into an immutable rule.
 
 ## Current implementation frontier
 
-Phase 0 through Phase 5 implementation is present on `main`; current
-acceptance reconciliation is active and Phase 6+ is blocked pending #61
-residual reconciliation and the #60 readiness rerun.
+Phase 0 through Phase 5 implementation is present on `main`; remediation and
+residual reconciliation through #61 are complete. Phase 6+ is blocked pending
+the #60 readiness rerun.
 Phase 4 recorded no learning claim, and Phase 5 consumes that explicit
 measurement rather than asserting success. See `docs/PHASE6_HANDOFF.md`.
 
