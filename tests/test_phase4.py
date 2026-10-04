@@ -576,6 +576,7 @@ class Phase4IOTests(unittest.TestCase):
         self.assertEqual(result.autonomous_events, expected)
         self.assertEqual(result.input_complete_generation, 3)
         self.assertEqual(result.early_output_count, 1)
+        self.assertGreater(result.wrong_output_count, 0)
         self.assertFalse(result.success)
 
     def test_p62_004_sequence_measurement_gates_prefix_and_unmapped_sequence_controls(self):
