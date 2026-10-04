@@ -6,9 +6,9 @@ Phase 0 through Phase 5 are readiness-accepted on `main`. Current State
 reconciliation #66, Phase 5 remediation #65, GUI/search integration #63, and
 post-v0.1 residual reconciliation #61 are complete; readiness rerun #60 passed.
 Phase 6 roadmap #78 is active. P6.1 multiple independent byte mappings are
-accepted through #79 / PR #80 and P6.2 temporal sequence discrimination is
-accepted through #82 / PR #83 on main; the next bounded frontier is P6.3
-multi-event output timing.
+accepted through #79 / PR #80, P6.2 temporal sequence discrimination through
+#82 / PR #83, and P6.3 multi-event output timing through #85 / PR #86 on main;
+the next bounded frontier is P6.4 forgetting/relearning.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -75,15 +75,16 @@ Earlier implementation/remediation history: #24 / PR #25, #30 / PR #34,
 
 P6.1 multiple independent byte mappings is implemented/accepted through #79 /
 PR #80. P6.2 temporal sequence discrimination is implemented/accepted through
-#82 / PR #83: the protocol can train AA→B and AC→D on one continuing
-authoritative state, evaluate sequences on isolated clones, reject/charge
-pre-completion output, preserve explicit prefix/unmapped-sequence controls, and
-round-trip the protocol through Phase 5 optimizer snapshots.
+#82 / PR #83. P6.3 multi-event output timing is implemented/accepted through
+#85 / PR #86: the protocol can require two repeated autonomous byte events at
+a declared physical-generation onset interval before NULL, evaluate exact
+content/order/count/timing on isolated clones, preserve P6.2 controls, and
+round-trip the timing contract through Phase 5 optimizer snapshots.
 
-The accepted bounded P6.2 smoke observed AA→B 0→0 and AC→D 0→0 across three
-seeds; no-input, prefix-A and unmapped CA controls were clean, so
+The accepted bounded P6.3 smoke observed AA→B,B 0→0 and AC→D,D 0→0 across
+three seeds; no-input, prefix-A and unmapped-CA controls were clean, so
 `learning_claim=false` remains the truthful result.
 
-Next frontier: **P6.3 multi-event output timing** as one new bounded child
-Issue. P6.4+ remains deferred: forgetting/relearning, noise robustness,
-generalization, multi-byte sequences, and raw UTF-8 experiments.
+Next frontier: **P6.4 forgetting/relearning** as one new bounded child Issue.
+P6.5+ remains deferred: noise robustness, generalization, multi-byte sequences,
+and raw UTF-8 experiments.
