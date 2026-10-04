@@ -7,7 +7,7 @@
     "phase6_ready": true,
     "blocking_owners": [],
     "readiness_owner": "#60",
-    "next_phase": "Phase 6.6 generalization (bounded child Issue required)"
+    "next_phase": "Phase 6.7 multi-byte sequences (bounded child Issue required)"
   },
   "world": {
     "logical_size": 32,
@@ -73,6 +73,7 @@
     "phase6_multi_event_timing": true,
     "phase6_retention_relearning": true,
     "phase6_noise_robustness": true,
+    "phase6_generalization": true,
     "aging": true
   }
 }

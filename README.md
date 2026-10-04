@@ -9,15 +9,18 @@ The inner system is intended to learn through deterministic time evolution of an
 **Phase 0 through Phase 5 are readiness-accepted on `main`; Phase 6.1
 multiple independent byte mappings, Phase 6.2 temporal sequence
 discrimination, Phase 6.3 multi-event output timing, Phase 6.4
-forgetting/relearning retention, and Phase 6.5 controlled physical-noise
-robustness are implemented/accepted through #79 / PR #80, #82 / PR #83,
-#85 / PR #86, #88 / PR #89, and #91 / PR #92.** The repository contains the
+forgetting/relearning retention, Phase 6.5 controlled physical-noise
+robustness, and Phase 6.6 predeclared held-out relation generalization are
+implemented/accepted through #79 / PR #80, #82 / PR #83, #85 / PR #86,
+#88 / PR #89, #91 / PR #92, and #95 / PR #96.** The repository contains the
 canonical v0.1 foundation, server-owned runtime/API, browser observer/control
-surface, authoritative Phase 5 optimizer, and the first five bounded Phase 6
+surface, authoritative Phase 5 optimizer, and the first six bounded Phase 6
 experimental capabilities.
-The accepted P6.5 bounded smoke had no clean-success eligible cases, so noise
-robustness was explicitly non-evaluable (`null`) and `learning_claim=false`;
-capability acceptance does not relabel that result as learned robustness.
+The accepted P6.6 bounded smoke still had teacher baseline/trained success 0→0,
+so `training_qualified_count=0`, `generalization_eligible_count=0`, and the
+generalization rate was explicitly non-evaluable (`null`) with
+`learning_claim=false`. Capability acceptance does not relabel that result as
+successful generalization.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
@@ -50,8 +53,9 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   implements multiple independent byte mappings, P6.2 #82 / PR #83 implements
   temporal sequence discrimination, P6.3 #85 / PR #86 implements multi-event
   output timing, P6.4 #88 / PR #89 implements forgetting/relearning
-  retention measurement, and P6.5 #91 / PR #92 implements controlled
-  physical-noise robustness measurement.
+  retention measurement, P6.5 #91 / PR #92 implements controlled
+  physical-noise robustness measurement, and P6.6 #95 / PR #96 implements
+  predeclared held-out relation generalization measurement.
 - Issue #24 owns the original Phase 5 optimizer mechanics; audit remediation
   #30 / PR #34 integrates genome mapping and real Phase 4 candidate evaluation.
 - Audit remediation #29 / PR #33 connects the Phase 3 GUI to the runtime API.
@@ -76,9 +80,9 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   parallel Phase 3 population.
 - Post-v0.1 residual reconciliation #61 is complete via PR #74.
 - Readiness audit #60 passed on the repaired Phase 0–5 boundary.
-- Phase 6 roadmap #78 is active; P6.1 #79 / PR #80, P6.2 #82 / PR #83, P6.3 #85 / PR #86, P6.4 #88 / PR #89, and P6.5 #91 / PR #92 are accepted on main.
-- The next permitted capability is one bounded P6.6 generalization child
-  Issue. P6.6+ is not implemented yet.
+- Phase 6 roadmap #78 is active; P6.1 #79 / PR #80, P6.2 #82 / PR #83, P6.3 #85 / PR #86, P6.4 #88 / PR #89, P6.5 #91 / PR #92, and P6.6 #95 / PR #96 are accepted on main.
+- The next permitted capability is one bounded P6.7 multi-byte-sequence child
+  Issue. P6.7+ is not implemented yet.
 
 ## Headless verification commands
 

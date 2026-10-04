@@ -1,6 +1,6 @@
 # Specification Changelog
 
-## 2026-10-05 — Phase 6.6 held-out relation generalization candidate (#95 / PR #96)
+## 2026-10-05 — Phase 6.6 held-out relation generalization accepted (#95 / PR #96)
 
 - adds one predeclared held-out relation, AE→F,F→NULL, while teacher training
   remains limited to AA→B,B→NULL and AC→D,D→NULL;
@@ -25,6 +25,16 @@
   teacher learning did not qualify, not a generalized or generalization-failed
   claim; capability acceptance does not imply that the current universe
   generalized.
+- exact reviewed implementation head
+  `2904446564f535fe650e94bd896581a70b0ebb6b` passed CI #286
+  (`37212729551`) with Phase 5 plus P6.1–P6.6 real smokes and browser E2E;
+- exact-head review `5406864275` had no blocking finding;
+- squash-merged implementation main:
+  `f5ac79062e35eb8206e8449ceb0a9ea015cbc961`;
+- all 12 implementation files were verified blob-identical between reviewed
+  head and merged main;
+- the next bounded frontier is P6.7 multi-byte sequences; P6.8 raw UTF-8
+  remains deferred.
 
 ## 2026-10-04 — Phase 6.5 controlled physical-noise robustness accepted (#91 / PR #92)
 

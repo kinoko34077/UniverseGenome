@@ -28,11 +28,13 @@ rerun #60 passed after remediation/reconciliation. P6.1 multiple independent
 byte mappings are implemented/accepted through #79 / PR #80, P6.2 temporal
 sequence discrimination through #82 / PR #83, P6.3 multi-event output timing
 through #85 / PR #86, P6.4 forgetting/relearning retention through #88 /
-PR #89, and P6.5 controlled physical-noise robustness through #91 / PR #92.
-The accepted P6.5 bounded smoke produced zero clean-success eligible cases, so
-noise robustness was non-evaluable (`null`) and `learning_claim=false`.
-The next permitted capability is one bounded P6.6 generalization child Issue
-with explicit acceptance criteria. This state
+PR #89, P6.5 controlled physical-noise robustness through #91 / PR #92, and
+P6.6 predeclared held-out relation generalization through #95 / PR #96.
+The accepted P6.6 bounded smoke produced no training-qualified seeds, so
+generalization eligibility was zero and the generalization rate remained
+non-evaluable (`null`) with `learning_claim=false`.
+The next permitted capability is one bounded P6.7 multi-byte-sequence child
+Issue with explicit acceptance criteria. This state
 statement is separate from historical acceptance records preserved in the
 changelog and Issues.
 
@@ -57,11 +59,11 @@ not promote `accepted-default` or `parameterized` into an immutable rule.
 
 Phase 0 through Phase 5 are readiness-accepted on `main`; #60 has passed and
 P6.1 is implemented/accepted through #79 / PR #80, P6.2 through #82 / PR #83,
-P6.3 through #85 / PR #86, P6.4 through #88 / PR #89, and P6.5 through
-#91 / PR #92. Phase 6 remains a bounded capability ladder: P6.6+ requires
-separate child Issues. The current P6.5 robustness measurement has no
-clean-success eligible cases, so noise robustness remains non-evaluable rather
-than asserted as successful. See
+P6.3 through #85 / PR #86, P6.4 through #88 / PR #89, P6.5 through
+#91 / PR #92, and P6.6 through #95 / PR #96. Phase 6 remains a bounded
+capability ladder: P6.7+ requires separate child Issues. The current P6.6
+generalization measurement has no training-qualified/eligible cases, so
+generalization remains non-evaluable rather than asserted as successful. See
 `docs/PHASE6_HANDOFF.md`.
 
 See `docs/ROADMAP.md`.
