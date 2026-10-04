@@ -612,3 +612,70 @@ seed evolution, pruning or promising-allocation semantics and does not by
 itself establish a successful learning result.
 
 ---
+
+# 35. Phase 6.2 temporal sequence discrimination
+
+## SPEC-P6SEQ-001 — Two-byte ordered mapping protocol
+**Status: accepted**
+
+P6.2 extends the protocol mapping union with an ordered two-byte input sequence
+and one expected output byte. The initial declared mappings are:
+
+- `[0x41, 0x41] → 0x42` (AA → B);
+- `[0x41, 0x43] → 0x44` (AC → D).
+
+The mapping remains experiment/protocol data and is not an evolved
+UniverseGenome field. The P6.1 one-byte mapping representation remains valid.
+
+## SPEC-P6SEQ-002 — Inter-input timing and training order
+**Status: accepted**
+
+`inter_input_generations` is an explicit non-negative protocol parameter.
+Each input byte is held using the existing byte-hold rule; between input bytes,
+input is released for the declared inter-input interval. Teacher delay and
+teacher byte→NULL stimulation begin only after the complete input sequence.
+All mappings train one continuing authoritative Universe in deterministic
+protocol order.
+
+## SPEC-P6SEQ-003 — Sequence clone evaluation
+**Status: accepted**
+
+A sequence mapping is evaluated on a disposable clone. The evaluator records
+autonomous output throughout input delivery and the subsequent evaluation
+window. Any autonomous output event before completion of the full sequence
+makes the mapping unsuccessful even if the final event tuple otherwise equals
+the expected byte→NULL tuple.
+
+Cross-target bytes, extra events, missing events, missing NULL and timeout remain
+ordinary failures.
+
+## SPEC-P6SEQ-004 — Temporal counterfactual controls
+**Status: accepted**
+
+When sequence mappings are active, the protocol persists and measures:
+
+- `counterfactual_prefix`: initially `[0x41]`;
+- `counterfactual_input_sequence`: initially `[0x43, 0x41]` (CA);
+- the existing no-input control.
+
+The prefix must match the shared declared sequence prefix. The unmapped sequence
+must not equal any mapped input sequence. Both controls are evaluated on
+disposable clones and gate the aggregate learning claim.
+
+## SPEC-P6SEQ-005 — Phase 5 integration and reporting
+**Status: accepted**
+
+Phase 5 uses all trained mapping evaluations from the active protocol when
+computing task success, wrong-output, timeout, latency and activity aggregates.
+P6.2 does not alter search-category isolation, the canonical fitness ordering,
+pruning, seed allocation, or promising policy.
+
+Optimizer snapshots persist the sequence protocol through the existing
+serialized `ExperimentConfig`; no new optimizer snapshot version is required
+solely for P6.2 fields. Explicit timeout reconstruction may replace only the
+timeout while preserving sequence mappings, timing and counterfactual controls.
+
+Public experiment reporting identifies each mapping by `input_bytes` and
+reports prefix/unmapped-sequence control results without relabeling failed
+learning as success.
+
