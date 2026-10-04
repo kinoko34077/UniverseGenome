@@ -1,0 +1,31 @@
+{
+  "byte_hold_generations": 4,
+  "byte_gap_generations": 4,
+  "teacher_delay_generations": 4,
+  "teacher_repetitions": 1,
+  "evaluation_timeout_generations": 1024,
+  "mappings": [
+    {
+      "input_bytes": [65, 65],
+      "output_byte": 66
+    },
+    {
+      "input_bytes": [65, 67],
+      "output_byte": 68
+    }
+  ],
+  "counterfactual_input_byte": 66,
+  "inter_input_generations": 4,
+  "counterfactual_prefix": [65],
+  "counterfactual_input_sequence": [67, 65],
+  "output_event_count": 2,
+  "output_event_interval_generations": 4,
+  "retention_delay_generations": 128,
+  "retention_interference_repetitions": 1,
+  "relearning_teacher_repetitions": 1,
+  "noise_robustness_rate_delta": 256,
+  "held_out_mapping": {
+    "input_bytes": [65, 69],
+    "output_byte": 70
+  }
+}
