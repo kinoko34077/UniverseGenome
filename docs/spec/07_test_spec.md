@@ -268,9 +268,14 @@ v0.1 measurement keeps retention/noise-robustness fields zero, so growth bits
 Optimizer persistence includes the effective base/protocol configuration,
 all 128 authoritative Universe states and their parameters, normalized
 fitness/growth references, short-health/failure state, physical cadence state,
-lineage, and scheduler policy state. It does not retain disposable evaluation
-clones. Restore/resume produces the same bounded slot population as
-uninterrupted continuation.
+lineage, explicit prune history, and scheduler policy state. A child persists a
+stable parent-genome key independently of its reusable parent slot index.
+Prune history contains actual retired/replaced targets and round-trips through
+the optimizer snapshot. Current format version 5 must restore exactly, while
+legacy version 4 remains readable with absent new lineage/history fields
+defaulted safely. It does not retain disposable evaluation clones.
+Restore/resume produces the same bounded slot population as uninterrupted
+continuation.
 
 The headless performance path reports bounded optimizer iterations, evaluated
 slots, replacements, mutation fields, actual same-genome slot-group counts,
