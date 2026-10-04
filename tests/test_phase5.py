@@ -1573,6 +1573,8 @@ class Phase5OptimizerTests(unittest.TestCase):
             mapping_count=2,
             evaluation_case_count=2,
             trained_successes=0,
+            trained_no_input_clean=1,
+            trained_alternate_input_clean=1,
             no_input_clean=1,
             alternate_input_clean=1,
             per_seed=(seed_record,),
