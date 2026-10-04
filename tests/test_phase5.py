@@ -1803,5 +1803,115 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertFalse(payload["learning_claim"])
 
 
+    def test_p62_005_optimizer_snapshot_and_timeout_override_preserve_sequence_protocol(self):
+        protocol = load_experiment_config(
+            ROOT / "config" / "experiment_phase6_temporal_sequence.json"
+        )
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=500,
+            experiment=protocol,
+        )
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(restored.experiment, protocol)
+
+        captured = []
+
+        def fake_optimizer(**kwargs):
+            captured.append(kwargs["experiment"])
+            return {"stub": True}
+
+        stdout = StringIO()
+        with patch("core.runner.run_optimizer_headless", side_effect=fake_optimizer):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--optimizer",
+                        "--optimizer-iterations",
+                        "0",
+                        "--experiment-config",
+                        "config/experiment_phase6_temporal_sequence.json",
+                        "--optimizer-timeout-generations",
+                        "8",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        effective = captured[-1]
+        self.assertEqual(effective.evaluation_timeout_generations, 8)
+        self.assertEqual(effective.mappings, protocol.mappings)
+        self.assertEqual(effective.inter_input_generations, 4)
+        self.assertEqual(effective.counterfactual_prefix, (65,))
+        self.assertEqual(effective.counterfactual_input_sequence, (67, 65))
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(
+            payload["optimizer_protocol"]["input_sequences"],
+            [[65, 65], [65, 67]],
+        )
+        self.assertEqual(
+            payload["optimizer_protocol"]["counterfactual_prefix"],
+            [65],
+        )
+        self.assertEqual(
+            payload["optimizer_protocol"]["counterfactual_input_sequence"],
+            [67, 65],
+        )
+
+    def test_p62_006_public_runner_reports_sequence_inputs_and_counterfactuals(self):
+        measurement = LearningMeasurement(
+            seed_count=3,
+            baseline_successes=0,
+            trained_successes=0,
+            baseline_no_input_clean=3,
+            trained_no_input_clean=3,
+            baseline_alternate_input_clean=3,
+            trained_alternate_input_clean=3,
+            criterion="P6.2 temporal sequence criterion",
+            learning_claim=False,
+            per_seed=(),
+            mapping_count=2,
+            counterfactual_input_byte=66,
+            per_mapping=(
+                MappingMeasurement(ByteSequenceMapping((65, 65), 66), 0, 0),
+                MappingMeasurement(ByteSequenceMapping((65, 67), 68), 0, 0),
+            ),
+            counterfactual_prefix=(65,),
+            counterfactual_input_sequence=(67, 65),
+            baseline_prefix_input_clean=3,
+            trained_prefix_input_clean=3,
+            baseline_sequence_counterfactual_clean=3,
+            trained_sequence_counterfactual_clean=3,
+        )
+
+        stdout = StringIO()
+        with patch("core.runner.compare_baseline_trained", return_value=measurement):
+            with redirect_stdout(stdout):
+                self.assertEqual(
+                    runner_main([
+                        "--config",
+                        "config/default.json",
+                        "--experiment",
+                        "--experiment-config",
+                        "config/experiment_phase6_temporal_sequence.json",
+                        "--json",
+                    ]),
+                    0,
+                )
+
+        payload = json.loads(stdout.getvalue())["experiment_measurement"]
+        self.assertEqual(
+            [item["input_bytes"] for item in payload["per_mapping"]],
+            [[65, 65], [65, 67]],
+        )
+        self.assertEqual(payload["counterfactual_prefix"], [65])
+        self.assertEqual(payload["counterfactual_input_sequence"], [67, 65])
+        self.assertEqual(payload["trained_prefix_input_clean"], 3)
+        self.assertEqual(payload["trained_sequence_counterfactual_clean"], 3)
+        self.assertFalse(payload["learning_claim"])
+
+
 if __name__ == "__main__":
     unittest.main()
