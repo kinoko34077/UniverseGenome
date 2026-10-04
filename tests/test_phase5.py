@@ -346,7 +346,8 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(status["next_phase"], "Phase 6.2 temporal sequence discrimination (bounded child Issue required)")
         self.assertTrue(raw["features"]["multi_universe_search"])
         self.assertTrue(raw["features"]["evolution"])
-        self.assertFalse(raw["features"]["phase6_capabilities"])
+        self.assertTrue(raw["features"]["phase6_capabilities"])
+        self.assertTrue(raw["features"]["phase6_multi_mapping"])
         with (ROOT / "config" / "experiment_v0_1.json").open(encoding="utf-8") as handle:
             experiment = json.load(handle)
         self.assertEqual(experiment["learning_claim"], False)
