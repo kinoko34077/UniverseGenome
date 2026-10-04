@@ -1,5 +1,17 @@
 # Specification Changelog
 
+## 2026-10-04 — Phase 6 readiness rerun accepted (#60)
+
+- audited repaired main `78e9d87a11952197f320602031cfb08852bed078`;
+- exact-main push CI `37184102158` passed with 149 tests / OK and browser
+  E2E SUCCESS, including the real optimizer CLI smoke;
+- current canonical inventory remains 62 REQ / 93 SPEC / 42 TEST / 8 ADR;
+- all #64 remediation owners #66/#65/#63/#61 are closed or explicitly
+  reclassified with no unresolved P0/P1;
+- Phase 4 remains baseline 0 / trained 0 / `learning_claim=false`;
+- no Phase 6 capability is implemented; readiness only permits creation of one
+  new bounded Phase 6 child Issue.
+
 ## 2026-10-04 — Issue #61 residual reconciliation accepted (#61 / PR #74)
 
 - preserves the canonical Phase 4 evaluation timeout on the public optimizer

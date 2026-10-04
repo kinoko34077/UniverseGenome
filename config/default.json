@@ -3,11 +3,11 @@
   "project": "UniverseGenome",
   "phase": 5,
   "current_state": {
-    "acceptance_state": "remediation_in_progress",
-    "phase6_ready": false,
+    "acceptance_state": "accepted",
+    "phase6_ready": true,
     "blocking_owners": [],
     "readiness_owner": "#60",
-    "next_phase": "Readiness rerun (#60; Phase 6+ blocked)"
+    "next_phase": "Phase 6+ capability ladder (handoff only)"
   },
   "world": {
     "logical_size": 32,

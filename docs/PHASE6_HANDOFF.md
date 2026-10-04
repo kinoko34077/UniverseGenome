@@ -1,25 +1,23 @@
 # Phase 6+ capability handoff
 
-Status: **blocked pending readiness rerun #60**.
+Status: **ready for one new bounded Phase 6 child Issue after readiness rerun #60**.
 No Phase 6+ capability has been implemented.
 
 ## Current v0.1 boundary
 
-Phase 0 through Phase 5 implementation is present on `main`, but full current
-acceptance/readiness remains invalidated. Status-truth remediation #66 is
+Phase 0 through Phase 5 are readiness-accepted on `main` after the fresh
+#60 rerun. Status-truth remediation #66 is
 complete via PR #69 and Phase 5 search-semantics remediation #65 is complete
 via PR #70, merged to main as `3e8c8f31a1d87d3f2a7e88de731392b4f3202bd2`.
 GUI/authoritative-search integration #63 is complete via PR #73, and
 post-v0.1 residual reconciliation #61 is complete via PR #74, merged to main
 as `87de79012650b44b934651c8e1ba5a7b8d91e173`. No unresolved remediation
-owner remains. Readiness owner #60 must rerun the audit from repaired current
-`main`.
+owner remains. Readiness rerun #60 has passed from repaired current `main`.
 
 The original sequential Work Order #7 established the v0.1 phase sequence.
 Earlier remediation established the current Phase 0–5 implementation boundary;
 the later #64 audit found cross-phase acceptance gaps that were subsequently
-repaired through #66/#65/#63/#61. Current readiness still requires the #60
-rerun. The historical implementation boundary is documented by:
+repaired through #66/#65/#63/#61. The fresh #60 readiness rerun has now passed. The historical implementation boundary is documented by:
 
 - original Phase 1–5 implementation PRs;
 - completeness audit #27;
@@ -76,9 +74,10 @@ PR #74 completed #61 residual reconciliation. Its exact reviewed head
 (`37183145594`) with 149 tests / OK and browser E2E SUCCESS before squash
 merge to current main `87de7901...`.
 
-The previous #60 PASS is historical and invalidated by the later full
+The previous #60 PASS remains historical and invalidated by the later full
 traceability audit #64 and handoff #67/#68. Remediation and residual
-reconciliation are now complete; #60 must rerun readiness from current main.
+reconciliation are complete, and the fresh #60 rerun has established the
+current readiness result.
 
 ## Phase 4 outcome
 
@@ -99,11 +98,10 @@ to the historical v0.1 physics/search contract.
 Before any Phase 6 mutation:
 
 1. reread live devflow Control #314;
-2. rerun readiness owner #60 from current `main`;
-3. create a new explicit repository-local child Issue with measurable
-   acceptance criteria only after readiness passes;
-4. keep any new capability behind the Phase 6 boundary;
-5. preserve deterministic replay, authoritative-state separation and the
+2. create one new explicit repository-local child Issue with measurable
+   acceptance criteria;
+3. keep the new capability behind the Phase 6 boundary;
+4. preserve deterministic replay, authoritative-state separation and the
    no-semantic-shortcut rule.
 
 ## Candidate capability order
@@ -129,5 +127,6 @@ P2/P3 residuals, including post-initial matched seeds, rewind memory semantics,
 browser E2E depth, fragmentation RNG addressing, optimizer CLI protocol,
 snapshot lineage/prune history, and implementation-default performance debt.
 
-These items no longer form an active remediation queue. Readiness #60 is the
-only remaining gate before any Phase 6 child work.
+These items no longer form an active remediation queue. Readiness #60 has
+passed; the next gate is the acceptance contract of the new bounded Phase 6
+child Issue itself.
