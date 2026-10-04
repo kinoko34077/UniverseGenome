@@ -778,7 +778,62 @@ Exact success threshold/sample count is intentionally not frozen in this require
 
 ---
 
-# 22. Traceability
+# 22. Phase 6 capability requirements
+
+## REQ-200 — Multiple mapping protocol
+**Status: accepted**
+
+The experiment layer shall support a bounded ordered set of byte-to-byte
+mappings as protocol data, separate from UniverseGenome. Phase 6.1 begins with:
+
+- `A (0x41) → B (0x42) → NULL`
+- `C (0x43) → D (0x44) → NULL`
+
+Mapped input bytes shall be unambiguous within one protocol.
+
+---
+
+## REQ-201 — Shared authoritative training history
+**Status: accepted**
+
+All declared Phase 6.1 mappings for one seed shall be presented to the same
+authoritative training Universe in deterministic protocol order. The Universe
+shall not be reset between mappings merely to simplify measurement.
+
+Teacher-produced output remains external stimulation and shall not count as
+autonomous success.
+
+---
+
+## REQ-202 — Isolated per-mapping evaluation
+**Status: accepted**
+
+Each declared mapping shall be evaluated independently on a disposable clone
+of the same source state. Evaluation of one mapping shall not mutate the
+authoritative training state or another mapping's evaluation clone.
+
+Wrong mapped outputs, extra events, missing expected events, or missing NULL
+termination shall remain observable failures.
+
+---
+
+## REQ-203 — Truthful multi-mapping learning claim
+**Status: accepted**
+
+A Phase 6.1 learning claim may be true only under a predeclared criterion that:
+
+- evaluates every declared mapping across every evaluated seed;
+- compares trained performance against the corresponding baseline;
+- retains no-input and a predeclared unmapped-input cleanliness control;
+- does not use another valid mapped input as the unmapped-input control;
+- records failure as `learning_claim=false` when the criterion is not met.
+
+Implementation of the experimental capability does not itself constitute
+evidence that learning succeeded.
+
+---
+
+# 23. Traceability
 
 Historical rationale: #2  
 Parent implementation/bootstrap task: #1
