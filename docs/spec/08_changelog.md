@@ -1,5 +1,26 @@
 # Specification Changelog
 
+## 2026-10-05 — Phase 6.8 bounded raw UTF-8 byte experiment candidate (#101 / PR #102)
+
+- reuses the accepted P6.7 byte-sequence runtime rather than adding a tokenizer,
+  Unicode semantic state or decoded-text scoring path;
+- adds canonical numeric-byte mappings C3 A9→C3 B1 and C3 B6→C3 B8 with
+  prefix C3 and unmapped C3 A7 controls;
+- host-side tests verify those arrays are valid UTF-8 encodings while
+  training/evaluation remain byte-only;
+- adds canonical/smoke configs, snapshot/timeout preservation tests, public raw
+  byte evidence assertions and real P6.8 experiment/optimizer CI entrypoints;
+- keeps Phase 5 fitness/search policy and growth bit7 unchanged and preserves
+  all P6.1–P6.7 protocol behavior;
+- interim implementation head `aa142ff4320769d0f2d94035f26bd667c996b367`
+  passed CI #314 (`37218689029`) with 217 tests / OK, P6.1–P6.8 real smokes
+  and browser E2E;
+- bounded P6.8 smoke produced zero trained mapped successes and
+  `learning_claim=false`; capability implementation is not a UTF-8 learning
+  success claim;
+- after P6.8 acceptance, any next capability requires an explicit new roadmap
+  decision; no automatic P6.9 is authorized.
+
 ## 2026-10-05 — Phase 6.7 bounded distinct multi-byte sequences accepted (#98 / PR #99)
 
 - extends two-event temporal mappings from repeated identical output bytes to

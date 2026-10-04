@@ -1039,3 +1039,63 @@ kind/value/generation per mapping/seed. Optimizer protocol diagnostics expose
 the serialized mapping protocol. CI executes real bounded P6.7 experiment and
 optimizer entrypoints. Raw UTF-8 remains outside this specification.
 
+---
+
+# 41. Phase 6.8 bounded raw UTF-8 byte experiments
+
+## SPEC-P6UTF8-001 — Existing byte protocol is authoritative
+**Status: accepted**
+
+P6.8 introduces no new inner-universe text type. It uses the existing
+`ByteSequenceMapping` numeric `input_bytes` and `output_bytes` fields.
+UTF-8 identity is an experiment/documentation interpretation outside the
+universe. Runtime teacher delivery, autonomous evaluation and Phase 5
+measurement continue to operate on integer bytes only.
+
+## SPEC-P6UTF8-002 — Canonical raw-byte protocol
+**Status: accepted**
+
+Canonical mappings are:
+- `C3 A9 → C3 B1 → NULL`;
+- `C3 B6 → C3 B8 → NULL`.
+
+The prefix-only control is `C3`; the unmapped two-byte control is `C3 A7`.
+Canonical timing reuses P6.7: two output byte events with the accepted
+four-generation onset interval. The bounded smoke may shorten timing explicitly
+while preserving byte identity and success semantics.
+
+## SPEC-P6UTF8-003 — External UTF-8 validity, no semantic shortcut
+**Status: accepted**
+
+Canonical tests may use host-language UTF-8 encode/decode operations only to
+verify that the predeclared numeric arrays correspond to the documented
+characters. That verification is outside simulation/training/scoring.
+
+The experiment runtime must not branch on decoded text, Unicode code points,
+character identity, tokenizer state or semantic labels. Malformed UTF-8 and
+three/four-byte sequence support are not part of this bounded capability.
+
+## SPEC-P6UTF8-004 — Exact evaluation and search boundary
+**Status: accepted**
+
+P6.8 reuses SPEC-P6BYTE exact ordered-byte evaluation: content, order, count,
+inter-event timing, complete-input ordering and NULL termination are all
+required. Baseline/trained evaluations remain disposable clones and the
+learning criterion remains baseline-relative and counterfactual-gated.
+
+No P6.8 evidence changes Phase 5 absolute fitness ordering or consumes growth
+bit7. Existing retention, robustness, generalization and search-policy
+semantics remain independent.
+
+## SPEC-P6UTF8-005 — Persistence, reporting, configs and CI
+**Status: accepted**
+
+The raw UTF-8 experiment serializes through the existing numeric sequence
+fields; optimizer snapshot/restore and explicit timeout reconstruction preserve
+those arrays without a snapshot-format increment solely for P6.8.
+
+Canonical and bounded-smoke configs contain only numeric protocol bytes. Public
+experiment JSON and optimizer diagnostics expose declared raw bytes and observed
+events. CI executes real P6.8 experiment and optimizer entrypoints together with
+the complete earlier capability regression set.
+

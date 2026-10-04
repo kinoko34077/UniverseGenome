@@ -1294,6 +1294,85 @@ current universe learned the sequence task.
 
 ---
 
+# 22.8 Phase 6.8 bounded raw UTF-8 byte experiment requirements
+
+## REQ-270 — UTF-8 remains external raw byte traffic
+**Status: accepted**
+
+Phase 6.8 shall exercise the existing byte-sequence protocol with byte arrays
+that are externally predeclared as valid UTF-8. The artificial universe shall
+continue to receive and emit only 8-bit bus values.
+
+P6.8 shall not introduce tokenizer/vocabulary state, Unicode/code-point
+semantics, semantic labels, text embeddings, a semantic parser, or any other
+symbolic shortcut into the universe, fitness, or search policy.
+
+---
+
+## REQ-271 — Canonical bounded UTF-8 mappings and controls
+**Status: accepted**
+
+The initial bounded P6.8 protocol shall use exactly:
+
+- `[0xC3,0xA9] → [0xC3,0xB1] → NULL` (documented externally as é→ñ);
+- `[0xC3,0xB6] → [0xC3,0xB8] → NULL` (documented externally as ö→ø).
+
+Required controls remain:
+- no input;
+- prefix-only `[0xC3]`;
+- unmapped valid UTF-8 sequence `[0xC3,0xA7]` (ç).
+
+Human-readable characters are documentation only; canonical runtime/config
+identity is the numeric byte sequence.
+
+---
+
+## REQ-272 — Reuse exact byte-sequence teacher/evaluation semantics
+**Status: accepted**
+
+P6.8 shall reuse the accepted P6.7 teacher and disposable-clone evaluation
+path without decoding text during training or scoring. Success continues to
+require exact byte content, order, event count, declared inter-event timing and
+NULL termination, with no early/extra/wrong events.
+
+Tests may externally decode the predeclared arrays solely to prove that the
+canonical experiment traffic is valid UTF-8. Invalid/malformed UTF-8
+classification and arbitrary-length text are outside this bounded child.
+
+---
+
+## REQ-273 — Learning claim and Phase 5 boundary remain unchanged
+**Status: accepted**
+
+A P6.8 learning claim remains all-mappings/all-seeds, strictly
+baseline-relative and counterfactual-gated. Failed learning remains
+`learning_claim=false`.
+
+P6.8 shall not change canonical absolute-fitness ordering, consume reserved
+growth bit 7, or change retention bit5, noise-robustness bit6, generalization,
+pruning, promising allocation, category isolation, seed handling,
+matched-seed behavior or authoritative-slot semantics.
+
+---
+
+## REQ-274 — Persistence, public evidence and executable entrypoints
+**Status: accepted**
+
+Canonical and bounded-smoke P6.8 configs shall preserve the raw input/output
+byte arrays through `ExperimentConfig`, optimizer snapshot/restore and
+explicit timeout reconstruction using the existing P6.7 sequence format.
+
+Public experiment/optimizer diagnostics shall expose the declared numeric byte
+arrays and observed event evidence without making decoded text part of
+authoritative state or fitness. CI shall execute real P6.8 experiment and
+optimizer entrypoints while P6.1–P6.7 regressions remain GREEN.
+
+P6.8 alone does not require a snapshot-format increment or a new inner-universe
+text representation. After P6.8 acceptance, any further capability requires a
+new explicit roadmap decision rather than automatic P6.9 work.
+
+---
+
 # 23. Traceability
 
 Historical rationale: #2  

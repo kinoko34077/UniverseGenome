@@ -680,3 +680,33 @@ Public experiment JSON exposes declared output-byte sequences plus observed
 event kind/value/generation per mapping/seed. CI executes real bounded P6.7
 experiment and optimizer entrypoints while prior P6.1–P6.6 smokes remain GREEN.
 
+---
+
+## Phase 6.8 acceptance tests
+
+### TEST-P68-001 Canonical raw UTF-8 byte configs
+
+Canonical and bounded-smoke configs declare exactly C3 A9→C3 B1 and
+C3 B6→C3 B8, prefix C3 and unmapped C3 A7. Host-side assertions verify those
+numeric arrays are valid UTF-8 encodings of the documented characters while the
+protocol itself remains numeric-byte data.
+
+### TEST-P68-002 Byte-only teacher execution
+
+Training through the existing P6.7 path receives/emits the declared numeric
+bytes and produces the expected two-byte teacher tuples plus NULL without a
+new Unicode/text runtime layer.
+
+### TEST-P68-003 Snapshot and explicit-timeout reconstruction
+
+Optimizer snapshot round-trip preserves all raw P6.8 byte arrays. Explicit
+timeout reconstruction changes only timeout while optimizer protocol JSON
+retains the raw mappings.
+
+### TEST-P68-004 Public evidence, learning result and real CI entrypoints
+
+Public experiment JSON exposes the declared raw input/output arrays and observed
+event lists, retains the prefix/unmapped controls and reports failed learning
+truthfully when applicable. CI executes real P6.8 experiment and optimizer
+entrypoints and keeps the full P6.1–P6.7 + browser regression suite GREEN.
+
