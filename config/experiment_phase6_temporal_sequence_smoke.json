@@ -1,0 +1,20 @@
+{
+  "byte_hold_generations": 1,
+  "byte_gap_generations": 0,
+  "teacher_delay_generations": 0,
+  "teacher_repetitions": 1,
+  "evaluation_timeout_generations": 2,
+  "inter_input_generations": 1,
+  "mappings": [
+    {
+      "input_bytes": [65, 65],
+      "output_byte": 66
+    },
+    {
+      "input_bytes": [65, 67],
+      "output_byte": 68
+    }
+  ],
+  "counterfactual_prefix": [65],
+  "counterfactual_input_sequence": [67, 65]
+}
