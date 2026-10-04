@@ -346,6 +346,9 @@ def main(argv: list[str] | None = None) -> int:
                                 if record.noisy is not None
                                 else None
                             ),
+                            "noise_eligible": item.noise_classification(record)[0],
+                            "noise_robust": item.noise_classification(record)[1],
+                            "noise_failed": item.noise_classification(record)[2],
                             "t0_event_generations": list(
                                 record.t0.event_generations
                             ),
