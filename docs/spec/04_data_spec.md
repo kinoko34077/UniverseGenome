@@ -286,6 +286,14 @@ event content/generations remain disposable measurement/reporting evidence and
 are not persisted evaluation-clone state. P6.7 alone does not require a
 snapshot-format increment.
 
+For Phase 6.8, the same numeric `input_bytes` / `output_bytes` sequence
+fields may be externally documented as valid UTF-8 traffic. No decoded string,
+Unicode code point, tokenizer/vocabulary identity or semantic label becomes
+authoritative state. Raw byte arrays continue to round-trip inside the existing
+experiment protocol and optimizer snapshot. Host-side UTF-8 validity checks and
+human-readable character annotations are test/documentation evidence only.
+P6.8 alone does not require a snapshot-format increment.
+
 ---
 
 ---
