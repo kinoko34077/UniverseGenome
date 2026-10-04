@@ -561,7 +561,8 @@ explicit stronger delta 65535 while retaining the same protocol semantics.
 ### TEST-P65-009 Public reporting and real experiment smoke
 
 Public JSON exposes P6.5 protocol state, aggregate eligibility/result counts and
-nullable rate, per-seed effective rates/noisy controls, and per-mapping noisy
+nullable rate, per-seed effective rates/noisy controls, and per-mapping
+noise-eligible / noise-robust / noise-failed classification together with noisy
 success/event generations. CI executes the real bounded P6.5 experiment path.
 
 ### TEST-P65-010 Snapshot / timeout reconstruction and optimizer smoke
