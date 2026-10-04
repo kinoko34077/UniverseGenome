@@ -10,9 +10,11 @@ from .fitness import Fitness
 SHORT_WINDOW = 16
 GROWTH_WINDOW = 128
 STAGNATION_HORIZON = 512
+SHORT_HEALTH_HISTORY_LIMIT = 4
+GROWTH_BIT_NO_INPUT_CLEAN = 5
+GROWTH_BIT_ALTERNATE_INPUT_CLEAN = 6
 SHORT_HEALTH_ACTIVE_CELLS = 1 << 0
 SHORT_HEALTH_MEANINGFUL_ACTIVITY = 1 << 1
-PERSISTENT_NON_RESPONSE_WINDOWS = 2
 
 
 def short_health_flags(*, active_cells: int, activity_cost: int) -> int:
@@ -28,7 +30,12 @@ def short_health_flags(*, active_cells: int, activity_cost: int) -> int:
 
 
 def absolute_failure_reason(history: tuple[int, ...]) -> str | None:
-    """Return an objective failure reason, or ``None`` for a live universe."""
+    """Return the accepted objective failure reason, if present.
+
+    The canonical specification names persistent non-response as a possible
+    condition but does not define its protocol or threshold. Until that
+    decision is approved, short-health activity remains telemetry only.
+    """
     windows = tuple(int(value) for value in history)
     if any(not 0 <= value <= 0b11 for value in windows):
         raise ValueError("short-health flags must fit two bits")
@@ -36,13 +43,6 @@ def absolute_failure_reason(history: tuple[int, ...]) -> str | None:
         return None
     if not (windows[-1] & SHORT_HEALTH_ACTIVE_CELLS):
         return "all_active_cells_gone"
-    recent = windows[-PERSISTENT_NON_RESPONSE_WINDOWS:]
-    if len(recent) == PERSISTENT_NON_RESPONSE_WINDOWS and all(
-        value & SHORT_HEALTH_ACTIVE_CELLS
-        and not value & SHORT_HEALTH_MEANINGFUL_ACTIVITY
-        for value in recent
-    ):
-        return "persistent_non_response"
     return None
 
 
@@ -59,9 +59,9 @@ def growth_flags(previous: Fitness, current: Fitness) -> int:
     if current.activity_cost < previous.activity_cost:
         flags |= 1 << 4
     if current.retention > previous.retention:
-        flags |= 1 << 5
+        flags |= 1 << GROWTH_BIT_NO_INPUT_CLEAN
     if current.noise_robustness > previous.noise_robustness:
-        flags |= 1 << 6
+        flags |= 1 << GROWTH_BIT_ALTERNATE_INPUT_CLEAN
     return flags
 
 

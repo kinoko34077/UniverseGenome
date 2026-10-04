@@ -26,6 +26,8 @@ from search.evolution import (
 from search.fitness import Fitness, compare_fitness
 from search.genome import UniverseGenome
 from search.pruning import (
+    GROWTH_BIT_ALTERNATE_INPUT_CLEAN,
+    GROWTH_BIT_NO_INPUT_CLEAN,
     GrowthHistory,
     absolute_failure_reason,
     growth_flags,
@@ -163,6 +165,10 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertEqual(fitness.timeouts, 1.0)
         self.assertEqual(fitness.response_latency, 5.0)
         self.assertEqual(fitness.activity_cost, 17.0)
+        self.assertEqual(fitness.retention, 0.0)
+        self.assertEqual(fitness.noise_robustness, 0.0)
+        self.assertEqual(fitness.counterfactual_no_input_clean, 1.0)
+        self.assertEqual(fitness.counterfactual_alternate_input_clean, 1.0)
         self.assertEqual(
             Fitness(success=1, retention=0, noise_robustness=0).sort_key(),
             Fitness(success=1, retention=1, noise_robustness=1).sort_key(),
@@ -1018,7 +1024,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         ]
         self.assertLess(len(surviving), 3)
 
-    def test_p5_041_growth_bits_keep_canonical_field_names_without_proxy_aliases(self):
+    def test_p5_041_growth_bits_keep_canonical_retention_and_noise_names(self):
         before = Fitness(retention=0, noise_robustness=0)
         no_input_after = Fitness(retention=1, noise_robustness=0)
         alternate_after = Fitness(retention=0, noise_robustness=1)
@@ -1027,11 +1033,11 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertFalse(hasattr(before, "trained_alternate_input_clean"))
         self.assertEqual(
             growth_flags(before, no_input_after),
-            1 << 5,
+            1 << GROWTH_BIT_NO_INPUT_CLEAN,
         )
         self.assertEqual(
             growth_flags(before, alternate_after),
-            1 << 6,
+            1 << GROWTH_BIT_ALTERNATE_INPUT_CLEAN,
         )
 
     def test_p5_042_short_health_runs_at_authoritative_16_generation_boundaries(self):
@@ -1058,7 +1064,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(slot.absolute_failure)
         self.assertEqual(slot.absolute_failure_reason, "all_active_cells_gone")
 
-    def test_p5_043_persistent_non_response_is_an_absolute_failure_reason(self):
+    def test_p5_043_persistent_non_response_remains_a_specification_gate(self):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=123)
         slot = optimizer.slots[0]
         metrics = StepMetrics(
@@ -1100,10 +1106,10 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
         self.assertEqual(
             absolute_failure_reason(slot.short_health_windows),
-            "persistent_non_response",
+            None,
         )
-        self.assertTrue(slot.absolute_failure)
-        self.assertEqual(slot.absolute_failure_reason, "persistent_non_response")
+        self.assertFalse(slot.absolute_failure)
+        self.assertIsNone(slot.absolute_failure_reason)
 
     def test_p5_044_absolute_failure_is_prunable_without_growth_or_maturity(self):
         record = make_slot(index=7, seed=7)

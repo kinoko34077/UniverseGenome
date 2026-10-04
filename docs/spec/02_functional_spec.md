@@ -327,6 +327,12 @@ Initial candidate bits:
 - bit6 noise robustness improved
 - bit7 reserved
 
+Retention and alternate-input noise robustness remain distinct growth-only
+dimensions and are not added to the absolute-fitness ordering. Phase 4
+counterfactual measurements such as no-input-clean and alternate-input-clean
+are recorded as separate observables; this specification does not equate
+either observable with retention or noise robustness.
+
 ---
 
 ## SPEC-GROWTH-002
@@ -356,12 +362,11 @@ Recent growth score may use:
 - 512-generation stagnation horizon
 
 At each authoritative multiple of 16 generations, short health records
-whether active cells remain and whether the physical step produced measurable
-activity. A window with no active cells is an `all_active_cells_gone`
-absolute failure. Two consecutive windows with active cells but no measurable
-activity are a `persistent_non_response` absolute failure. These failure
-reasons are distinct from ordinary low growth and are eligible for retirement
-without waiting for four 128-generation growth windows.
+whether active cells remain and whether the physical window produced
+measurable activity. A window with no active cells is an
+`all_active_cells_gone` absolute failure. Persistent non-response remains a
+specification decision gate: the protocol, activity observable, and required
+duration are not fixed here and must not be inferred from `activity_cost`.
 
 ---
 
@@ -395,9 +400,10 @@ Examples:
 
 Implementation corruption is an error, not evolutionary death.
 
-The v0.1 implementation uses only the measurable short-health predicates
-above. Absolute failures take precedence over growth-only protection and
-minimum-evidence maturity; malformed state/configuration remains an error.
+The v0.1 implementation retires the explicit all-active-cell-loss condition
+before growth-only protection and minimum-evidence maturity. Persistent
+non-response is not automatically retired until its protocol and threshold are
+approved. Malformed state/configuration remains an error.
 
 ---
 

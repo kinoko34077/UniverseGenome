@@ -3,16 +3,17 @@
 ## 2026-10-04 — Issue #65 Phase 5 search-liveness remediation
 
 - connected the accepted 16-generation short-health cadence to authoritative
-  physical-step metrics and recorded distinct all-active-cell-loss and
-  persistent-non-response failure reasons;
-- made absolute failures retirement-eligible independently of growth history,
-  leader protection, or provisional minimum-evidence maturity;
+  physical-step metrics and recorded the explicit all-active-cell-loss failure
+  reason;
+- made that accepted absolute failure retirement-eligible independently of
+  growth history, leader protection, or provisional minimum-evidence maturity;
 - constrained integrated mutation to valid adjacent binary-grid values,
   including the effective `initial_density <= max_cells` bound and deterministic
   opposite-direction fallback;
-- preserved the canonical retention/noise-robustness growth-bit semantics; the
-  promising-allocation policy and any alternate cleanliness observables remain
-  unresolved Human/specification decision gates.
+- kept the canonical growth bit 5/6 meanings (`retention` and `noise
+  robustness`) separate from Phase 4 counterfactual observables; the
+  persistent-non-response predicate and promising-allocation policy remain
+  unresolved specification gates.
 
 ## 2026-10-04 — Audit #64 / Issues #66/#67/#68 current-state correction
 

@@ -198,14 +198,19 @@ binary-grid parameter without changing category or seed.
 ### TEST-P5-002 Fitness and growth
 
 Absolute fitness follows the lexicographic specification, while growth flags
-and four 8-bit windows remain separate and bounded.
+and four 8-bit windows remain separate and bounded. Growth bit 5 retains the
+canonical `retention` meaning and bit 6 retains the canonical `noise
+robustness` meaning. Phase 4 no-input-clean and alternate-input-clean
+counterfactual measurements must not be silently substituted for those fields.
 
 ### TEST-P5-003 Pruning and protection
 
 Category-relative low-growth eligibility uses four windows and protects the
 absolute-fitness top 1/8 from growth-only pruning. Authoritative 16-generation
-health boundaries detect all-active-cell loss and persistent non-response as
-separate absolute-failure reasons, including for a provisional slot.
+health boundaries detect all-active-cell loss as an absolute-failure reason,
+including for a provisional slot. Activity telemetry is persisted, but no
+automatic persistent-non-response rule is accepted without a protocol
+decision.
 
 ### TEST-P5-004 Steady-state escalation
 

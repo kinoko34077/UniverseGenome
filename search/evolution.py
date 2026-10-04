@@ -19,7 +19,7 @@ from core.state import UniverseState
 from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
 from .pruning import (
-    PERSISTENT_NON_RESPONSE_WINDOWS,
+    SHORT_HEALTH_HISTORY_LIMIT,
     SHORT_WINDOW,
     absolute_failure_reason,
     growth_flags,
@@ -96,7 +96,6 @@ class UniverseSlot:
         if self.absolute_failure_reason not in (
             None,
             "all_active_cells_gone",
-            "persistent_non_response",
         ):
             raise ValueError("unsupported slot absolute failure reason")
         if self.absolute_failure_reason is not None and not self.absolute_failure:
@@ -306,8 +305,10 @@ class SteadyStateOptimizer:
             timeouts=sum(result.timed_out for result in trained) / denominator,
             response_latency=sum(result.response_latency for result in trained) / denominator,
             activity_cost=sum(result.activity_cost for result in trained) / denominator,
-            retention=measurement.trained_no_input_clean / denominator,
-            noise_robustness=measurement.trained_alternate_input_clean / denominator,
+            counterfactual_no_input_clean=measurement.trained_no_input_clean / denominator,
+            counterfactual_alternate_input_clean=(
+                measurement.trained_alternate_input_clean / denominator
+            ),
         )
 
     def _measure_slot(self, slot: UniverseSlot) -> tuple[LearningMeasurement, Fitness]:
@@ -328,7 +329,7 @@ class SteadyStateOptimizer:
         slot.short_health_windows = (
             *slot.short_health_windows,
             flags,
-        )[-PERSISTENT_NON_RESPONSE_WINDOWS:]
+        )[-SHORT_HEALTH_HISTORY_LIMIT:]
         reason = absolute_failure_reason(slot.short_health_windows)
         if not slot.absolute_failure and reason is not None:
             slot.absolute_failure = True
@@ -483,6 +484,14 @@ class SteadyStateOptimizer:
             activity_cost=sum(slot.fitness.activity_cost for slot in values) / denominator,
             retention=sum(slot.fitness.retention for slot in values) / denominator,
             noise_robustness=sum(slot.fitness.noise_robustness for slot in values) / denominator,
+            counterfactual_no_input_clean=(
+                sum(slot.fitness.counterfactual_no_input_clean for slot in values)
+                / denominator
+            ),
+            counterfactual_alternate_input_clean=(
+                sum(slot.fitness.counterfactual_alternate_input_clean for slot in values)
+                / denominator
+            ),
         )
 
     def group_fitnesses(
