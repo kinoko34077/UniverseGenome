@@ -1098,4 +1098,66 @@ Canonical and bounded-smoke configs contain only numeric protocol bytes. Public
 experiment JSON and optimizer diagnostics expose declared raw bytes and observed
 events. CI executes real P6.8 experiment and optimizer entrypoints together with
 the complete earlier capability regression set.
+---
+
+# 42. Phase 6.9 mixed-length raw byte sequences
+
+## SPEC-P6MIX-001 — Bounded mixed mapping shape and legacy compatibility
+**Status: accepted**
+
+`ByteMapping` remains the one-byte mapping representation.
+`ByteSequenceMapping` accepts bounded two- or three-byte inputs and explicit
+two- or three-byte output tuples. Explicit tuples retain the legacy requirement
+that the first byte equals `output_byte` and that explicit bytes are distinct.
+
+Legacy fixed-length protocols continue to require explicit tuple length to match
+their global `output_event_count`. A mixed-length protocol may combine the
+legacy one-event fallback with explicit two- and three-event mappings.
+
+## SPEC-P6MIX-002 — Prefix-free bounded inputs and controls
+**Status: accepted**
+
+Mixed mapped input sequences must be prefix-free. The canonical P6.9 mappings
+are:
+- `41 → 42 → NULL`;
+- `43 44 → 45 46 → NULL`;
+- `47 48 49 → 4A 4B 4C → NULL`.
+
+The proper-prefix control is `47 48`; the unmapped complete-sequence control
+is `4D 4E`. P6.9 intentionally does not define valid-mapping prefix
+disambiguation.
+
+## SPEC-P6MIX-003 — Mapping-specific teacher/evaluation timing
+**Status: accepted**
+
+Teacher execution resolves the effective output byte tuple per mapping and emits
+all declared bytes at the accepted common onset interval before NULL.
+
+Autonomous evaluation derives the expected output-event count from each mapping's
+expected byte tuple rather than from the global legacy fallback count. Exact
+content, order, count, timing, complete-input ordering and NULL termination are
+required.
+
+## SPEC-P6MIX-004 — Persistence and public evidence
+**Status: accepted**
+
+Mixed-length protocol timing serializes even when the legacy fallback
+`output_event_count` remains one. Config round-trip, optimizer snapshots and
+explicit timeout reconstruction preserve all mapping arrays and lengths.
+
+Public diagnostics expose `mapping_input_lengths`,
+`mapping_output_event_counts`, per-mapping declared output bytes and observed
+event evidence.
+
+## SPEC-P6MIX-005 — Learning/search boundary and executable CI
+**Status: accepted**
+
+P6.9 retains the baseline-relative all-mappings/all-seeds,
+counterfactual-gated learning criterion and authoritative-training/disposable-
+evaluation separation. No P6.9 evidence changes Phase 5 search objectives or
+growth bits.
+
+Canonical and bounded-smoke configs use the same mixed-length semantics. CI
+executes real P6.9 experiment and optimizer entrypoints while P6.1–P6.8 and
+browser regressions remain GREEN.
 
