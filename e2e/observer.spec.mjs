@@ -57,3 +57,62 @@ test("observer renders the authoritative Phase 5 optimizer and real replacement"
   await page.getByRole("button", { name: "Pause Search" }).click();
   await expect.poll(() => page.evaluate(() => window.universeGenomeState.running)).toBe(false);
 });
+
+
+test("observer clone rewind, optimizer snapshot load, modes, and reset edits remain bounded", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator("#overview .thumbnail")).toHaveCount(128);
+
+  const mode = page.getByLabel("Mode", { exact: true });
+  await mode.selectOption("latent bit 3");
+  await expect(mode).toHaveValue("latent bit 3");
+  await page.getByLabel("Lock mode").check();
+
+  await page.getByRole("button", { name: "Clone for Observation" }).click();
+  const authoritativeGeneration = await page.evaluate(
+    () => window.universeGenomeState.summaries[0].generation,
+  );
+  const cloneGeneration = await page.evaluate(
+    () => window.universeGenomeState.selected.generation,
+  );
+  await page.getByRole("button", { name: "1 Observation Step" }).click();
+  await page.getByRole("button", { name: "1 Observation Step" }).click();
+  await page.getByRole("button", { name: "Rewind Observation 1" }).click();
+  await expect.poll(
+    () => page.evaluate(() => window.universeGenomeState.selected.generation),
+  ).toBe(cloneGeneration + 1);
+  expect(await page.evaluate(
+    () => window.universeGenomeState.summaries[0].generation,
+  )).toBe(authoritativeGeneration);
+
+  const saved = await page.evaluate(() => window.universeGenomeControl("save"));
+  await page.getByRole("button", { name: "1 Search Iteration" }).click();
+  await expect.poll(
+    () => page.evaluate(() => window.universeGenomeState.optimizer_generation),
+  ).toBe(saved.snapshot.generation + 1);
+  await page.evaluate(
+    (snapshot) => window.universeGenomeControl("load", { snapshot }),
+    saved.snapshot,
+  );
+  await expect.poll(
+    () => page.evaluate(() => window.universeGenomeState.optimizer_generation),
+  ).toBe(saved.snapshot.generation);
+
+  await page.getByLabel("Collision damage").fill("16");
+  await page.getByLabel("Noise attempts").fill("1");
+  await page.getByRole("button", { name: "Apply on Reset" }).click();
+  await expect.poll(
+    () => page.evaluate(() => window.universeGenomeState.pending_reset_parameters.collision_damage),
+  ).toBe(16);
+  expect(await page.evaluate(
+    () => window.universeGenomeState.reset_config.collision_damage,
+  )).not.toBe(16);
+
+  await page.getByRole("button", { name: "Reset" }).click();
+  await expect.poll(
+    () => page.evaluate(() => window.universeGenomeState.reset_config.collision_damage),
+  ).toBe(16);
+  expect(await page.evaluate(
+    () => window.universeGenomeState.pending_reset_parameters,
+  )).toEqual({});
+});
