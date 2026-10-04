@@ -267,7 +267,13 @@ class EvaluationResult:
     def wrong_output_count(self) -> int:
         expected_index = 0
         wrong = 0
-        for event in self.autonomous_events:
+        for event, generation in zip(self.autonomous_events, self.event_generations):
+            if (
+                self.input_complete_generation > 0
+                and generation < self.input_complete_generation
+            ):
+                wrong += 1
+                continue
             if (
                 expected_index < len(self.expected_events)
                 and event == self.expected_events[expected_index]
