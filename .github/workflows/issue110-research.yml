@@ -46,6 +46,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Run fixed-physics single-event shard
+        env:
+          PYTHONPATH: .
         run: >-
           python tools/issue110_single_event_floor.py
           --start-seed ${{ matrix.start_seed }}
