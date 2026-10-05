@@ -11,9 +11,13 @@ from __future__ import annotations
 import argparse
 import json
 import platform
+from pathlib import Path
 import sys
 import time
 from typing import Any, Callable
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from core.physics import create_universe, step
 from server.runtime import PopulationRuntime
