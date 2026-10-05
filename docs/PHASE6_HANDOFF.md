@@ -2,10 +2,12 @@
 
 Status: **P6.1 through P6.9 accepted; no later capability is currently selected**.
 
-Post-P6.9 learning-emergence research through #113 is also accepted; no
-learning-research child is currently selected. Further work requires an explicit
-roadmap/research decision under #78 and a new bounded child Issue.
-No automatic P6.10 is authorized. Canonical `learning_claim=false` remains authoritative.
+Post-P6.9 learning-emergence / learning-path research is accepted through
+#120 / PR #121. #120's predeclared transduction audit terminates at
+`ROUTE-MEMORY`: the next bounded research question is memory-coupling /
+persistence under unchanged accepted physics. This does not authorize P6.10 or
+establish learning. No automatic P6.10 is authorized. Canonical
+`learning_claim=false` remains authoritative.
 
 ## Current v0.1 boundary
 
@@ -191,23 +193,32 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 ## Phase 6 boundary
 
 P6.1 through P6.9 are accepted capability layers. No later semantic capability
-is currently selected. Post-P6.9 learning-emergence research is accepted
-through #109–#113 without changing production physics/defaults.
+is currently selected. Post-P6.9 learning-emergence / learning-path research is
+accepted through #120 / PR #121 without changing production physics/defaults.
 
 #111 / PR #114 showed that density 32 improves substrate persistence/activity
 but does not produce canonical A→B→NULL learning. #113 / PR #115 localized the
 strongest reachable causal path: density 4 first fails L0 in 32/32 cases;
 density 32 first fails L0 in 23/32, L2 in 8/32 and L3 in 1/32. The sole L2
 case retains a teacher-specific distinction through +100 but not +1000, so the
-first reachable failed level is **L3 memory persistence**; L4–L7 are
-NOT_EVALUABLE. Replay and raw-vs-instrumented equivalence passed 64/64.
-`learning_claim=false` and the P6.10+ freeze remain unchanged.
+formal first reachable failed level remains **L3 memory persistence**; L4–L7
+are NOT_EVALUABLE.
 
-Any further work must first be explicitly chosen under roadmap #78 and remain
-bounded rather than becoming a silent change to the
-historical v0.1 physics/search contract. The next learning-research decision must distinguish
-transduction/contact reliability from memory-coupling/persistence. #93 remains
-a separate performance/architecture workstream.
+#119 separated this formal L3 result from a preceding physical-I/O
+distinguishability problem. #120 / PR #121 then tested that transduction problem
+under a predeclared geometry-only comparator freeze. Density-32 B/C remains
+weak at 2/32 teacher-specific immediate writes, while the frozen B=66/H=8
+comparison yields **12/32**, traceable 12/12. All such immediate
+teacher-specific writes are HP-only; no latent/bond/structure write is observed.
+Input probes also reproduce HP-saturation contact-without-write. Replay,
+raw-vs-instrumented equivalence and no-teacher repeat controls pass 64/64.
+The predeclared terminal classification is **ROUTE-MEMORY**.
+
+Therefore the next bounded learning research is memory-coupling/persistence
+under unchanged accepted physics. This is not acceptance of the full physical
+8-bit channel and does not pass L3. `learning_claim=false` and the P6.10+
+freeze remain unchanged. #93 remains a separate performance/architecture
+workstream.
 
 Before any Phase 6 mutation:
 
@@ -245,6 +256,7 @@ browser E2E depth, fragmentation RNG addressing, optimizer CLI protocol,
 snapshot lineage/prune history, and implementation-default performance debt.
 
 These items no longer form an active remediation queue. Readiness #60 has
-passed. P6.1–P6.9 and learning-emergence research #109–#113 are terminal at the
-current boundary; the next gate is an explicit research decision and the
-acceptance contract of any newly selected bounded child Issue.
+passed. P6.1–P6.9 remain terminal capability layers. Learning-path research is
+accepted through #120 / PR #121; its next gate is a separately bounded
+memory-coupling/persistence research Issue under unchanged physics, with the
+#120 ROUTE-MEMORY result as its entry evidence.
