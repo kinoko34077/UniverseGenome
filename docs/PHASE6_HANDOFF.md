@@ -1,8 +1,12 @@
 # Phase 6+ capability handoff
 
-Status: **P6.1 through P6.9 accepted; no later capability is currently selected**.
-Further Phase 6+ work requires an explicit roadmap/research decision under #78
-and a new bounded child Issue. No automatic P6.10 is authorized.
+Status: **P6.1 through P6.9 accepted; post-P6.9 learning-emergence research
+through #113 is also accepted; no later capability or learning-research child
+is currently selected**.
+
+Further work requires an explicit roadmap/research decision under #78 and a new
+bounded child Issue. No automatic P6.10 is authorized. Canonical
+`learning_claim=false` remains authoritative.
 
 ## Current v0.1 boundary
 
@@ -187,10 +191,24 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 
 ## Phase 6 boundary
 
-P6.1 through P6.9 are accepted capability layers. No later capability is
-currently selected. Any further Phase 6+ work must first be explicitly chosen
-under roadmap #78 and remain bounded rather than becoming a silent change to
-the historical v0.1 physics/search contract.
+P6.1 through P6.9 are accepted capability layers. No later semantic capability
+is currently selected. Post-P6.9 learning-emergence research is accepted
+through #109–#113 without changing production physics/defaults.
+
+#111 / PR #114 showed that density 32 improves substrate persistence/activity
+but does not produce canonical A→B→NULL learning. #113 / PR #115 localized the
+strongest reachable causal path: density 4 first fails L0 in 32/32 cases;
+density 32 first fails L0 in 23/32, L2 in 8/32 and L3 in 1/32. The sole L2
+case retains a teacher-specific distinction through +100 but not +1000, so the
+first reachable failed level is **L3 memory persistence**; L4–L7 are
+NOT_EVALUABLE. Replay and raw-vs-instrumented equivalence passed 64/64.
+`learning_claim=false` and the P6.10+ freeze remain unchanged.
+
+Any further work must first be explicitly chosen under roadmap #78 and remain
+bounded rather than becoming a silent change to the historical v0.1
+physics/search contract. The next learning-research decision must distinguish
+transduction/contact reliability from memory-coupling/persistence. #93 remains
+a separate performance/architecture workstream.
 
 Before any Phase 6 mutation:
 
@@ -228,5 +246,6 @@ browser E2E depth, fragmentation RNG addressing, optimizer CLI protocol,
 snapshot lineage/prune history, and implementation-default performance debt.
 
 These items no longer form an active remediation queue. Readiness #60 has
-passed; the next gate is the acceptance contract of the new bounded Phase 6
-child Issue itself.
+passed. P6.1–P6.9 and learning-emergence research #109–#113 are terminal at the
+current boundary; the next gate is an explicit research decision and the
+acceptance contract of any newly selected bounded child Issue.
