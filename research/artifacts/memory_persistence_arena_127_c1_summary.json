@@ -1,0 +1,125 @@
+{
+  "candidate": "ENERGY_TO_LATENT_XOR",
+  "density32_negative_sentinel_count": 4,
+  "duplicate_control_clean": true,
+  "horizons": {
+    "0": {
+      "distinct_count": 12,
+      "distinct_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ]
+    },
+    "1": {
+      "distinct_count": 12,
+      "distinct_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ]
+    },
+    "10": {
+      "distinct_count": 12,
+      "distinct_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ]
+    },
+    "100": {
+      "distinct_count": 12,
+      "distinct_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ]
+    },
+    "1000": {
+      "distinct_count": 5,
+      "distinct_seeds": [
+        12,
+        19,
+        20,
+        22,
+        24
+      ]
+    }
+  },
+  "input_candidate_write_count": 28,
+  "negative_sentinels_clean": true,
+  "non_hp_by_1000_count": 12,
+  "non_hp_by_1000_seeds": [
+    0,
+    5,
+    8,
+    9,
+    12,
+    14,
+    18,
+    19,
+    20,
+    22,
+    24,
+    29
+  ],
+  "persistence_capable": false,
+  "pre_lifecycle_non_hp_count": 12,
+  "pre_lifecycle_non_hp_seeds": [
+    0,
+    5,
+    8,
+    9,
+    12,
+    14,
+    18,
+    19,
+    20,
+    22,
+    24,
+    29
+  ],
+  "primary_case_count": 12,
+  "raw_instrumented_clean": true,
+  "replay_clean": true,
+  "route_eligible": true,
+  "teacher_candidate_write_count": 42,
+  "verified_case_count": 12,
+  "verified_primary_count": 12
+}
