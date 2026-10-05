@@ -194,6 +194,7 @@ def advance_to_pre_teacher(
     *,
     config: PhysicsConfig,
     protocol: ExperimentConfig,
+    instrumented: bool,
 ) -> dict[str, Any]:
     a_state = clone_state(initial_snapshot, config)
     control_state = clone_state(initial_snapshot, config)
@@ -201,14 +202,55 @@ def advance_to_pre_teacher(
     control_exp = IOExperiment(control_state, experiment=protocol)
     input_hit_slots: set[int] = set()
     input_hit_steps = 0
+    input_step_probes: list[dict[str, Any]] = []
 
-    for _ in range(protocol.byte_hold_generations):
+    for step_index in range(protocol.byte_hold_generations):
         a_exp.drive_input(INPUT_A)
         anchors = a_exp.input_bus.signal_coordinates()
-        hits = a_exp._nearby_slots(anchors)
+        hits = tuple(sorted(a_exp._nearby_slots(anchors)))
         if hits:
             input_hit_steps += 1
             input_hit_slots.update(hits)
+
+        if instrumented:
+            probe_source = a_state.to_snapshot()
+            probe_stim_state = clone_state(probe_source, config)
+            probe_sham_state = clone_state(probe_source, config)
+            probe_stim_exp = IOExperiment(probe_stim_state, experiment=protocol)
+            probe_sham_exp = IOExperiment(probe_sham_state, experiment=protocol)
+            probe_stim_exp._advance(anchors)
+            probe_sham_exp._advance(())
+            arrays = probe_source["arrays"]
+            hit_state_before = []
+            for slot in hits:
+                lifecycle = int(arrays["lifecycle"][slot])
+                hp = int(arrays["hp"][slot])
+                hit_state_before.append(
+                    {
+                        "slot": int(slot),
+                        "lifecycle": lifecycle,
+                        "hp": hp,
+                        "hp_headroom": 255 - hp,
+                        "active_full_hp": (
+                            lifecycle == int(Lifecycle.ACTIVE) and hp == 255
+                        ),
+                    }
+                )
+            probe_diff = snapshot_diff(
+                probe_stim_state.to_snapshot(),
+                probe_sham_state.to_snapshot(),
+            )
+            input_step_probes.append(
+                {
+                    "step_index": int(step_index),
+                    "generation_before": int(probe_source["generation"]),
+                    "hits": list(hits),
+                    "hit_state_before": hit_state_before,
+                    "state_write": bool(probe_diff["different"]),
+                    "state_diff": probe_diff,
+                }
+            )
+
         a_exp._advance(anchors)
         control_exp._advance(())
 
@@ -226,6 +268,7 @@ def advance_to_pre_teacher(
         "control_pre_teacher": control_state.to_snapshot(),
         "input_hit_steps": input_hit_steps,
         "input_hit_slots": sorted(input_hit_slots),
+        "input_step_probes": input_step_probes,
         "input_after_input_diff": snapshot_diff(after_input_a, after_input_control),
         "input_pre_teacher_diff": snapshot_diff(
             a_state.to_snapshot(), control_state.to_snapshot()
@@ -246,10 +289,16 @@ def realized_hit_sets(
         hits = experiment._nearby_slots(teacher_coordinates(value))
         by_byte[value] = tuple(sorted(int(slot) for slot in hits))
 
-    distinct_patterns = {hits for hits in by_byte.values()}
+    pattern_frequencies = Counter(by_byte.values())
+    distinct_patterns = set(pattern_frequencies)
+    pattern_entropy_bits = -sum(
+        (count / 256.0) * math.log2(count / 256.0)
+        for count in pattern_frequencies.values()
+    )
     return {
         "distinct_hit_pattern_count": len(distinct_patterns),
         "effective_capacity_bits": math.log2(len(distinct_patterns)),
+        "pattern_entropy_bits": pattern_entropy_bits,
         "contact_byte_count": sum(bool(hits) for hits in by_byte.values()),
         "b_hits": list(by_byte[TEACHER_B]),
         "c_hits": list(by_byte[TEACHER_C]),
@@ -327,6 +376,7 @@ def case_once(
         initial_snapshot,
         config=config,
         protocol=protocol,
+        instrumented=instrumented,
     )
     pre_teacher = prepared["a_pre_teacher"]
     hit_capacity = (
@@ -337,6 +387,13 @@ def case_once(
 
     branches = {
         "control": teacher_step(
+            pre_teacher,
+            config=config,
+            protocol=protocol,
+            teacher_value=None,
+            instrumented=instrumented,
+        ),
+        "control_repeat": teacher_step(
             pre_teacher,
             config=config,
             protocol=protocol,
@@ -367,6 +424,9 @@ def case_once(
     }
     control_after = branches["control"]["after_snapshot"]
     comparisons = {
+        "control_vs_control_repeat": snapshot_diff(
+            control_after, branches["control_repeat"]["after_snapshot"]
+        ),
         "b_vs_control": snapshot_diff(branches["b"]["after_snapshot"], control_after),
         "c_vs_control": snapshot_diff(branches["c"]["after_snapshot"], control_after),
         "h_vs_control": snapshot_diff(branches["h"]["after_snapshot"], control_after),
@@ -399,6 +459,7 @@ def case_once(
         "input": {
             "hit_steps": int(prepared["input_hit_steps"]),
             "hit_slots": prepared["input_hit_slots"],
+            "step_probes": prepared["input_step_probes"],
             "after_input_diff": prepared["input_after_input_diff"],
             "pre_teacher_diff": prepared["input_pre_teacher_diff"],
         },
@@ -492,7 +553,7 @@ def run_case(
         and all(
             first["branches"][name]["after_digest"]
             == raw["branches"][name]["after_digest"]
-            for name in ("control", "b", "c", "h")
+            for name in ("control", "control_repeat", "b", "c", "h")
         )
     )
     if not raw_match:
@@ -517,6 +578,9 @@ def summarize_density(cases: list[dict[str, Any]]) -> dict[str, Any]:
     ]
     capacities = [
         float(case["hit_capacity"]["effective_capacity_bits"]) for case in cases
+    ]
+    pattern_entropies = [
+        float(case["hit_capacity"]["pattern_entropy_bits"]) for case in cases
     ]
 
     teacher_stats: dict[str, Any] = {}
@@ -551,6 +615,31 @@ def summarize_density(cases: list[dict[str, Any]]) -> dict[str, Any]:
     bh_writes = [
         case for case in cases if case["comparisons"]["b_vs_h"]["different"]
     ]
+    input_contact_probes = [
+        probe
+        for case in cases
+        for probe in case["input"]["step_probes"]
+        if probe["hits"]
+    ]
+    input_contact_write_probes = [
+        probe for probe in input_contact_probes if probe["state_write"]
+    ]
+    input_contact_without_write_probes = [
+        probe for probe in input_contact_probes if not probe["state_write"]
+    ]
+    input_saturated_without_write_probes = [
+        probe
+        for probe in input_contact_without_write_probes
+        if probe["hit_state_before"]
+        and all(item["active_full_hp"] for item in probe["hit_state_before"])
+    ]
+    bh_changed_field_case_counts = {
+        name: sum(
+            int(case["comparisons"]["b_vs_h"]["fields"][name]["changed_slots"]) > 0
+            for case in cases
+        )
+        for name in FIELDS
+    }
     bc_writes = [
         case for case in cases if case["comparisons"]["b_vs_c"]["different"]
     ]
@@ -558,6 +647,19 @@ def summarize_density(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "case_count": len(cases),
         "input_contact_case_count": sum(
             int(case["input"]["hit_steps"]) > 0 for case in cases
+        ),
+        "input_contact_step_count": len(input_contact_probes),
+        "input_contact_write_probe_step_count": len(input_contact_write_probes),
+        "input_contact_without_write_probe_step_count": len(
+            input_contact_without_write_probes
+        ),
+        "input_saturated_without_write_probe_step_count": len(
+            input_saturated_without_write_probes
+        ),
+        "input_write_given_contact_probe": (
+            len(input_contact_write_probes) / len(input_contact_probes)
+            if input_contact_probes
+            else None
         ),
         "input_after_input_write_case_count": sum(
             bool(case["input"]["after_input_diff"]["different"]) for case in cases
@@ -579,6 +681,11 @@ def summarize_density(cases: list[dict[str, Any]]) -> dict[str, Any]:
             "mean": mean(capacities),
             "maximum": max(capacities) if capacities else 0.0,
         },
+        "pattern_entropy_bits": {
+            "median": statistics.median(pattern_entropies) if pattern_entropies else 0.0,
+            "mean": mean(pattern_entropies),
+            "maximum": max(pattern_entropies) if pattern_entropies else 0.0,
+        },
         "b_c_hitset_distinct_case_count": sum(
             bool(case["hit_capacity"]["b_c_hitset_distinct"]) for case in cases
         ),
@@ -587,10 +694,15 @@ def summarize_density(cases: list[dict[str, Any]]) -> dict[str, Any]:
         ),
         "b_c_teacher_specific_write_case_count": len(bc_writes),
         "b_h_teacher_specific_write_case_count": len(bh_writes),
+        "b_h_changed_field_case_counts": bh_changed_field_case_counts,
         "b_h_traceable_write_case_count": sum(
             bool(case["trace"]["b_h_traceable"]) for case in bh_writes
         ),
         "teacher_vs_control": teacher_stats,
+        "no_teacher_control_repeat_match_count": sum(
+            not case["comparisons"]["control_vs_control_repeat"]["different"]
+            for case in cases
+        ),
         "replay_match_count": sum(case["replay_match"] is True for case in cases),
         "raw_instrumented_match_count": sum(
             case["raw_instrumented_match"] is True for case in cases
@@ -613,10 +725,15 @@ def build_summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
         and value["raw_instrumented_match_count"] == value["case_count"]
         for value in by_density.values()
     )
+    no_teacher_clean = all(
+        value["no_teacher_control_repeat_match_count"] == value["case_count"]
+        for value in by_density.values()
+    )
     high_write_count = int(density32["b_h_teacher_specific_write_case_count"])
     traceable_count = int(density32["b_h_traceable_write_case_count"])
     route_memory = (
         deterministic_ok
+        and no_teacher_clean
         and high_write_count >= 8
         and traceable_count >= 1
     )
@@ -639,6 +756,7 @@ def build_summary(cases: list[dict[str, Any]]) -> dict[str, Any]:
             "required_traceable_write_cases": 1,
             "observed_traceable_write_cases": traceable_count,
             "deterministic_and_raw_equivalent": deterministic_ok,
+            "no_teacher_control_repeat_match": no_teacher_clean,
             "route": "ROUTE-MEMORY" if route_memory else "ROUTE-CHANNEL-ARENA",
         },
     }
