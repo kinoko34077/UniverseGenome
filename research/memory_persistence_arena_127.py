@@ -465,7 +465,7 @@ def case_once(
             )
             inspect_diff(generation, bh)
         if generation in HORIZONS:
-            checkpoints[str(generation)] = checkpoint(states)
+            checkpoints[str(generation)] = checkpoint(states, experiments)
 
     return {
         "status": "complete",
