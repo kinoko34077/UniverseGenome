@@ -71,20 +71,16 @@
           "NOT_EVALUABLE": 31
         },
         "L4": {
-          "NOT_EVALUABLE": 31,
-          "NOT_EVALUATED": 1
+          "NOT_EVALUABLE": 32
         },
         "L5": {
-          "NOT_EVALUABLE": 31,
-          "NOT_EVALUATED": 1
+          "NOT_EVALUABLE": 32
         },
         "L6": {
-          "NOT_EVALUABLE": 31,
-          "NOT_EVALUATED": 1
+          "NOT_EVALUABLE": 32
         },
         "L7": {
-          "NOT_EVALUABLE": 31,
-          "NOT_EVALUATED": 1
+          "NOT_EVALUABLE": 32
         }
       },
       "teacher_hit_set_difference_count": 2
@@ -186,6 +182,21 @@
   "l2_any_teacher_specific_case": true,
   "l3_any_persistent_case": false,
   "p6_10_plus": "frozen",
+  "performance": {
+    "clone_evaluation_wall_seconds_total": 0.0,
+    "instrumentation_overhead_ratio": 0.23678941288040048,
+    "instrumentation_overhead_wall_seconds": 174.700081299874,
+    "instrumented_generations_per_second": 284.1991831367691,
+    "instrumented_generations_total": 259328,
+    "instrumented_wall_seconds_total": 912.4867887998116,
+    "jsonl_write_flush_wall_seconds_total": 0.016973599733319134,
+    "raw_generations_per_second": 351.49454085281405,
+    "raw_generations_total": 259328,
+    "raw_wall_seconds_total": 737.7867074999376,
+    "runner_wall_seconds": 634.5097669000388,
+    "serialization_probe_wall_seconds_total": 0.08600839978316799
+  },
+  "raw_instrumented_match_count": 64,
   "replay_match_count": 64,
   "schema_version": 1,
   "seeds": [
@@ -223,5 +234,5 @@
     31
   ],
   "status": "complete",
-  "workers": 2
+  "workers": 4
 }
