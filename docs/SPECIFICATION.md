@@ -34,7 +34,18 @@ P6.7 bounded distinct multi-byte output sequences through #98 / PR #99,
 P6.8 bounded raw UTF-8 byte experiments through #101 / PR #102, and P6.9
 bounded mixed-length raw byte sequences through #104 / PR #105.
 The accepted P6.9 bounded smoke produced zero trained mapped successes and
-`learning_claim=false`. No later capability is selected automatically; the
+`learning_claim=false`.
+
+Accepted post-P6.9 learning-emergence research now extends through #113 / PR
+#115. #111 / PR #114 found that density 32 improves persistence/activity
+without producing canonical trained success. #113's 64-case matched-snapshot
+audit localized the first reachable failed causal level at **L3 memory
+persistence**: density 4 first fails L0 in 32/32 cases; density 32 first fails
+L0 in 23/32, L2 in 8/32 and L3 in 1/32; L4–L7 are NOT_EVALUABLE. No
+production physics/default/P6.10+ semantic change was accepted and
+`learning_claim=false` remains authoritative.
+
+No later capability or learning-research child is selected automatically; the
 next step is an explicit roadmap/research decision under #78. This state
 statement is separate from historical acceptance records preserved in the
 changelog and Issues.
@@ -64,7 +75,9 @@ P6.3 through #85 / PR #86, P6.4 through #88 / PR #89, P6.5 through
 #91 / PR #92, P6.6 through #95 / PR #96, P6.7 through #98 / PR #99,
 P6.8 through #101 / PR #102, and P6.9 through #104 / PR #105. Phase 6 remains
 a bounded capability ladder, but no P6.10 or later capability is currently
-selected. The current P6.9 mixed-length measurement remains
-`learning_claim=false` rather than being asserted as successful. See `docs/PHASE6_HANDOFF.md`.
+selected. Accepted research #109–#113 has not demonstrated canonical learning;
+#113 localizes the first reachable failed causal level at L3 memory persistence,
+with L4–L7 not evaluable. `learning_claim=false` remains authoritative. See
+`docs/PHASE6_HANDOFF.md`.
 
 See `docs/ROADMAP.md`.

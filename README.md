@@ -16,10 +16,15 @@ bounded Phase 6 experimental capabilities.
 
 P6.9 extends the raw-byte sequence protocol so 1/2/3-byte mappings can coexist
 without padding or truncation while keeping valid mapped inputs prefix-free in
-this bounded step. The bounded P6.9 smoke produced zero trained mapped successes
-and `learning_claim=false`; capability acceptance does not relabel that result
-as successful mixed-length learning. No later Phase 6 capability is currently
-selected.
+this bounded step. The bounded P6.9 smoke produced zero trained mapped successes.
+
+Post-P6.9 learning-emergence research is accepted through #113 / PR #115.
+#111 showed that higher initial density improves substrate persistence/activity
+without canonical learning. #113's 64-case matched-snapshot audit localized the
+first reachable failure at **L3 memory persistence**; L4–L7 were not causally
+evaluable. Canonical `learning_claim=false` remains authoritative, P6.10+
+semantic expansion remains frozen, and no next learning-research child is
+currently selected.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
@@ -85,9 +90,11 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
 - Phase 6 roadmap #78 is active; P6.1 through P6.9 are accepted on main through
   #79/#80, #82/#83, #85/#86, #88/#89, #91/#92, #95/#96, #98/#99, #101/#102,
   and #104/#105.
-- No later capability is automatically authorized. The next step is an explicit
-  roadmap/research decision in #78 followed by a new bounded child Issue if a
-  further capability is selected.
+- Learning-emergence research #109–#113 is complete through PR #115. The current
+  accepted causal localization is L3 memory persistence; `learning_claim=false`.
+- No later capability or research child is automatically authorized. The next
+  step is an explicit roadmap/research decision in #78; #93 remains a separate
+  performance/architecture workstream.
 
 ## Headless verification commands
 

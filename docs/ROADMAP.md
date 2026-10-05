@@ -13,8 +13,22 @@ physical-noise robustness through #91 / PR #92, P6.6 predeclared held-out
 relation generalization through #95 / PR #96, P6.7 bounded distinct
 multi-byte output sequences through #98 / PR #99, P6.8 bounded raw UTF-8
 byte experiments through #101 / PR #102, and P6.9 bounded mixed-length raw
-byte sequences through #104 / PR #105 on main. No later capability is
-currently selected; the next frontier is an explicit roadmap/research decision.
+byte sequences through #104 / PR #105 on main.
+
+Post-P6.9 learning-emergence research is also accepted through #109–#113.
+#111 / PR #114 showed that density 32 improves substrate persistence/activity
+but still yields zero canonical trained successes. #113 / PR #115 then ran a
+64-case matched-snapshot causal audit: density 4 first fails L0 in 32/32 cases;
+density 32 first fails L0 in 23/32, L2 in 8/32 and L3 in 1/32. The sole case
+reaching teacher-specific encoding loses that distinction by +1000 generations,
+so the first reachable failed causal level is **L3 memory persistence**.
+L4–L7 are NOT_EVALUABLE, `learning_claim=false` remains authoritative, and no
+physics/default/P6.10+ semantic change was accepted.
+
+No later capability or learning-research child is currently selected; the next
+frontier is an explicit roadmap/research decision between transduction/contact
+reliability and memory-coupling/persistence. #93 remains a separate
+performance/architecture workstream.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -133,6 +147,22 @@ this bounded step. The bounded smoke produced zero trained mapped successes and
 `learning_claim=false`; capability acceptance is not a mixed-length-learning
 success claim.
 
-Next frontier: **explicit Phase 6+ roadmap/research decision**. No P6.10 or later
-capability is automatically authorized. Any continuation requires #78 to select
-one bounded capability and a new child Issue with explicit acceptance criteria.
+## Post-P6.9 learning-emergence research
+
+- #109: long-run A→B→NULL baseline through ~100k generations; no target learning.
+- #110: easier-curriculum / minimal-output / I/O-distance diagnostics; no
+  baseline-relative input-specific learned precursor.
+- #111 / PR #114: initial-density arena; density 32 materially improves
+  persistence/activity, but canonical trained success remains 0.
+- #113 / PR #115: 64-case matched-snapshot causal audit, accepted on main
+  `155f73b0cbcad276093c26fa55fe69eb562f0347`. Density 4 first fails L0 in
+  32/32 cases; density 32 first fails L0 in 23/32, L2 in 8/32 and L3 in 1/32.
+  No case passes full L3 persistence, so L4–L7 are NOT_EVALUABLE.
+  Deterministic replay and raw-vs-instrumented equivalence both passed 64/64.
+  Canonical `learning_claim=false` remains unchanged.
+
+Next frontier: **explicit research decision**. P6.10+ remains frozen. Do not
+resume semantic-capability expansion automatically. The next bounded learning
+research, if selected, must distinguish transduction/contact reliability from
+memory-coupling/persistence. #93 remains a separate performance/architecture
+workstream.
