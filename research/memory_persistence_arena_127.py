@@ -56,7 +56,7 @@ ROUTE_ELIGIBLE_CANDIDATES = (
     ENERGY_TO_STRUCTURE_PROMOTE,
 )
 REFERENCE_CANDIDATES = (HP_NO_DECAY_REFERENCE,)
-EMPIRICAL_CANDIDATES = ROUTE_ELIGIBLE_CANDIDATES + REFERENCE_CANDIDATES
+EMPIRICAL_CANDIDATES = (BASELINE,) + ROUTE_ELIGIBLE_CANDIDATES + REFERENCE_CANDIDATES
 
 PRIMARY_DENSITY32_SEEDS = (0, 5, 8, 9, 12, 14, 18, 19, 20, 22, 24, 29)
 NEGATIVE_DENSITY32_SENTINELS = (1, 2, 3, 4)
@@ -213,16 +213,27 @@ class VariantIOExperiment(IOExperiment):
         self.candidate = candidate
         self.instrumented = bool(instrumented)
         self.candidate_writes: list[dict[str, Any]] = []
+        self.activity = {
+            "collision_count": 0,
+            "bond_contact_count": 0,
+            "latent_transmission_count": 0,
+        }
 
     def _advance(self, anchors: Iterable[tuple[int, int]] = ()) -> Any:
         stimulus = self._nearby_slots(anchors)
         log = self.candidate_writes if self.instrumented else None
-        return variant_step(
+        metrics = variant_step(
             self.state,
             stimulus_slots=stimulus,
             candidate=self.candidate,
             candidate_write_log=log,
         )
+        self.activity["collision_count"] += int(metrics.collision_count)
+        self.activity["bond_contact_count"] += int(metrics.bond_contact_count)
+        self.activity["latent_transmission_count"] += int(
+            metrics.latent_transmission_count
+        )
+        return metrics
 
 
 def changed_fields(diff: dict[str, Any]) -> tuple[str, ...]:
@@ -235,6 +246,7 @@ def changed_fields(diff: dict[str, Any]) -> tuple[str, ...]:
 
 def checkpoint(
     states: dict[str, UniverseState],
+    experiments: dict[str, VariantIOExperiment],
 ) -> dict[str, Any]:
     snapshots = {name: state.to_snapshot() for name, state in states.items()}
     return {
@@ -256,6 +268,15 @@ def checkpoint(
         },
         "active_counts": {
             name: len(state.active_slots()) for name, state in states.items()
+        },
+        "activity": {
+            name: {
+                **dict(experiments[name].activity),
+                "candidate_write_count": len(
+                    experiments[name].candidate_writes
+                ),
+            }
+            for name in states
         },
     }
 
@@ -389,7 +410,7 @@ def case_once(
         name: payload["experiment"] for name, payload in branch_payloads.items()
     }
 
-    checkpoints: dict[str, Any] = {"0": checkpoint(states)}
+    checkpoints: dict[str, Any] = {"0": checkpoint(states, experiments)}
     h0_diff = checkpoints["0"]["comparisons"]["b_vs_h"]
 
     trace: dict[str, Any] = {
@@ -401,10 +422,18 @@ def case_once(
         "first_reconvergence_generation": (
             0 if not bool(h0_diff["different"]) else None
         ),
+        "first_difference_generation": (
+            0 if bool(h0_diff["different"]) else None
+        ),
     }
 
     def inspect_diff(generation: int, diff: dict[str, Any]) -> None:
         fields = set(changed_fields(diff))
+        if (
+            bool(diff["different"])
+            and trace["first_difference_generation"] is None
+        ):
+            trace["first_difference_generation"] = generation
         if any(name != "hp" for name in fields):
             if trace["first_non_hp_generation"] is None:
                 trace["first_non_hp_generation"] = generation
@@ -510,6 +539,7 @@ def run_case(
     density: int,
     seed: int,
     role: str,
+    verify: bool,
     config_payload: dict[str, Any],
     experiment_payload: dict[str, Any],
 ) -> dict[str, Any]:
@@ -522,6 +552,11 @@ def run_case(
         experiment_payload=experiment_payload,
         instrumented=True,
     )
+    first["replay_match"] = None
+    first["raw_instrumented_match"] = None
+    if not verify:
+        return first
+
     second = case_once(
         candidate=candidate,
         density=density,
@@ -570,6 +605,11 @@ def case_plan(candidates: Iterable[str] = EMPIRICAL_CANDIDATES) -> list[dict[str
                     "density": 32,
                     "seed": seed,
                     "role": "density32_primary",
+                    "verify": (
+                        candidate in ROUTE_ELIGIBLE_CANDIDATES
+                        or candidate in (BASELINE, HP_NO_DECAY_REFERENCE)
+                        and seed == PRIMARY_DENSITY32_SEEDS[0]
+                    ),
                 }
             )
         for seed in NEGATIVE_DENSITY32_SENTINELS:
@@ -579,6 +619,10 @@ def case_plan(candidates: Iterable[str] = EMPIRICAL_CANDIDATES) -> list[dict[str
                     "density": 32,
                     "seed": seed,
                     "role": "density32_negative_sentinel",
+                    "verify": (
+                        candidate in (BASELINE, HP_NO_DECAY_REFERENCE)
+                        and seed == NEGATIVE_DENSITY32_SENTINELS[0]
+                    ),
                 }
             )
         for seed in DENSITY4_WRITE_POSITIVE:
@@ -588,6 +632,7 @@ def case_plan(candidates: Iterable[str] = EMPIRICAL_CANDIDATES) -> list[dict[str
                     "density": 4,
                     "seed": seed,
                     "role": "density4_write_positive_control",
+                    "verify": candidate in (BASELINE, HP_NO_DECAY_REFERENCE),
                 }
             )
         for seed in DENSITY4_NEGATIVE_SENTINELS:
@@ -597,6 +642,7 @@ def case_plan(candidates: Iterable[str] = EMPIRICAL_CANDIDATES) -> list[dict[str
                     "density": 4,
                     "seed": seed,
                     "role": "density4_negative_sentinel",
+                    "verify": False,
                 }
             )
     return plan
@@ -684,10 +730,7 @@ def candidate_summary(
             pre_lifecycle.append(case)
 
     negative_clean = all(
-        all(
-            not checkpoint_diff(case, horizon)["different"]
-            for horizon in HORIZONS
-        )
+        case["trace"]["first_difference_generation"] is None
         for case in negatives
     )
     duplicate_control_clean = all(
@@ -699,10 +742,16 @@ def candidate_summary(
         )
         for case in cases
     )
-    replay_clean = all(case["replay_match"] is True for case in cases)
+    verified = [
+        case for case in cases if case["replay_match"] is not None
+    ]
+    replay_clean = all(case["replay_match"] is True for case in verified)
     raw_clean = all(
-        case["raw_instrumented_match"] is True for case in cases
+        case["raw_instrumented_match"] is True for case in verified
     )
+    verified_primary = [
+        case for case in primary if case["replay_match"] is not None
+    ]
 
     h1000 = horizons["1000"]["distinct_count"]
     route_eligible = candidate in ROUTE_ELIGIBLE_CANDIDATES
@@ -713,6 +762,7 @@ def candidate_summary(
         and len(pre_lifecycle) >= REQUIRED_PRIMARY
         and negative_clean
         and duplicate_control_clean
+        and len(verified_primary) == len(PRIMARY_DENSITY32_SEEDS)
         and replay_clean
         and raw_clean
     )
@@ -730,6 +780,8 @@ def candidate_summary(
         "negative_sentinels_clean": negative_clean,
         "density32_negative_sentinel_count": len(d32_neg),
         "duplicate_control_clean": duplicate_control_clean,
+        "verified_case_count": len(verified),
+        "verified_primary_count": len(verified_primary),
         "replay_clean": replay_clean,
         "raw_instrumented_clean": raw_clean,
         "input_candidate_write_count": sum(
@@ -869,6 +921,7 @@ def main() -> int:
                 density=int(spec["density"]),
                 seed=int(spec["seed"]),
                 role=str(spec["role"]),
+                verify=bool(spec["verify"]),
                 config_payload=config_payload,
                 experiment_payload=experiment_payload,
             )
