@@ -570,19 +570,43 @@ def summarize(cases: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def write_outputs(
-    cases: list[dict[str, Any]],
-    summary: dict[str, Any],
-    *,
-    output_path: Path,
-    summary_path: Path,
-) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+def case_key(density: int, seed: int) -> str:
+    return f"{int(density)}:{int(seed)}"
+
+
+def read_completed(path: Path) -> dict[str, dict[str, Any]]:
+    completed: dict[str, dict[str, Any]] = {}
+    if not path.exists():
+        return completed
+    with path.open("r", encoding="utf-8") as handle:
+        for line_number, line in enumerate(handle, start=1):
+            material = line.strip()
+            if not material:
+                continue
+            item = json.loads(material)
+            if item.get("status") != "complete":
+                continue
+            try:
+                key = case_key(
+                    int(item["initial_density"]),
+                    int(item["seed"]),
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"invalid #122 JSONL case at line {line_number}"
+                ) from exc
+            completed[key] = item
+    return completed
+
+
+def append_case(handle: Any, case: dict[str, Any]) -> None:
+    handle.write(json.dumps(case, sort_keys=True, separators=(",", ":")))
+    handle.write("\n")
+    handle.flush()
+
+
+def write_summary(summary: dict[str, Any], *, summary_path: Path) -> None:
     summary_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8", newline="\n") as handle:
-        for case in cases:
-            handle.write(json.dumps(case, sort_keys=True, separators=(",", ":")))
-            handle.write("\n")
     summary_path.write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -611,36 +635,61 @@ def main() -> int:
 
     config_payload = load_config(args.config)
     experiment_payload = json.loads(args.experiment.read_text(encoding="utf-8"))
+    plan = case_plan()
 
-    cases: list[dict[str, Any]] = []
-    for spec in case_plan():
-        case = run_case(
-            seed=int(spec["seed"]),
-            density=int(spec["density"]),
-            role=str(spec["role"]),
-            long_horizon=bool(spec["long_horizon"]),
-            verify=bool(spec["verify"]),
-            config_payload=config_payload,
-            experiment_payload=experiment_payload,
-        )
-        cases.append(case)
-        print(
-            "#122 "
-            f"density={case['initial_density']} seed={case['seed']} "
-            f"role={case['role']} long={case['long_horizon']} "
-            f"h0={bool(hdiff(case, 0)['different'])} "
-            f"h1000={None if hdiff(case, 1000) is None else bool(hdiff(case, 1000)['different'])}",
-            file=sys.stderr,
-            flush=True,
-        )
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    completed = read_completed(args.output)
+    pending = [
+        spec
+        for spec in plan
+        if case_key(int(spec["density"]), int(spec["seed"])) not in completed
+    ]
+    if pending and args.summary.exists():
+        args.summary.unlink()
 
-    result = summarize(cases)
-    write_outputs(
-        cases,
-        result,
-        output_path=args.output,
-        summary_path=args.summary,
+    print(
+        f"#122 resume: completed={len(completed)} pending={len(pending)}",
+        file=sys.stderr,
+        flush=True,
     )
+
+    with args.output.open("a", encoding="utf-8", newline="\n") as handle:
+        for spec in pending:
+            case = run_case(
+                seed=int(spec["seed"]),
+                density=int(spec["density"]),
+                role=str(spec["role"]),
+                long_horizon=bool(spec["long_horizon"]),
+                verify=bool(spec["verify"]),
+                config_payload=config_payload,
+                experiment_payload=experiment_payload,
+            )
+            append_case(handle, case)
+            completed[case_key(case["initial_density"], case["seed"])] = case
+            print(
+                "#122 "
+                f"density={case['initial_density']} seed={case['seed']} "
+                f"role={case['role']} long={case['long_horizon']} "
+                f"h0={bool(hdiff(case, 0)['different'])} "
+                f"h1000={None if hdiff(case, 1000) is None else bool(hdiff(case, 1000)['different'])}",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    missing = [
+        case_key(int(spec["density"]), int(spec["seed"]))
+        for spec in plan
+        if case_key(int(spec["density"]), int(spec["seed"])) not in completed
+    ]
+    if missing:
+        raise RuntimeError(f"incomplete #122 matrix after run: {missing}")
+
+    cases = [
+        completed[case_key(int(spec["density"]), int(spec["seed"]))]
+        for spec in plan
+    ]
+    result = summarize(cases)
+    write_summary(result, summary_path=args.summary)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0
 
