@@ -3,10 +3,14 @@
 Status: **P6.1 through P6.9 accepted; no later capability is currently selected**.
 
 Post-P6.9 learning-emergence / learning-path research is accepted through
-#120 / PR #121. #120's predeclared transduction audit terminates at
-`ROUTE-MEMORY`: the next bounded research question is memory-coupling /
-persistence under unchanged accepted physics. This does not authorize P6.10 or
-establish learning. No automatic P6.10 is authorized. Canonical
+#122 / PR #126. #120 first established a usable high-contrast immediate-write
+condition and routed to memory persistence. #122 then found that the frozen
+density-32 primary B/H cohort falls from 12/12 distinct through +10 to 9/12 at
++100 and **1/12 at +1000**. Non-HP differences occur only after
+lifecycle/survival divergence, so #122 terminates at
+`ROUTE-MEMORY-ARENA`. #127 now owns a research-only design arena for generic
+local persistence coupling. This does not authorize P6.10, L4 recall or a
+production physics change. No automatic P6.10 is authorized. Canonical
 `learning_claim=false` remains authoritative.
 
 ## Current v0.1 boundary
@@ -194,29 +198,30 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 
 P6.1 through P6.9 are accepted capability layers. No later semantic capability
 is currently selected. Post-P6.9 learning-emergence / learning-path research is
-accepted through #120 / PR #121 without changing production physics/defaults.
+accepted through #122 / PR #126 without changing production physics/defaults.
 
 #111 / PR #114 showed that density 32 improves substrate persistence/activity
 but does not produce canonical A→B→NULL learning. #113 / PR #115 localized the
-strongest reachable causal path: density 4 first fails L0 in 32/32 cases;
-density 32 first fails L0 in 23/32, L2 in 8/32 and L3 in 1/32. The sole L2
-case retains a teacher-specific distinction through +100 but not +1000, so the
-formal first reachable failed level remains **L3 memory persistence**; L4–L7
-are NOT_EVALUABLE.
+strongest reachable causal path at **L3 memory persistence**; L4–L7 are
+NOT_EVALUABLE.
 
-#119 separated this formal L3 result from a preceding physical-I/O
-distinguishability problem. #120 / PR #121 then tested that transduction problem
-under a predeclared geometry-only comparator freeze. Density-32 B/C remains
-weak at 2/32 teacher-specific immediate writes, while the frozen B=66/H=8
-comparison yields **12/32**, traceable 12/12. All such immediate
-teacher-specific writes are HP-only; no latent/bond/structure write is observed.
-Input probes also reproduce HP-saturation contact-without-write. Replay,
-raw-vs-instrumented equivalence and no-teacher repeat controls pass 64/64.
-The predeclared terminal classification is **ROUTE-MEMORY**.
+#119 separated this formal L3 result from the physical-I/O distinguishability
+problem. #120 / PR #121 then established the frozen B=66/H=8 diagnostic
+condition: **12/32** density-32 immediate teacher-specific writes, traceable
+12/12 and HP-only, terminal route **ROUTE-MEMORY**.
 
-Therefore the next bounded learning research is memory-coupling/persistence
-under unchanged accepted physics. This is not acceptance of the full physical
-8-bit channel and does not pass L3. `learning_claim=false` and the P6.10+
+#122 / PR #126 tested persistence of the exact accepted write-positive cohort
+under ordinary unchanged physics. The 12 density-32 primary cases remain
+B/H-distinct through +10, fall to 9/12 at +100, and only **1/12** is distinct
+at +1000. Six cases reach non-HP state, but every case first splits in
+lifecycle/survival and only afterward reaches latent/structure/bond differences.
+The predeclared terminal classification is therefore
+**ROUTE-MEMORY-ARENA**, not ROUTE-RECALL.
+
+#127 owns the next bounded design/research arena. It may evaluate generic local
+coupling candidates in isolated research variants, but it cannot change
+production physics/defaults. It must test whether durable non-HP distinction
+can occur before lifecycle divergence. `learning_claim=false` and the P6.10+
 freeze remain unchanged. #93 remains a separate performance/architecture
 workstream.
 
@@ -260,6 +265,6 @@ snapshot lineage/prune history, and implementation-default performance debt.
 
 These items no longer form an active remediation queue. Readiness #60 has
 passed. P6.1–P6.9 remain terminal capability layers. Learning-path research is
-accepted through #120 / PR #121; its next gate is a separately bounded
-memory-coupling/persistence research Issue under unchanged physics, with the
-#120 ROUTE-MEMORY result as its entry evidence.
+accepted through #122 / PR #126. The active next gate is #127's bounded
+memory-persistence design arena, entered from #122 ROUTE-MEMORY-ARENA. It is
+research-only and does not authorize a production physics/default change.

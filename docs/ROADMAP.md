@@ -16,22 +16,26 @@ byte experiments through #101 / PR #102, and P6.9 bounded mixed-length raw
 byte sequences through #104 / PR #105 on main.
 
 Post-P6.9 learning-emergence / learning-path research is accepted through
-#120 / PR #121. #111 / PR #114 showed that density 32 improves substrate
+#122 / PR #126. #111 / PR #114 showed that density 32 improves substrate
 persistence/activity but still yields zero canonical trained successes. #113 /
 PR #115 localized the deepest reachable failure at **L3 memory persistence**;
-L4–L7 remained NOT_EVALUABLE. #119 then recorded a post-hoc gap between logical
-byte representation and substrate-level physical distinguishability. #120 /
-PR #121 reproduced that transduction collapse under a predeclared 64-case audit
-without changing accepted physics/defaults. The frozen high-contrast B=66/H=8
-comparison produced teacher-specific immediate state writes in **12/32**
-density-32 seeds, all traceable but HP-only, satisfying #120's diagnostic
-`ROUTE-MEMORY` gate.
+L4–L7 remained NOT_EVALUABLE. #119 recorded the physical-I/O distinguishability
+gap. #120 / PR #121 then established a bounded high-contrast B=66/H=8
+immediate-write diagnostic condition: 12/32 density-32 seeds, traceable and
+HP-only, terminal route `ROUTE-MEMORY`.
 
-The next bounded learning-research frontier is therefore
-**memory-coupling/persistence under unchanged physics**, not a P6.10 semantic
-capability and not a production-I/O redesign. Canonical `learning_claim=false`
-and the P6.10+ freeze remain authoritative. #93 remains a separate
-performance/architecture workstream.
+#122 / PR #126 followed the frozen 12 write-positive density-32 seeds through
+h0/+1/+10/+100/+1000 under unchanged physics. B/H distinction is 12/12 through
++10, 9/12 at +100 and **1/12 at +1000**. Six seeds develop non-HP differences,
+but lifecycle divergence always occurs first and latent/structure/bond
+differences follow later; 11/12 primary cases reconverge by +1000. The
+predeclared route is **ROUTE-MEMORY-ARENA**.
+
+The active bounded frontier is therefore #127: a research-only design arena for
+generic local persistence/coupling candidates using existing physical state.
+It does not authorize a production physics/default change, L4 recall, or P6.10.
+Canonical `learning_claim=false` and the P6.10+ freeze remain authoritative.
+#93 remains a separate performance/architecture workstream.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -173,11 +177,16 @@ success claim.
   saturation. Deterministic replay, raw-vs-instrumented equivalence, and
   no-teacher repeat controls all pass 64/64. The predeclared terminal route is
   **ROUTE-MEMORY**.
+- #122 / PR #126: memory-coupling/persistence audit using the accepted B/H
+  write-positive cohort. Primary B/H distinction is 12/12 at h0/+1/+10,
+  9/12 at +100 and **1/12 at +1000**. Six seeds ever develop non-HP
+  differences, but all six split in lifecycle/survival before network-state
+  divergence; 11/12 reconverge by +1000. Replay/raw-equivalence and controls
+  are clean. The predeclared terminal route is **ROUTE-MEMORY-ARENA**.
   Canonical `learning_claim=false` remains unchanged.
 
-Next frontier: **bounded memory-coupling/persistence research under unchanged
-physics**. P6.10+ remains frozen; do not resume semantic-capability expansion
-automatically. The #120 result is sufficient to test whether a known
-content-bearing HP write can persist/couple, but it is not acceptance of the
-full 8-bit physical channel. #93 remains a separate performance/architecture
-workstream.
+Next frontier: **#127 research-only memory persistence design arena**. It must
+compare generic local physical coupling candidates without modifying production
+physics/defaults and must explicitly measure whether non-HP persistence occurs
+before lifecycle divergence. P6.10+ remains frozen; no L4 recall is authorized.
+#93 remains a separate performance/architecture workstream.
