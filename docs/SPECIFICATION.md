@@ -36,18 +36,23 @@ bounded mixed-length raw byte sequences through #104 / PR #105.
 The accepted P6.9 bounded smoke produced zero trained mapped successes and
 `learning_claim=false`.
 
-Accepted post-P6.9 learning-emergence research now extends through #113 / PR
-#115. #111 / PR #114 found that density 32 improves persistence/activity
-without producing canonical trained success. #113's 64-case matched-snapshot
-audit localized the first reachable failed causal level at **L3 memory
-persistence**: density 4 first fails L0 in 32/32 cases; density 32 first fails
-L0 in 23/32, L2 in 8/32 and L3 in 1/32; L4–L7 are NOT_EVALUABLE. No
-production physics/default/P6.10+ semantic change was accepted and
-`learning_claim=false` remains authoritative.
+Accepted post-P6.9 learning-emergence / learning-path research now extends
+through #120 / PR #121. #113 / PR #115 localized the formal deepest reachable
+failed causal level at **L3 memory persistence**. #119 then identified a
+research/specification-completeness gap between logical byte representation and
+substrate-level physical distinguishability. #120 / PR #121 reproduced that
+transduction problem under a predeclared audit and found a usable diagnostic
+high-contrast condition under unchanged accepted physics: B=66/H=8 produces
+teacher-specific immediate state writes in 12/32 density-32 seeds, all
+traceable but HP-only. The predeclared #120 classification is
+`ROUTE-MEMORY`.
 
-No later capability or learning-research child is selected automatically; the
-next step is an explicit roadmap/research decision under #78. This state
-statement is separate from historical acceptance records preserved in the
+This is current-state research evidence, not a new I/O requirement or physics
+default. It does not establish L3 persistence, learning, or full 8-bit physical
+channel adequacy. No production physics/default/P6.10+ semantic change was
+accepted and `learning_claim=false` remains authoritative. The next bounded
+research question is memory-coupling/persistence under unchanged physics. This
+state statement is separate from historical acceptance records preserved in the
 changelog and Issues.
 
 ## Status vocabulary
@@ -75,9 +80,11 @@ P6.3 through #85 / PR #86, P6.4 through #88 / PR #89, P6.5 through
 #91 / PR #92, P6.6 through #95 / PR #96, P6.7 through #98 / PR #99,
 P6.8 through #101 / PR #102, and P6.9 through #104 / PR #105. Phase 6 remains
 a bounded capability ladder, but no P6.10 or later capability is currently
-selected. Accepted research #109–#113 has not demonstrated canonical learning;
-#113 localizes the first reachable failed causal level at L3 memory persistence,
-with L4–L7 not evaluable. `learning_claim=false` remains authoritative. See
-`docs/PHASE6_HANDOFF.md`.
+selected. Accepted learning-path research extends through #120 / PR #121 and
+has not demonstrated canonical learning. #113 localizes the formal deepest
+reachable failed causal level at L3 memory persistence; #120 establishes a
+predeclared high-contrast immediate write condition and routes the next bounded
+question to memory-coupling/persistence without changing accepted physics.
+`learning_claim=false` remains authoritative. See `docs/PHASE6_HANDOFF.md`.
 
 See `docs/ROADMAP.md`.
