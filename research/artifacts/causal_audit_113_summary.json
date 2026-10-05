@@ -1,0 +1,238 @@
+{
+  "base_main": "a8c3685939c3e9779fae6511b81c75f0f638b888",
+  "by_density": {
+    "32": {
+      "case_count": 32,
+      "first_failed_by_seed": {
+        "0": "L0",
+        "1": "L2",
+        "10": "L0",
+        "11": "L0",
+        "12": "L0",
+        "13": "L0",
+        "14": "L2",
+        "15": "L0",
+        "16": "L0",
+        "17": "L0",
+        "18": "L0",
+        "19": "L0",
+        "2": "L2",
+        "20": "L2",
+        "21": "L0",
+        "22": "L0",
+        "23": "L3",
+        "24": "L0",
+        "25": "L2",
+        "26": "L0",
+        "27": "L0",
+        "28": "L0",
+        "29": "L0",
+        "3": "L2",
+        "30": "L0",
+        "31": "L2",
+        "4": "L0",
+        "5": "L2",
+        "6": "L0",
+        "7": "L0",
+        "8": "L0",
+        "9": "L0"
+      },
+      "first_failed_counts": {
+        "L0": 23,
+        "L2": 8,
+        "L3": 1
+      },
+      "gate_pass_counts": {
+        "l0_input_contact": 23,
+        "l0_teacher_b_contact": 16,
+        "l0_teacher_c_contact": 16,
+        "l1_immediate_state_delta": 22,
+        "l2_teacher_specific_immediate": 2,
+        "l2_teacher_specific_plus_10": 2,
+        "l3_persistent_plus_100": 1,
+        "l3_persistent_plus_1000": 0
+      },
+      "level_status_counts": {
+        "L0": {
+          "FAIL": 23,
+          "PASS": 9
+        },
+        "L1": {
+          "NOT_EVALUABLE": 23,
+          "PASS": 9
+        },
+        "L2": {
+          "FAIL": 8,
+          "NOT_EVALUABLE": 23,
+          "PASS": 1
+        },
+        "L3": {
+          "FAIL": 1,
+          "NOT_EVALUABLE": 31
+        },
+        "L4": {
+          "NOT_EVALUABLE": 32
+        },
+        "L5": {
+          "NOT_EVALUABLE": 32
+        },
+        "L6": {
+          "NOT_EVALUABLE": 32
+        },
+        "L7": {
+          "NOT_EVALUABLE": 32
+        }
+      },
+      "teacher_hit_set_difference_count": 2
+    },
+    "4": {
+      "case_count": 32,
+      "first_failed_by_seed": {
+        "0": "L0",
+        "1": "L0",
+        "10": "L0",
+        "11": "L0",
+        "12": "L0",
+        "13": "L0",
+        "14": "L0",
+        "15": "L0",
+        "16": "L0",
+        "17": "L0",
+        "18": "L0",
+        "19": "L0",
+        "2": "L0",
+        "20": "L0",
+        "21": "L0",
+        "22": "L0",
+        "23": "L0",
+        "24": "L0",
+        "25": "L0",
+        "26": "L0",
+        "27": "L0",
+        "28": "L0",
+        "29": "L0",
+        "3": "L0",
+        "30": "L0",
+        "31": "L0",
+        "4": "L0",
+        "5": "L0",
+        "6": "L0",
+        "7": "L0",
+        "8": "L0",
+        "9": "L0"
+      },
+      "first_failed_counts": {
+        "L0": 32
+      },
+      "gate_pass_counts": {
+        "l0_input_contact": 4,
+        "l0_teacher_b_contact": 3,
+        "l0_teacher_c_contact": 3,
+        "l1_immediate_state_delta": 3,
+        "l2_teacher_specific_immediate": 0,
+        "l2_teacher_specific_plus_10": 0,
+        "l3_persistent_plus_100": 0,
+        "l3_persistent_plus_1000": 0
+      },
+      "level_status_counts": {
+        "L0": {
+          "FAIL": 32
+        },
+        "L1": {
+          "NOT_EVALUABLE": 32
+        },
+        "L2": {
+          "NOT_EVALUABLE": 32
+        },
+        "L3": {
+          "NOT_EVALUABLE": 32
+        },
+        "L4": {
+          "NOT_EVALUABLE": 32
+        },
+        "L5": {
+          "NOT_EVALUABLE": 32
+        },
+        "L6": {
+          "NOT_EVALUABLE": 32
+        },
+        "L7": {
+          "NOT_EVALUABLE": 32
+        }
+      },
+      "teacher_hit_set_difference_count": 0
+    }
+  },
+  "canonical_learning_claim": false,
+  "completed_case_count": 64,
+  "densities": [
+    32,
+    4
+  ],
+  "expected_case_count": 64,
+  "first_failed_counts_all_cases": {
+    "L0": 55,
+    "L2": 8,
+    "L3": 1
+  },
+  "first_failed_level_if_no_case_passes": "L3",
+  "issue": 113,
+  "l0_any_complete_contact_case": true,
+  "l1_any_state_delta_case": true,
+  "l2_any_teacher_specific_case": true,
+  "l3_any_persistent_case": false,
+  "p6_10_plus": "frozen",
+  "performance": {
+    "clone_evaluation_wall_seconds_total": 0.0,
+    "instrumentation_overhead_ratio": 0.23678941288040048,
+    "instrumentation_overhead_wall_seconds": 174.700081299874,
+    "instrumented_generations_per_second": 284.1991831367691,
+    "instrumented_generations_total": 259328,
+    "instrumented_wall_seconds_total": 912.4867887998116,
+    "jsonl_write_flush_wall_seconds_total": 0.016973599733319134,
+    "raw_generations_per_second": 351.49454085281405,
+    "raw_generations_total": 259328,
+    "raw_wall_seconds_total": 737.7867074999376,
+    "runner_wall_seconds": 634.5097669000388,
+    "serialization_probe_wall_seconds_total": 0.08600839978316799
+  },
+  "raw_instrumented_match_count": 64,
+  "replay_match_count": 64,
+  "schema_version": 1,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31
+  ],
+  "status": "complete",
+  "workers": 4
+}
