@@ -204,8 +204,8 @@ NOT_EVALUABLE. Replay and raw-vs-instrumented equivalence passed 64/64.
 `learning_claim=false` and the P6.10+ freeze remain unchanged.
 
 Any further work must first be explicitly chosen under roadmap #78 and remain
-bounded rather than becoming a silent change to the historical v0.1
-physics/search contract. The next learning-research decision must distinguish
+bounded rather than becoming a silent change to the
+historical v0.1 physics/search contract. The next learning-research decision must distinguish
 transduction/contact reliability from memory-coupling/persistence. #93 remains
 a separate performance/architecture workstream.
 
