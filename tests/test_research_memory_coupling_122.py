@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import tempfile
 import unittest
 
 from core.runner import load_config
@@ -14,8 +15,11 @@ from research.memory_coupling_audit_122 import (
     NEGATIVE_DENSITY32_SENTINELS,
     PRIMARY_DENSITY32_SEEDS,
     ROUTE_RECALL_REQUIRED_PRIMARY_PERSISTENT,
+    append_case,
+    case_key,
     case_plan,
     classify_diff,
+    read_completed,
     run_case,
 )
 
@@ -121,6 +125,37 @@ class MemoryCouplingAudit122Tests(unittest.TestCase):
                 "control_vs_control_repeat"
             ]["different"]
         )
+
+
+    def test_completed_case_ledger_is_append_flush_and_resume_readable(self) -> None:
+        first = {
+            "status": "complete",
+            "seed": 0,
+            "initial_density": 32,
+            "payload": "first",
+        }
+        second = {
+            "status": "complete",
+            "seed": 1,
+            "initial_density": 32,
+            "payload": "second",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "partial.jsonl"
+            with path.open("a", encoding="utf-8", newline="\n") as handle:
+                append_case(handle, first)
+            completed = read_completed(path)
+            self.assertEqual(set(completed), {case_key(32, 0)})
+            self.assertEqual(completed[case_key(32, 0)]["payload"], "first")
+
+            with path.open("a", encoding="utf-8", newline="\n") as handle:
+                append_case(handle, second)
+            completed = read_completed(path)
+            self.assertEqual(
+                set(completed),
+                {case_key(32, 0), case_key(32, 1)},
+            )
+            self.assertEqual(completed[case_key(32, 1)]["payload"], "second")
 
 
 if __name__ == "__main__":
