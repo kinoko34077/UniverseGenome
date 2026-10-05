@@ -46,6 +46,33 @@ class TransductionAudit120Tests(unittest.TestCase):
         self.assertTrue(case["replay_match"])
         self.assertTrue(case["raw_instrumented_match"])
         self.assertGreaterEqual(case["hit_capacity"]["distinct_hit_pattern_count"], 1)
+        self.assertFalse(
+            case["comparisons"]["control_vs_control_repeat"]["different"]
+        )
+        self.assertIn("pattern_entropy_bits", case["hit_capacity"])
+
+    def test_input_probe_records_full_hp_saturation_without_write(self) -> None:
+        config_payload = load_config(Path("config/default.json"))
+        experiment_payload = json.loads(
+            Path("config/experiment_v0_1.json").read_text(encoding="utf-8")
+        )
+        case = run_case(
+            seed=10,
+            density=32,
+            config_payload=config_payload,
+            experiment_payload=experiment_payload,
+        )
+        saturated_no_write = [
+            probe
+            for probe in case["input"]["step_probes"]
+            if probe["hits"]
+            and not probe["state_write"]
+            and probe["hit_state_before"]
+            and all(
+                item["active_full_hp"] for item in probe["hit_state_before"]
+            )
+        ]
+        self.assertTrue(saturated_no_write)
 
 
 if __name__ == "__main__":
