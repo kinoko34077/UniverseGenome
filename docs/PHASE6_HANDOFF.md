@@ -220,6 +220,9 @@ under unchanged accepted physics. This is not acceptance of the full physical
 freeze remain unchanged. #93 remains a separate performance/architecture
 workstream.
 
+Any further work must remain bounded rather than becoming a silent change to the
+historical v0.1 physics/search contract.
+
 Before any Phase 6 mutation:
 
 1. reread live devflow Control #314;
