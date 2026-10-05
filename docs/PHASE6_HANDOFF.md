@@ -4,8 +4,8 @@ Status: **P6.1 through P6.9 accepted; no later capability is currently selected*
 
 Post-P6.9 learning-emergence research through #113 is also accepted; no
 learning-research child is currently selected. Further work requires an explicit
-roadmap/research decision under #78 and a new bounded child Issue. No automatic
-P6.10 is authorized. Canonical `learning_claim=false` remains authoritative.
+roadmap/research decision under #78 and a new bounded child Issue.
+No automatic P6.10 is authorized. Canonical `learning_claim=false` remains authoritative.
 
 ## Current v0.1 boundary
 
