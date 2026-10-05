@@ -378,6 +378,47 @@ def read_completed(path: Path) -> dict[str, dict[str, Any]]:
     return out
 
 
+def classify_case(item: dict[str, Any]) -> dict[str, str | None]:
+    gates = item["gates"]
+    levels: dict[str, str] = {}
+    l0 = (
+        gates["l0_input_contact"]
+        and gates["l0_teacher_b_contact"]
+        and gates["l0_teacher_c_contact"]
+    )
+    levels["L0"] = "PASS" if l0 else "FAIL"
+    if not l0:
+        for level in ("L1", "L2", "L3", "L4", "L5", "L6", "L7"):
+            levels[level] = "NOT_EVALUABLE"
+        return {"first_failed": "L0", **levels}
+
+    l1 = bool(gates["l1_immediate_state_delta"])
+    levels["L1"] = "PASS" if l1 else "FAIL"
+    if not l1:
+        for level in ("L2", "L3", "L4", "L5", "L6", "L7"):
+            levels[level] = "NOT_EVALUABLE"
+        return {"first_failed": "L1", **levels}
+
+    l2 = bool(
+        gates["l2_teacher_specific_immediate"]
+        and gates["l2_teacher_specific_plus_10"]
+    )
+    levels["L2"] = "PASS" if l2 else "FAIL"
+    if not l2:
+        for level in ("L3", "L4", "L5", "L6", "L7"):
+            levels[level] = "NOT_EVALUABLE"
+        return {"first_failed": "L2", **levels}
+
+    l3 = bool(
+        gates["l3_persistent_plus_100"]
+        and gates["l3_persistent_plus_1000"]
+    )
+    levels["L3"] = "PASS" if l3 else "FAIL"
+    for level in ("L4", "L5", "L6", "L7"):
+        levels[level] = "NOT_EVALUATED"
+    return {"first_failed": None if l3 else "L3", **levels}
+
+
 def write_summary(
     path: Path,
     records: Iterable[dict[str, Any]],
@@ -397,11 +438,29 @@ def write_summary(
     )
     for density in densities:
         group = [item for item in values if item["initial_density"] == density]
+        classifications = [classify_case(item) for item in group]
+        teacher_hit_set_difference_count = sum(
+            item["branches"]["ab"]["contacts"]["teacher_byte_hit_slots"]
+            != item["branches"]["ac"]["contacts"]["teacher_byte_hit_slots"]
+            for item in group
+        )
         by_density[str(density)] = {
             "case_count": len(group),
             "gate_pass_counts": {
                 name: sum(bool(item["gates"][name]) for item in group)
                 for name in gate_names
+            },
+            "first_failed_counts": dict(
+                Counter(value["first_failed"] or "NONE" for value in classifications)
+            ),
+            "level_status_counts": {
+                level: dict(Counter(value[level] for value in classifications))
+                for level in ("L0", "L1", "L2", "L3", "L4", "L5", "L6", "L7")
+            },
+            "teacher_hit_set_difference_count": teacher_hit_set_difference_count,
+            "first_failed_by_seed": {
+                str(item["seed"]): classify_case(item)["first_failed"]
+                for item in group
             },
         }
 
@@ -447,6 +506,12 @@ def write_summary(
         "replay_match_count": sum(item.get("replay_match") is True for item in values),
         "by_density": by_density,
         "first_failed_level_if_no_case_passes": first_failed,
+        "first_failed_counts_all_cases": dict(
+            Counter(
+                (classify_case(item)["first_failed"] or "NONE")
+                for item in values
+            )
+        ),
         "l0_any_complete_contact_case": l0_any,
         "l1_any_state_delta_case": l1_any,
         "l2_any_teacher_specific_case": l2_any,
