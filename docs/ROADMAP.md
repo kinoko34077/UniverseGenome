@@ -15,19 +15,22 @@ multi-byte output sequences through #98 / PR #99, P6.8 bounded raw UTF-8
 byte experiments through #101 / PR #102, and P6.9 bounded mixed-length raw
 byte sequences through #104 / PR #105 on main.
 
-Post-P6.9 learning-emergence research is also accepted through #109–#113.
-#111 / PR #114 showed that density 32 improves substrate persistence/activity
-but still yields zero canonical trained successes. #113 / PR #115 then ran a
-64-case matched-snapshot causal audit: density 4 first fails L0 in 32/32 cases;
-density 32 first fails L0 in 23/32, L2 in 8/32 and L3 in 1/32. The sole case
-reaching teacher-specific encoding loses that distinction by +1000 generations,
-so the first reachable failed causal level is **L3 memory persistence**.
-L4–L7 are NOT_EVALUABLE, `learning_claim=false` remains authoritative, and no
-physics/default/P6.10+ semantic change was accepted.
+Post-P6.9 learning-emergence / learning-path research is accepted through
+#120 / PR #121. #111 / PR #114 showed that density 32 improves substrate
+persistence/activity but still yields zero canonical trained successes. #113 /
+PR #115 localized the deepest reachable failure at **L3 memory persistence**;
+L4–L7 remained NOT_EVALUABLE. #119 then recorded a post-hoc gap between logical
+byte representation and substrate-level physical distinguishability. #120 /
+PR #121 reproduced that transduction collapse under a predeclared 64-case audit
+without changing accepted physics/defaults. The frozen high-contrast B=66/H=8
+comparison produced teacher-specific immediate state writes in **12/32**
+density-32 seeds, all traceable but HP-only, satisfying #120's diagnostic
+`ROUTE-MEMORY` gate.
 
-No later capability or learning-research child is currently selected; the next
-frontier is an explicit roadmap/research decision between transduction/contact
-reliability and memory-coupling/persistence. #93 remains a separate
+The next bounded learning-research frontier is therefore
+**memory-coupling/persistence under unchanged physics**, not a P6.10 semantic
+capability and not a production-I/O redesign. Canonical `learning_claim=false`
+and the P6.10+ freeze remain authoritative. #93 remains a separate
 performance/architecture workstream.
 
 ## Gate 0 — Specification basis
@@ -159,10 +162,22 @@ success claim.
   32/32 cases; density 32 first fails L0 in 23/32, L2 in 8/32 and L3 in 1/32.
   No case passes full L3 persistence, so L4–L7 are NOT_EVALUABLE.
   Deterministic replay and raw-vs-instrumented equivalence both passed 64/64.
+- #119: completed report separating logical byte representability from physical
+  transduction distinguishability; report-only, with no specification change.
+- #120 / PR #121: predeclared transduction-capacity/state-write audit. The
+  current 256-byte geometry has 55 idealized receptive regions; density-32
+  realized pattern entropy averages ~0.370 bit. B/C yields 2/32 teacher-specific
+  writes, while the frozen high-contrast B/H comparison yields **12/32**,
+  traceable 12/12. Every B/H immediate teacher-specific difference is HP-only.
+  Input probes also directly reproduce contact-without-write through HP
+  saturation. Deterministic replay, raw-vs-instrumented equivalence, and
+  no-teacher repeat controls all pass 64/64. The predeclared terminal route is
+  **ROUTE-MEMORY**.
   Canonical `learning_claim=false` remains unchanged.
 
-Next frontier: **explicit research decision**. P6.10+ remains frozen. Do not
-resume semantic-capability expansion automatically. The next bounded learning
-research, if selected, must distinguish transduction/contact reliability from
-memory-coupling/persistence. #93 remains a separate performance/architecture
+Next frontier: **bounded memory-coupling/persistence research under unchanged
+physics**. P6.10+ remains frozen; do not resume semantic-capability expansion
+automatically. The #120 result is sufficient to test whether a known
+content-bearing HP write can persist/couple, but it is not acceptance of the
+full 8-bit physical channel. #93 remains a separate performance/architecture
 workstream.
