@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 import unittest
 
@@ -46,18 +45,51 @@ class MemoryPersistenceArena127Tests(unittest.TestCase):
         self.assertEqual(
             EMPIRICAL_CANDIDATES,
             (
+                BASELINE,
                 ENERGY_TO_LATENT_XOR,
                 ENERGY_TO_STRUCTURE_PROMOTE,
                 HP_NO_DECAY_REFERENCE,
             ),
         )
         plan = case_plan()
-        self.assertEqual(len(plan), 63)
+        self.assertEqual(len(plan), 84)
         for candidate in EMPIRICAL_CANDIDATES:
             self.assertEqual(
                 sum(item["candidate"] == candidate for item in plan),
                 21,
             )
+        self.assertEqual(
+            sum(
+                item["verify"]
+                for item in plan
+                if item["candidate"] == ENERGY_TO_LATENT_XOR
+            ),
+            12,
+        )
+        self.assertEqual(
+            sum(
+                item["verify"]
+                for item in plan
+                if item["candidate"] == ENERGY_TO_STRUCTURE_PROMOTE
+            ),
+            12,
+        )
+        self.assertEqual(
+            sum(
+                item["verify"]
+                for item in plan
+                if item["candidate"] == BASELINE
+            ),
+            3,
+        )
+        self.assertEqual(
+            sum(
+                item["verify"]
+                for item in plan
+                if item["candidate"] == HP_NO_DECAY_REFERENCE
+            ),
+            3,
+        )
 
     def test_generated_baseline_step_matches_production(self) -> None:
         for density in (4, 32):
@@ -140,6 +172,8 @@ class MemoryPersistenceArena127Tests(unittest.TestCase):
         self.assertEqual(structure.latent, baseline.latent)
         self.assertEqual(len(latent_log), 1)
         self.assertEqual(len(structure_log), 1)
+        self.assertEqual(latent_log[0]["recovery_amount"], 32)
+        self.assertEqual(structure_log[0]["recovery_amount"], 32)
 
     def test_saturated_external_contact_does_not_consolidate(self) -> None:
         config = PhysicsConfig(
@@ -177,108 +211,6 @@ class MemoryPersistenceArena127Tests(unittest.TestCase):
         reference_values = reference.to_dict()
         baseline_values["hp_decay"] = 0
         self.assertEqual(baseline_values, reference_values)
-
-
-if __name__ == "__main__":
-    unittest.main()
-
-    def test_energy_to_latent_xor_uses_positive_recovery_amount(self) -> None:
-        config = candidate_config(
-            self.config_payload,
-            1,
-            C1_ENERGY_TO_LATENT_XOR,
-        )
-        state = create_universe(seed=3, config=config)
-        state.hp[0] = 100
-        state.latent[0] = 1
-
-        _, writes = candidate_step(
-            state,
-            config,
-            variant=C1_ENERGY_TO_LATENT_XOR,
-            stimulus_slots=(0,),
-        )
-
-        self.assertEqual(len(writes), 1)
-        self.assertEqual(writes[0]["field"], "latent")
-        self.assertEqual(writes[0]["energy"], config.recovery_hp)
-        self.assertEqual(state.latent[0], 1 ^ config.recovery_hp)
-
-    def test_energy_candidate_no_write_when_no_positive_recovery(self) -> None:
-        config = candidate_config(
-            self.config_payload,
-            1,
-            C1_ENERGY_TO_LATENT_XOR,
-        )
-        state = create_universe(seed=4, config=config)
-        state.hp[0] = 255
-        before = state.latent[0]
-
-        _, writes = candidate_step(
-            state,
-            config,
-            variant=C1_ENERGY_TO_LATENT_XOR,
-            stimulus_slots=(0,),
-        )
-
-        self.assertEqual(writes, [])
-        self.assertEqual(state.latent[0], before)
-
-    def test_hp_no_decay_reference_only_changes_hp_decay(self) -> None:
-        baseline = candidate_config(
-            self.config_payload,
-            4,
-            C0_BASELINE,
-        )
-        reference = candidate_config(
-            self.config_payload,
-            4,
-            C4_HP_NO_DECAY_REFERENCE,
-        )
-        self.assertEqual(reference.hp_decay, 0)
-        self.assertNotEqual(baseline.hp_decay, reference.hp_decay)
-        baseline_values = baseline.to_mapping()["physics"]
-        reference_values = reference.to_mapping()["physics"]
-        changed = {
-            key
-            for key in baseline_values
-            if baseline_values[key] != reference_values[key]
-        }
-        self.assertEqual(changed, {"hp_decay"})
-
-    def test_completed_case_ledger_is_resume_readable(self) -> None:
-        first = {
-            "status": "complete",
-            "variant": C0_BASELINE,
-            "seed": 0,
-            "initial_density": 32,
-        }
-        second = {
-            "status": "complete",
-            "variant": C1_ENERGY_TO_LATENT_XOR,
-            "seed": 5,
-            "initial_density": 32,
-        }
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "partial.jsonl"
-            with path.open("a", encoding="utf-8", newline="\n") as handle:
-                append_case(handle, first)
-            completed = read_completed(path)
-            self.assertEqual(
-                set(completed),
-                {case_key(C0_BASELINE, 32, 0)},
-            )
-
-            with path.open("a", encoding="utf-8", newline="\n") as handle:
-                append_case(handle, second)
-            completed = read_completed(path)
-            self.assertEqual(
-                set(completed),
-                {
-                    case_key(C0_BASELINE, 32, 0),
-                    case_key(C1_ENERGY_TO_LATENT_XOR, 32, 5),
-                },
-            )
 
 
 if __name__ == "__main__":
