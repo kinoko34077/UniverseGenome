@@ -13,6 +13,7 @@ import hashlib
 import json
 from pathlib import Path
 import sys
+import time
 from typing import Any, Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -257,6 +258,97 @@ def run_branch(
     }
 
 
+
+def run_branch_raw(
+    initial_snapshot: dict[str, Any],
+    *,
+    config: PhysicsConfig,
+    protocol: ExperimentConfig,
+    branch: str,
+) -> dict[str, dict[str, Any]]:
+    """Execute the same physical schedule without diagnostic reads/metrics."""
+    if branch not in BRANCHES:
+        raise ValueError(f"unknown branch: {branch}")
+    state = clone_state(initial_snapshot, config)
+    experiment = IOExperiment(state, experiment=protocol)
+    snapshots: dict[str, dict[str, Any]] = {}
+
+    def record(name: str) -> None:
+        snapshots[name] = state.to_snapshot()
+
+    def advance(anchors: Iterable[tuple[int, int]] = ()) -> None:
+        experiment._advance(tuple(anchors))
+
+    record("initial")
+    for _ in range(protocol.byte_hold_generations):
+        if branch == "control":
+            advance(())
+        else:
+            experiment.drive_input(65)
+            advance(experiment.input_bus.signal_coordinates())
+    experiment.release_input()
+    record("after_input")
+
+    for _ in range(protocol.byte_gap_generations + protocol.teacher_delay_generations):
+        advance(())
+    record("pre_teacher")
+
+    if branch in {"ab", "ac"}:
+        teacher = OutputEvent.byte(66 if branch == "ab" else 67)
+        advance(experiment._teacher_coordinates(teacher))
+    else:
+        advance(())
+    record("teacher_immediate")
+
+    if branch in {"ab", "ac"}:
+        advance(experiment._teacher_coordinates(OutputEvent.null()))
+    else:
+        advance(())
+
+    for _ in range(9):
+        advance(())
+    record("plus_10")
+    for _ in range(90):
+        advance(())
+    record("plus_100")
+    for _ in range(900):
+        advance(())
+    record("plus_1000")
+    return snapshots
+
+
+def run_case_raw(
+    *,
+    seed: int,
+    density: int,
+    config_payload: dict[str, Any],
+    experiment_payload: dict[str, Any],
+) -> dict[str, Any]:
+    config = build_physics_config(config_payload, density)
+    protocol = replace(
+        ExperimentConfig.from_mapping(experiment_payload),
+        teacher_repetitions=1,
+    )
+    initial = create_universe(seed=seed, config=config).to_snapshot()
+    branches = {
+        name: run_branch_raw(initial, config=config, protocol=protocol, branch=name)
+        for name in BRANCHES
+    }
+    return {
+        "initial_snapshot_digest": canonical_digest(initial),
+        "branches": {
+            name: {
+                checkpoint: {
+                    "snapshot_digest": canonical_digest(snapshot),
+                    "generation": int(snapshot["generation"]),
+                }
+                for checkpoint, snapshot in snapshots.items()
+            }
+            for name, snapshots in branches.items()
+        },
+    }
+
+
 def run_case_once(
     *,
     seed: int,
@@ -350,14 +442,67 @@ def deterministic_projection(case: dict[str, Any]) -> dict[str, Any]:
 
 
 def run_case(**kwargs: Any) -> dict[str, Any]:
+    started = time.perf_counter()
+    first_started = time.perf_counter()
     first = run_case_once(**kwargs)
+    instrumented_wall = time.perf_counter() - first_started
+
+    replay_started = time.perf_counter()
     second = run_case_once(**kwargs)
+    replay_wall = time.perf_counter() - replay_started
+
+    raw_started = time.perf_counter()
+    raw = run_case_raw(**kwargs)
+    raw_wall = time.perf_counter() - raw_started
+
     first_digest = canonical_digest(deterministic_projection(first))
     second_digest = canonical_digest(deterministic_projection(second))
     if first_digest != second_digest:
         raise RuntimeError("matched causal audit is not deterministic under replay")
+
+    raw_match = first["initial_snapshot_digest"] == raw["initial_snapshot_digest"]
+    for branch in BRANCHES:
+        for checkpoint, metrics in first["branches"][branch]["checkpoints"].items():
+            raw_metrics = raw["branches"][branch][checkpoint]
+            if metrics["snapshot_digest"] != raw_metrics["snapshot_digest"]:
+                raw_match = False
+                break
+        if not raw_match:
+            break
+    if not raw_match:
+        raise RuntimeError("instrumented causal audit perturbs authoritative state")
+
+    instrumented_generations = sum(
+        int(value["checkpoints"]["plus_1000"]["generation"])
+        - int(value["checkpoints"]["initial"]["generation"])
+        for value in first["branches"].values()
+    )
+    raw_generations = sum(
+        int(value["plus_1000"]["generation"]) - int(value["initial"]["generation"])
+        for value in raw["branches"].values()
+    )
     first["replay_digest"] = first_digest
     first["replay_match"] = True
+    first["raw_instrumented_match"] = True
+    first["performance"] = {
+        "instrumented_wall_seconds": instrumented_wall,
+        "instrumented_replay_wall_seconds": replay_wall,
+        "raw_wall_seconds": raw_wall,
+        "instrumented_generations": instrumented_generations,
+        "raw_generations": raw_generations,
+        "instrumented_generations_per_second": (
+            instrumented_generations / instrumented_wall if instrumented_wall else 0.0
+        ),
+        "raw_generations_per_second": (
+            raw_generations / raw_wall if raw_wall else 0.0
+        ),
+        "instrumentation_overhead_wall_seconds": instrumented_wall - raw_wall,
+        "instrumentation_overhead_ratio": (
+            (instrumented_wall - raw_wall) / raw_wall if raw_wall else 0.0
+        ),
+        "clone_evaluation_wall_seconds": 0.0,
+        "case_total_wall_seconds": time.perf_counter() - started,
+    }
     return first
 
 
@@ -373,7 +518,11 @@ def read_completed(path: Path) -> dict[str, dict[str, Any]]:
         if not line.strip():
             continue
         item = json.loads(line)
-        if item.get("status") == "complete" and item.get("replay_match") is True:
+        if (
+            item.get("status") == "complete"
+            and item.get("replay_match") is True
+            and item.get("raw_instrumented_match") is True
+        ):
             out[case_key(item["seed"], item["initial_density"])] = item
     return out
 
@@ -414,9 +563,13 @@ def classify_case(item: dict[str, Any]) -> dict[str, str | None]:
         and gates["l3_persistent_plus_1000"]
     )
     levels["L3"] = "PASS" if l3 else "FAIL"
+    if not l3:
+        for level in ("L4", "L5", "L6", "L7"):
+            levels[level] = "NOT_EVALUABLE"
+        return {"first_failed": "L3", **levels}
     for level in ("L4", "L5", "L6", "L7"):
         levels[level] = "NOT_EVALUATED"
-    return {"first_failed": None if l3 else "L3", **levels}
+    return {"first_failed": None, **levels}
 
 
 def write_summary(
@@ -427,6 +580,9 @@ def write_summary(
     seeds: tuple[int, ...],
     workers: int,
     base_main: str,
+    runner_wall_seconds: float,
+    serialization_probe_wall_seconds: float,
+    jsonl_write_flush_wall_seconds: float,
 ) -> None:
     values = tuple(records)
     by_density: dict[str, Any] = {}
@@ -493,6 +649,45 @@ def write_summary(
         first_failed = None
 
     expected = len(densities) * len(seeds)
+    instrumented_wall = sum(
+        float(item.get("performance", {}).get("instrumented_wall_seconds", 0.0))
+        for item in values
+    )
+    raw_wall = sum(
+        float(item.get("performance", {}).get("raw_wall_seconds", 0.0))
+        for item in values
+    )
+    instrumented_generations = sum(
+        int(item.get("performance", {}).get("instrumented_generations", 0))
+        for item in values
+    )
+    raw_generations = sum(
+        int(item.get("performance", {}).get("raw_generations", 0))
+        for item in values
+    )
+    performance = {
+        "runner_wall_seconds": runner_wall_seconds,
+        "instrumented_wall_seconds_total": instrumented_wall,
+        "raw_wall_seconds_total": raw_wall,
+        "instrumented_generations_total": instrumented_generations,
+        "raw_generations_total": raw_generations,
+        "instrumented_generations_per_second": (
+            instrumented_generations / instrumented_wall if instrumented_wall else 0.0
+        ),
+        "raw_generations_per_second": (
+            raw_generations / raw_wall if raw_wall else 0.0
+        ),
+        "instrumentation_overhead_wall_seconds": instrumented_wall - raw_wall,
+        "instrumentation_overhead_ratio": (
+            (instrumented_wall - raw_wall) / raw_wall if raw_wall else 0.0
+        ),
+        "clone_evaluation_wall_seconds_total": sum(
+            float(item.get("performance", {}).get("clone_evaluation_wall_seconds", 0.0))
+            for item in values
+        ),
+        "serialization_probe_wall_seconds_total": serialization_probe_wall_seconds,
+        "jsonl_write_flush_wall_seconds_total": jsonl_write_flush_wall_seconds,
+    }
     summary = {
         "schema_version": 1,
         "issue": 113,
@@ -504,6 +699,10 @@ def write_summary(
         "expected_case_count": expected,
         "completed_case_count": len(values),
         "replay_match_count": sum(item.get("replay_match") is True for item in values),
+        "raw_instrumented_match_count": sum(
+            item.get("raw_instrumented_match") is True for item in values
+        ),
+        "performance": performance,
         "by_density": by_density,
         "first_failed_level_if_no_case_passes": first_failed,
         "first_failed_counts_all_cases": dict(
@@ -545,6 +744,9 @@ def main() -> int:
     seeds = tuple(args.seeds)
     config_payload = load_config(args.config)
     experiment_payload = json.loads(args.experiment.read_text(encoding="utf-8"))
+    runner_started = time.perf_counter()
+    serialization_probe_wall_seconds = 0.0
+    jsonl_write_flush_wall_seconds = 0.0
     completed = read_completed(args.output)
     pending = [
         (seed, density)
@@ -580,9 +782,24 @@ def main() -> int:
                         "initial_density": density,
                         "error": repr(exc),
                     }
-                handle.write(json.dumps(item, sort_keys=True) + "\n")
+                serialization_started = time.perf_counter()
+                json.dumps(item, sort_keys=True)
+                serialization_elapsed = time.perf_counter() - serialization_started
+                serialization_probe_wall_seconds += serialization_elapsed
+                if item.get("status") == "complete":
+                    item.setdefault("performance", {})[
+                        "serialization_probe_wall_seconds"
+                    ] = serialization_elapsed
+                payload = json.dumps(item, sort_keys=True)
+                write_started = time.perf_counter()
+                handle.write(payload + "\n")
                 handle.flush()
-                if item.get("status") == "complete" and item.get("replay_match") is True:
+                jsonl_write_flush_wall_seconds += time.perf_counter() - write_started
+                if (
+                    item.get("status") == "complete"
+                    and item.get("replay_match") is True
+                    and item.get("raw_instrumented_match") is True
+                ):
                     completed[case_key(seed, density)] = item
                 print(
                     f"case {index}/{len(pending)} density={density} seed={seed} status={item['status']}",
@@ -597,6 +814,9 @@ def main() -> int:
         seeds=seeds,
         workers=args.workers,
         base_main=args.base_main,
+        runner_wall_seconds=time.perf_counter() - runner_started,
+        serialization_probe_wall_seconds=serialization_probe_wall_seconds,
+        jsonl_write_flush_wall_seconds=jsonl_write_flush_wall_seconds,
     )
     expected = len(densities) * len(seeds)
     print(f"summary={args.summary} completed={len(completed)}/{expected}", file=sys.stderr)
