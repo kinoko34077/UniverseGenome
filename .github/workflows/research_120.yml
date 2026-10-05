@@ -1,0 +1,28 @@
+name: Research 120
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  transduction_audit_120:
+    if: github.head_ref == 'research/transduction-audit-120'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run #120 transduction audit
+        run: python research/transduction_audit_120.py
+      - name: Upload #120 research artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: transduction-audit-120
+          path: |
+            research/artifacts/transduction_audit_120.jsonl
+            research/artifacts/transduction_audit_120_summary.json
+          if-no-files-found: error
