@@ -183,10 +183,18 @@ success claim.
   differences, but all six split in lifecycle/survival before network-state
   divergence; 11/12 reconverge by +1000. Replay/raw-equivalence and controls
   are clean. The predeclared terminal route is **ROUTE-MEMORY-ARENA**.
+- #127 / PR #129: research-only memory persistence design arena under a frozen
+  8/12 +1000 gate. ENERGY_TO_LATENT_XOR and ENERGY_TO_STRUCTURE_PROMOTE each
+  create pre-lifecycle non-HP B/H distinctions in 12/12 primary cases but
+  retain only **5/12** at +1000. Contact-bond reinforcement was statically
+  unreachable for content-specific writes; HP_NO_DECAY_REFERENCE retains
+  0/12 and is reference-only. No candidate passes. Terminal route:
+  **ROUTE-ARCHITECTURE-RETHINK**.
   Canonical `learning_claim=false` remains unchanged.
 
-Next frontier: **#127 research-only memory persistence design arena**. It must
-compare generic local physical coupling candidates without modifying production
-physics/defaults and must explicitly measure whether non-HP persistence occurs
-before lifecycle divergence. P6.10+ remains frozen; no L4 recall is authorized.
-#93 remains a separate performance/architecture workstream.
+Next frontier: **#130 design-only learning-state persistence architecture
+rethink**. It must determine whether a bounded local physical memory
+architecture can tolerate ordinary cell turnover while preserving forgetting,
+deterministic replay and semantic agnosticism. It cannot modify production
+physics/defaults/specification. P6.10+ remains frozen; no L4 recall is
+authorized. #93 remains a separate performance/architecture workstream.
