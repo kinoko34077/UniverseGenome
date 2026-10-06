@@ -215,12 +215,12 @@ Values should use binary-friendly grids where practical, without banning empiric
 
 ---
 
-# 26.1 Candidate slow-trace physical parameters (#132)
+# 26.1 Slow-trace physical parameters (#132)
 
 ## SPEC-PARAM-ST-001 — Parameter ownership boundary
-**Status: candidate**
+**Status: accepted**
 
-The slow-trace proposal introduces bounded physical parameters:
+The accepted slow-trace specification introduces bounded physical parameters:
 
 - `trace_write_cap:uint8`
 - `trace_transfer_cap:uint8`
@@ -231,16 +231,17 @@ The slow-trace proposal introduces bounded physical parameters:
 These are physical-universe parameters, not training/evaluation protocol
 semantics. They must not be stored in `ExperimentConfig`.
 
-#132 does not by itself add these fields to the Phase 5 evolved genome/search
+#132 acceptance does not by itself add these fields to the Phase 5 evolved genome/search
 space. Searchability/mutation eligibility requires an explicit accepted
 parameter-status decision and must not be inferred from their presence in a
 physics configuration.
 
 SP3 classifies these parameters as follows. The classification is part of the
-candidate specification; D1 is still not accepted production behavior while
-#132 is open.
+accepted specification. D1 implementation remains pending and current
+production behavior remains unchanged until a separate implementation owner passes the
+accepted gates.
 
-| Parameter | Legal serialized range | Candidate inert/default value | Non-inert status |
+| Parameter | Legal serialized range | Accepted inert/default value | Non-inert status |
 |---|---:|---:|---|
 | `trace_write_cap` | 0..255 | 0 | research-only tuning; active profile requires 1..255 |
 | `trace_transfer_cap` | 0..255 | 0 | research-only tuning; active profile requires 1..255 |
@@ -252,7 +253,7 @@ The tuple
 
 `(trace_write_cap=0, trace_transfer_cap=0, trace_discharge_cap=0, trace_decay_rate=0, trace_bonus_shift=8)`
 
-is the **candidate inert compatibility/default profile**. It is selected for
+is the **accepted inert compatibility/default profile**. It is selected for
 backward behavioral compatibility, not learning performance:
 
 - write/transfer/discharge cannot create trace from an all-zero migrated state;
@@ -264,7 +265,7 @@ backward behavioral compatibility, not learning performance:
   with write/read/transfer/discharge disabled that bookkeeping cannot alter the
   accepted physical trajectory.
 
-No **non-inert** numeric value is an accepted default candidate in #132.
+No **non-inert** numeric value is an accepted default.
 Non-inert values remain research-only physical overrides until a later owner
 predeclares a bounded parameter matrix and demonstrates the accepted L3,
 semantic-cleanliness, deterministic-replay, migration and performance gates.
@@ -273,8 +274,8 @@ The slow-trace parameters are not added to the Phase 5 mutation/search genome by
 this proposal. Any later searchability decision requires a separate
 specification change after a non-inert operating regime is accepted.
 
-### SPEC-PARAM-ST-001A — Candidate inert-default validation plan
-**Status: candidate**
+### SPEC-PARAM-ST-001A — Inert-default validation plan
+**Status: accepted**
 
 A later implementation owner must validate the inert profile before any
 non-inert research result can be promoted:
@@ -298,7 +299,7 @@ parameters.
 ---
 
 ## SPEC-PARAM-ST-002 — Compatibility with existing search/evaluation
-**Status: candidate**
+**Status: accepted**
 
 Adopting slow trace shall not by itself change:
 
