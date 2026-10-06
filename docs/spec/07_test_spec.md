@@ -743,3 +743,230 @@ A mixed protocol rejects a valid mapped input that is a proper prefix of another
 valid mapped input. Prefix-overlap semantics remain deferred to a later explicit
 capability decision.
 
+
+
+---
+
+## Slow-trace persistence architecture tests (#132)
+
+These are **accepted specification acceptance tests**, not current passing
+production tests. A later implementation owner must establish the relevant RED
+evidence on the accepted pre-implementation main before production code is
+added.
+
+SP2 classifies the evidence stages:
+
+- TEST-ST-001..009 are implementation-contract tests and must have at least one
+  explicit RED assertion caused by missing D1 production behavior before the
+  corresponding implementation is added;
+- TEST-ST-010 is a structural/performance non-regression gate and is not useful
+  as a standalone RED test before D1 exists;
+- TEST-ST-011 must be paired with a positive D1 behavior test so the semantic
+  negative cannot pass vacuously merely because no slow-trace path exists;
+- TEST-ST-012 is the post-implementation causal research gate. The accepted
+  baseline is already below the gate (1/12 at +1000 in #122); it is not a unit
+  test substitute for TEST-ST-001..011.
+
+### SP2 RED activation matrix
+
+This matrix is the activation contract for the later implementation owner. It
+does not add executable slow-trace implementation tests in #132. The future
+owner must first materialize the applicable executable tests against the
+accepted pre-implementation main, record RED caused by the missing specified
+behavior, and only then add production implementation.
+
+| Test | Future executable fixture level | Current-production RED trigger | Future GREEN meaning |
+|---|---|---|---|
+| TEST-ST-001 | `UniverseState` unit fixtures covering construction, spawn, BLACK_HOLE grace/revival, final `free()` and slot reuse | current authoritative state has no `slow_trace` array; spawn/free cannot satisfy trace lifecycle assertions | one bounded uint8 trace value exists per slot; FREE/new allocation are zero; grace preserves; final FREE clears; reused storage does not inherit trace |
+| TEST-ST-002 | isolated `step()` physics fixtures for external stimulus, selected latent activity, simultaneous qualification and BLACK_HOLE revival | current qualifying activity changes HP/lifecycle/latent only and has no slow-trace write state or parameters | each qualifying cell receives exactly one generic per-generation write with the declared magnitude and no semantic source identity |
+| TEST-ST-003 | deterministic local-contact fixture using the same generation's selected non-overlapping latent-transmission pair set | current latent transmission selects pairs but performs no slow-trace transfer | only the already-selected pair set transfers trace; transfer is conservative, capped and uses post-write/pre-transfer values |
+| TEST-ST-004 | latent-transmission fixtures that hold operator/source/target state fixed while varying generation-start trace | current transmission-mask width has no slow-trace input, so nonzero trace cannot increase width | trace changes only the bounded mask width; all four accepted latent-operator formulas remain bit-for-bit unchanged; same-event writes cannot affect that event |
+| TEST-ST-005 | BLACK_HOLE lifecycle fixtures with zero/one/multiple ACTIVE recipients and competing carriers | current BLACK_HOLE handling resolves revival or timer decrement/final FREE with no pre-free trace discharge | non-revived carriers discharge locally before timer/free according to the declared deterministic order/cap; revival preserves trace; final FREE clears it |
+| TEST-ST-006 | deterministic decay fixtures with fixed seed/generation/physical address and nonzero decay regime | current physics has no trace-decay event/state, so a positive decay assertion cannot be satisfied | at most one unit decays per eligible carrier/generation using physical event addressing rather than reusable slot identity; replay is exact |
+| TEST-ST-007 | fusion/fragmentation unit fixtures for all accepted outcomes and edge values 0/1/254/255 | current fusion/fragmentation have no trace field to conserve, split or erase | saturating fusion, split conservation, level-0 retention/erasure and failed-allocation behavior match the specified rules exactly |
+| TEST-ST-008 | standalone persistence plus optimizer-envelope migration/round-trip integration fixtures | current standalone/nested UniverseState is format v1 without trace and optimizer envelope is v5; v2/v6 acceptance cannot pass | v2/v6 round-trip exact trace/config continuation; v1 and optimizer v4/v5 migrate to zero trace only; malformed new payloads are rejected; next save emits new versions |
+| TEST-ST-009 | Phase-5 128-authoritative-slot save/load plus observation-clone isolation integration fixture | current authoritative slots persist nested v1 states with no nonzero trace state to round-trip or isolate | all 128 authoritative slots preserve trace/config; disposable clones copy it for evaluation without becoming authoritative or mutating the source |
+| TEST-ST-010 | structural inspection plus benchmark/snapshot-size measurement after implementation exists | no standalone RED is required; absence of D1 trivially satisfies “no added hidden graph” | fixed storage and existing local-pair/neighborhood bounds are demonstrated, and actual density4/density32 throughput plus snapshot-size overhead are reported |
+| TEST-ST-011 | paired positive/negative physics/API fixtures: physically identical events under different experiment labels plus a positive trace-write/read case | an absence-only semantic-input inspection may pass today, but the required paired positive slow-trace behavior cannot; therefore current production must still be RED on the positive half | trace behavior is physically active yet invariant to byte/organ/target/token/label identity; no host-side learned table or semantic argument enters the rule |
+| TEST-ST-012 | post-implementation research harness using the frozen B/H cohort and turnover evidence | not a pre-implementation unit-test RED: accepted unchanged-physics baseline is already 1/12 at +1000 and remains reference evidence | after TEST-ST-001..011 are GREEN, a predeclared causal run reaches >=8/12 at +1000 with clean sentinels/replay/raw equivalence and declared carrier-turnover survival |
+
+Required future RED evidence is therefore:
+- at least one behavior-positive failing assertion for each of TEST-ST-001..009;
+- TEST-ST-011 must fail on its positive physical-behavior half, not merely pass an
+  API-signature/absence check;
+- TEST-ST-010 is activated only after an implementation exists to measure;
+- TEST-ST-012 is activated only after the implementation-contract suite is
+  GREEN and remains a causal research gate rather than a unit-test replacement.
+
+The later implementation owner may choose concrete test-file names and public
+helper boundaries, but it may not weaken these observable fixtures merely to fit
+an implementation layout. In particular, private-function names are not part of
+the contract; the observable state transition, snapshot contract and causal
+controls are.
+
+### TEST-ST-001 Authoritative state / lifecycle / slot reuse
+
+A slow-trace-enabled authoritative state has exactly one uint8 trace value per
+cell slot. FREE and newly allocated cells are zero. ACTIVE→BLACK_HOLE preserves
+trace during grace. Final FREE clears trace. Reusing the slot for a new cell
+does not inherit the previous trace.
+
+### TEST-ST-002 Generic meaningful-activity write
+
+Fixtures verify the exact per-cell/per-generation rule:
+- direct external stimulus alone writes
+  `min(recovery_hp, trace_write_cap)`;
+- successful selected latent transmission alone writes the same amount;
+- simultaneous external stimulus + latent activity still writes exactly once;
+- direct external stimulation that revives a BLACK_HOLE cell is eligible;
+- local-revival-only eligibility without either qualifying source does not
+  create a second write;
+- later fusion/fragmentation does not retroactively change whether the
+  qualifying event created the write proposal.
+
+The write path has no byte value, organ-line identity, target label,
+tokenizer/vocabulary input or matched-control result.
+
+### TEST-ST-003 Local conservative transfer
+
+Known pair fixtures cover `ta>tb`, `tb>ta`, equality and transfer-cap
+limits. Each transfer preserves `ta+tb`, keeps both values in uint8 range and
+uses post-write/pre-transfer values.
+
+The test must prove that the slow-trace transfer pair set is **exactly the same
+deterministic non-overlapping pair set selected for ordinary latent
+transmission** in that generation. Nonlocal/incompatible or compatible-but-not-
+selected cells do not transfer, and D1 does not perform a second pair-selection
+pass.
+
+### TEST-ST-004 Read coupling preserves latent operators
+
+With generation-start source trace zero, effective mask width equals the
+accepted SPEC-MASK-001 width. Nonzero trace adds only the configured bounded
+bonus and caps width at 16. The selected mask still feeds the unchanged Masked
+Copy / XOR / Rotate Copy / AND formulas. A slow-trace write caused by the
+current latent event cannot increase that same event's width.
+
+### TEST-ST-005 BLACK_HOLE discharge / revival / FREE
+
+Fixtures cover generation-start BLACK_HOLE carriers with zero/one/multiple
+local ACTIVE recipients and multiple BLACK_HOLE carriers competing for the same
+recipient headroom.
+
+They verify:
+- revival is resolved before discharge and a revived carrier retains its trace;
+- non-revived carriers discharge before the accepted timer decrement/final
+  FREE rule;
+- carrier and recipient processing follow the declared physical-state order,
+  with storage-slot index only as a final deterministic tie-break and never an
+  RNG/probability or lineage key;
+- later carriers observe headroom consumed by earlier ordered carriers;
+- no carrier moves more than its configured discharge cap;
+- every transferred unit is subtracted from the source and total trace never
+  increases;
+- a cell newly entering BLACK_HOLE later in the generation does not discharge
+  until the next generation;
+- with no recipient, loss at final FREE is permitted;
+- final FREE always clears trace and slot reuse never inherits it.
+
+### TEST-ST-006 Deterministic decay / physical addressing
+
+Fixed seed, generation, physical state and parameters produce the same decay
+event. At most one trace unit decays per eligible carrier/generation. The event
+key follows SPEC-RNG-001/002 physical addressing and does not use reusable slot
+identity as a probability key. A configured nonzero forgetting regime has
+fixtures that demonstrate trace can decrease without deleting the Universe.
+
+### TEST-ST-007 Fusion / fragmentation trace conservation semantics
+
+Fusion computes the saturating participant sum and clears participant slots made
+FREE.
+
+Fragmentation fixtures distinguish every accepted outcome:
+- successful core+fragment creation splits `old_trace` as floor-half plus
+  remainder and conserves the sum;
+- level-0 horizontal/vertical in-place degradation retains trace unchanged;
+- level-0 single-cell direct FREE erases trace without creating a ghost
+  recipient;
+- failed fragment allocation leaves trace unchanged.
+
+Edge fixtures include 0, 1, 254 and 255.
+
+### TEST-ST-008 Two-layer snapshot migration
+
+RED evidence must reflect the current two-layer version boundary:
+
+- standalone/nested UniverseState currently emits format version 1 and has no
+  `slow_trace` array;
+- the Phase 5 optimizer envelope currently emits version 5 and embeds those
+  version-1 UniverseState payloads.
+
+Production acceptance requires:
+
+1. UniverseState v2 save/load/continue equals uninterrupted continuation with
+   nonzero trace and accepted trace parameters;
+2. standalone persistence uses the v2 contract;
+3. optimizer v6 round-trips 128 authoritative slots whose nested states are v2;
+4. UniverseState v1 migrates trace to all-zero only;
+5. optimizer v4/v5 remain readable and migrate embedded v1 states to v2;
+6. migrated legacy state uses the SP3-defined inert compatibility parameter
+   profile, and a continuation fixture proves the migrated trajectory remains
+   equivalent to old no-slow-trace behavior over a bounded window;
+7. the next save emits the new layer versions;
+8. malformed UniverseState v2 and optimizer v6 payloads are rejected for the
+   data-spec cases rather than silently downgraded or guessed.
+
+### TEST-ST-009 Phase 5 authoritative-slot persistence / clone isolation
+
+All 128 occupied Phase 5 slots round-trip their authoritative slow-trace state
+and parameters. Disposable evaluation clones may copy trace for evaluation but
+do not become separately persisted authoritative state and do not mutate the
+source slot.
+
+### TEST-ST-010 Bounded work / no hidden graph
+
+Slow-trace storage is fixed by `MAX_CELLS`. Transfer uses the already-selected
+non-overlapping latent-transmission pair set; discharge uses bounded local
+neighborhood information; no persistent all-pairs graph/global memory search is
+introduced.
+
+This is primarily a non-regression/measurement gate, not a standalone
+pre-implementation RED test. Acceptance evidence must report:
+
+- authoritative raw trace bytes per Universe and across 128 slots;
+- measured step-throughput impact on representative density4 and density32
+  conditions;
+- snapshot-size impact;
+- proof/inspection that no persistent pairwise memory graph/table was added.
+
+Performance evidence reports actual overhead rather than assuming the raw-state
+bound is sufficient.
+
+### TEST-ST-011 Semantic-shortcut negative boundary
+
+Production slow-trace write/transfer/decay/discharge/read APIs receive no
+teacher/input byte value, organ-line identity, target output, token/vocabulary
+identity or host-side learned table. Physically matched events with the same
+local state/activity follow the same law independent of experiment label.
+
+This negative boundary must be paired with positive fixtures that demonstrate
+slow trace actually changes under physical activity and later affects bounded
+local transmission. An absence-only API/introspection test is insufficient
+because current production, which has no slow-trace path at all, would otherwise
+pass vacuously.
+
+### TEST-ST-012 L3 persistence / turnover causal gate
+
+Using the predeclared high-contrast B/H condition and frozen #122/#127
+density-32 primary cohort:
+
+- >=8/12 primary seeds remain teacher-content-specific at +1000;
+- negative sentinels remain clean;
+- deterministic replay and raw-vs-instrumented state are equivalent;
+- declared cases demonstrate original carrier FREE while the branch
+  distinction survives in other authoritative local state;
+- no semantic shortcut is used.
+
+Only this gate may support an L3-persistence-capable classification. L4 recall,
+output reachability, target bias and canonical learning remain separate later
+tests.

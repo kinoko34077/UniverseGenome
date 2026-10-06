@@ -8,3 +8,4 @@
 - ADR-006: Core / GUI separation
 - ADR-007: evaluation clone
 - ADR-008: no cross-category elimination during initial comparison
+- ADR-009: anonymous slow-trace persistence architecture (accepted specification; implementation pending)

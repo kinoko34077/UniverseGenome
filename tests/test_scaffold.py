@@ -39,7 +39,7 @@ class Phase0ScaffoldTests(unittest.TestCase):
         for rel in required:
             self.assertTrue((ROOT / rel).is_file(), rel)
         adrs = list((ROOT / "docs" / "adr").glob("ADR-*.md"))
-        self.assertEqual(len(adrs), 8)
+        self.assertEqual(len(adrs), 9)
 
     def test_geometry_contract(self):
         self.assertEqual(geometry.LOGICAL_SIZE, 32)

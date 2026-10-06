@@ -192,6 +192,119 @@ Do not rewrite historical rationale out of existence.
 
 ---
 
+# 45.1 D1 slow-trace implementation boundary (#132)
+
+## SPEC-IMPL-ST-001 — Specification-first implementation gate
+**Status: accepted**
+
+#132 accepts the specification only; it does not introduce production slow
+trace. Production implementation belongs to a separate successor owner.
+
+A separate implementation owner may begin only from the accepted #132 terminal
+route and must use RED-first acceptance evidence against this specification.
+
+Expected production surfaces if later authorized:
+
+- authoritative UniverseState storage/allocation/reset;
+- physical configuration for accepted slow-trace parameters;
+- synchronous step ordering and local event resolution;
+- latent mask-width calculation only at the bounded read-coupling point;
+- fusion/fragmentation trace material handling;
+- BLACK_HOLE discharge / FREE erasure;
+- deterministic decay event addressing;
+- independent UniverseState snapshot v1→v2 and Phase 5 optimizer envelope
+  v5→v6 migration;
+- clone/replay/equality and relevant observer serialization where authoritative
+  state is projected;
+- unit/integration/research-gate tests.
+
+Not authorized by D1 adoption alone:
+
+- I/O organ geometry/protocol change;
+- new semantic labels/tokens;
+- Phase 5 fitness/growth/pruning/objective change;
+- automatic addition of slow-trace parameters to the evolved genome;
+- P6.10+ capability work;
+- L4 recall or output-readout redesign.
+
+---
+
+## SPEC-IMPL-ST-002 — Bounded state/work target
+**Status: accepted**
+
+The specified authoritative state cost is one uint8 per cell slot:
+
+- 1024 bytes per max-capacity Universe in compact representation;
+- 128 KiB raw slow-trace arrays across 128 max-capacity Phase 5 Universe slots,
+  before Python/container/snapshot-history overhead.
+
+Normal per-generation work must remain bounded by existing local structures:
+
+- O(active cells) write/decay bookkeeping;
+- O(already-selected compatible local pairs) trace transfer;
+- bounded local-neighborhood work for BLACK_HOLE discharge;
+- no persistent N² pair matrix;
+- no global memory search/broadcast.
+
+A later implementation owner must measure actual runtime/snapshot overhead and
+may not treat these raw-state arithmetic bounds as performance acceptance by
+themselves.
+
+---
+
+## SPEC-IMPL-ST-003 — Deterministic event-addressing boundary
+**Status: accepted**
+
+Slow-trace **stochastic decay** must reuse the accepted deterministic
+event-address model of SPEC-RNG-001/002.
+
+BLACK_HOLE discharge ordering is deterministic rather than stochastic. It uses
+the physical-state ordering defined by SPEC-ST-006. A reusable storage-slot
+index may appear only as the final total-order tie-break after the physical
+tuple is equal.
+
+A reusable storage slot may therefore be used as an implementation array
+reference / final deterministic ordering tie-break, but it must not:
+
+- become a permanent Cell identity;
+- enter any slow-trace probability/event key;
+- act as lineage identity;
+- preserve trace through FREE-slot reuse.
+
+Physical position/address, generation, event type and a documented physical
+local-index/subevent domain remain the event-key basis for stochastic decay.
+
+---
+
+## SPEC-IMPL-ST-004 — Migration / rollback boundary
+**Status: accepted**
+
+A later implementation must preserve a reversible compatibility boundary:
+
+- the standalone/nested UniverseState snapshot advances independently from
+  version 1 to specified version 2;
+- the Phase 5 optimizer envelope advances independently from version 5 to
+  specified version 6;
+- accepted optimizer v4/v5 and UniverseState v1 compatibility remains readable
+  as defined by the data spec;
+- migration produces zero slow trace rather than inferred history;
+- migrated legacy states use the SP3-defined inert compatibility parameter
+  profile so old continuation does not silently activate new memory physics;
+- the accepted implementation/default profile is the same inert tuple
+  `(0,0,0,0,8)` until a later non-inert operating regime is separately
+  accepted;
+- non-inert values are explicit research-only physical overrides and must not be
+  silently promoted to config defaults or the Phase 5 evolved genome;
+- any later non-inert default promotion requires predeclared L3, migration,
+  semantic-cleanliness and TEST-ST-010 performance evidence;
+- no implementation migration rewrites historical repository data in place;
+- if production adoption is rejected after research, rollback is performed by
+  ordinary version-controlled change/revert rather than shared-history rewrite.
+
+No release/deploy/publication action is implied by this accepted specification.
+
+---
+
 # 46. Current unresolved / intentionally flexible items
 
 These are not fixed enough to hard-code as hidden assumptions:
