@@ -750,8 +750,22 @@ capability decision.
 ## Candidate slow-trace persistence architecture tests (#132)
 
 These are **candidate specification acceptance tests**, not current passing
-production tests. A later implementation owner must turn the relevant items
-RED on the accepted pre-implementation main before production code is added.
+production tests. A later implementation owner must establish the relevant RED
+evidence on the accepted pre-implementation main before production code is
+added.
+
+SP2 classifies the evidence stages:
+
+- TEST-ST-001..009 are implementation-contract tests and must have at least one
+  explicit RED assertion caused by missing D1 production behavior before the
+  corresponding implementation is added;
+- TEST-ST-010 is a structural/performance non-regression gate and is not useful
+  as a standalone RED test before D1 exists;
+- TEST-ST-011 must be paired with a positive D1 behavior test so the semantic
+  negative cannot pass vacuously merely because no slow-trace path exists;
+- TEST-ST-012 is the post-implementation causal research gate. The accepted
+  baseline is already below the gate (1/12 at +1000 in #122); it is not a unit
+  test substitute for TEST-ST-001..011.
 
 ### TEST-ST-001 Authoritative state / lifecycle / slot reuse
 
@@ -841,13 +855,29 @@ Fragmentation fixtures distinguish every accepted outcome:
 
 Edge fixtures include 0, 1, 254 and 255.
 
-### TEST-ST-008 Snapshot v6 and legacy migration
+### TEST-ST-008 Two-layer snapshot migration
 
-Candidate v6 save/load/continue equals uninterrupted continuation with
-nonzero trace and all accepted trace parameters. Current v5 and existing v4
-legacy snapshots remain readable and migrate missing trace to all-zero only.
-The next save emits v6. Malformed v6 missing/wrong-length/out-of-range trace,
-nonzero FREE trace, or missing required deterministic parameters is rejected.
+RED evidence must reflect the current two-layer version boundary:
+
+- standalone/nested UniverseState currently emits format version 1 and has no
+  `slow_trace` array;
+- the Phase 5 optimizer envelope currently emits version 5 and embeds those
+  version-1 UniverseState payloads.
+
+Candidate production acceptance requires:
+
+1. UniverseState v2 save/load/continue equals uninterrupted continuation with
+   nonzero trace and accepted trace parameters;
+2. standalone persistence uses the v2 contract;
+3. optimizer v6 round-trips 128 authoritative slots whose nested states are v2;
+4. UniverseState v1 migrates trace to all-zero only;
+5. optimizer v4/v5 remain readable and migrate embedded v1 states to v2;
+6. migrated legacy state uses the SP3-defined inert compatibility parameter
+   profile, and a continuation fixture proves the migrated trajectory remains
+   equivalent to old no-slow-trace behavior over a bounded window;
+7. the next save emits the new layer versions;
+8. malformed UniverseState v2 and optimizer v6 payloads are rejected for the
+   data-spec cases rather than silently downgraded or guessed.
 
 ### TEST-ST-009 Phase 5 authoritative-slot persistence / clone isolation
 
@@ -858,11 +888,22 @@ source slot.
 
 ### TEST-ST-010 Bounded work / no hidden graph
 
-Slow-trace storage is fixed by `MAX_CELLS`. Transfer uses only bounded local
-candidate relations already produced by physical processing; discharge uses
-bounded local neighborhood information; no persistent all-pairs graph/global
-memory search is introduced. Performance evidence reports actual overhead
-rather than assuming the raw-state bound is sufficient.
+Slow-trace storage is fixed by `MAX_CELLS`. Transfer uses the already-selected
+non-overlapping latent-transmission pair set; discharge uses bounded local
+neighborhood information; no persistent all-pairs graph/global memory search is
+introduced.
+
+This is primarily a non-regression/measurement gate, not a standalone
+pre-implementation RED test. Acceptance evidence must report:
+
+- authoritative raw trace bytes per Universe and across 128 slots;
+- measured step-throughput impact on representative density4 and density32
+  conditions;
+- snapshot-size impact;
+- proof/inspection that no persistent pairwise memory graph/table was added.
+
+Performance evidence reports actual overhead rather than assuming the raw-state
+bound is sufficient.
 
 ### TEST-ST-011 Semantic-shortcut negative boundary
 
@@ -870,6 +911,12 @@ Production slow-trace write/transfer/decay/discharge/read APIs receive no
 teacher/input byte value, organ-line identity, target output, token/vocabulary
 identity or host-side learned table. Physically matched events with the same
 local state/activity follow the same law independent of experiment label.
+
+This negative boundary must be paired with positive fixtures that demonstrate
+slow trace actually changes under physical activity and later affects bounded
+local transmission. An absence-only API/introspection test is insufficient
+because current production, which has no slow-trace path at all, would otherwise
+pass vacuously.
 
 ### TEST-ST-012 L3 persistence / turnover causal gate
 
