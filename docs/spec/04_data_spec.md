@@ -131,6 +131,47 @@ No bit may be named as a semantic category in the simulation core.
 
 ---
 
+# 12.1 Candidate slow-trace state (#132)
+
+## SPEC-ST-DATA-001 — Authoritative storage
+**Status: candidate**
+
+If the D1 slow-trace proposal is accepted, authoritative UniverseState adds:
+
+`slow_trace:uint8[MAX_CELLS]`
+
+This array is distinct from `latent`, HP, bond strength and structure.
+
+Semantic constraints:
+
+- values are anonymous physical history quantities;
+- no bit/value is assigned a byte/token/teacher/target meaning;
+- the array is authoritative state and is included in clone/snapshot equality;
+- no host-side cache or observer-only metadata may substitute for it.
+
+At `MAX_CELLS=1024`, compact raw storage adds exactly 1024 bytes per
+Universe before container/serialization overhead.
+
+---
+
+## SPEC-ST-DATA-002 — Lifecycle initialization and erasure
+**Status: candidate**
+
+Per-slot data rules:
+
+- FREE: `slow_trace=0`;
+- newly allocated initial/noise/spawn ordinary cell: `slow_trace=0`;
+- ACTIVE: ordinary write/transfer/decay rules apply;
+- BLACK_HOLE: retains its current trace during grace and may discharge it
+  locally according to candidate behavior;
+- revival: remaining trace is retained;
+- final FREE: trace is set to 0 before the slot can be reused.
+
+Reusable slot indices remain storage locations only and do not carry trace
+lineage across FREE→new allocation.
+
+---
+
 # 18. HP
 
 ## SPEC-HP-001 — Storage
@@ -303,6 +344,67 @@ disposable measurement/reporting evidence. P6.9 alone does not require a
 snapshot-format increment.
 
 ---
+
+---
+
+# 37.1 Candidate slow-trace snapshot migration (#132)
+
+## SPEC-SNAP-ST-001 — Version 6 proposal
+**Status: candidate**
+
+Production adoption of D1 requires a new snapshot contract because authoritative
+UniverseState gains a new cell array.
+
+Proposed next format:
+
+`format_version = 6`
+
+A version-6 authoritative Universe snapshot must include:
+
+- the complete `slow_trace` array with exactly `MAX_CELLS` uint8 values;
+- every accepted slow-trace physical parameter needed for exact continuation;
+- all pre-existing authoritative fields required by SPEC-SNAP-001.
+
+For the Phase 5 optimizer, every occupied authoritative Universe slot
+round-trips the version-6 UniverseState. Disposable evaluation clones remain
+non-persisted.
+
+---
+
+## SPEC-SNAP-ST-002 — Legacy migration
+**Status: candidate**
+
+The version-6 reader must preserve the repository's accepted backward-read
+boundary.
+
+For currently readable legacy snapshots:
+
+- v5 remains readable;
+- existing v4 readability is not removed by this proposal;
+- absent `slow_trace` maps deterministically to an all-zero array;
+- no historical trace/learning state is inferred from HP, latent, structure,
+  output history or any other field;
+- after successful legacy restore, the next save emits the new accepted format.
+
+Legacy migration does not alter existing experiment-protocol fields or Phase 5
+lineage/prune-history semantics.
+
+---
+
+## SPEC-SNAP-ST-003 — Malformed version-6 rejection
+**Status: candidate**
+
+A version-6 snapshot is malformed and must be rejected when the authoritative
+slow-trace representation is incomplete or inconsistent, including:
+
+- missing `slow_trace` for an authoritative UniverseState;
+- array length different from effective `MAX_CELLS`;
+- value outside uint8 range;
+- FREE-slot trace that is nonzero after canonical restore validation;
+- missing accepted slow-trace parameter required for deterministic
+  continuation.
+
+The loader must not silently invent nonzero trace or infer a replacement value.
 
 ---
 
