@@ -31,11 +31,17 @@ but lifecycle divergence always occurs first and latent/structure/bond
 differences follow later; 11/12 primary cases reconverge by +1000. The
 predeclared route is **ROUTE-MEMORY-ARENA**.
 
-The active bounded frontier is therefore #127: a research-only design arena for
-generic local persistence/coupling candidates using existing physical state.
-It does not authorize a production physics/default change, L4 recall, or P6.10.
-Canonical `learning_claim=false` and the P6.10+ freeze remain authoritative.
-#93 remains a separate performance/architecture workstream.
+#127 / PR #129 completed the research-only persistence arena and routed to
+`ROUTE-ARCHITECTURE-RETHINK`. #130 then completed the design-only architecture
+rethink, selected **D1 Anonymous Slow Trace with Conservative Local Transfer**,
+and terminated at **ROUTE-SPEC-PROPOSAL**.
+
+The active bounded frontier is therefore **#132 specification proposal**.
+#132 may draft requirement/data/behavior/test/migration deltas for D1, but it
+does not authorize production implementation, accepted defaults, snapshot-format
+production mutation, L4 recall, or P6.10+. Canonical `learning_claim=false`
+and the P6.10+ freeze remain authoritative. #93 remains a separate
+performance/architecture workstream.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -190,11 +196,19 @@ success claim.
   unreachable for content-specific writes; HP_NO_DECAY_REFERENCE retains
   0/12 and is reference-only. No candidate passes. Terminal route:
   **ROUTE-ARCHITECTURE-RETHINK**.
+- #130: design-only architecture rethink. B1 latent echo and C1 morphology
+  cluster were rejected as primary specification candidates because they
+  respectively confound long-term memory with existing fast latent semantics
+  or with morphology/contact dynamics. D1 **Anonymous Slow Trace with
+  Conservative Local Transfer** was selected because it specifies a bounded
+  anonymous carrier, generic activity write, conservative local transfer,
+  BLACK_HOLE discharge, explicit forgetting, bounded read coupling and
+  deterministic snapshot consequences. Terminal route:
+  **ROUTE-SPEC-PROPOSAL**.
+  This selection does not accept D1 as production specification or prove L3.
   Canonical `learning_claim=false` remains unchanged.
 
-Next frontier: **#130 design-only learning-state persistence architecture
-rethink**. It must determine whether a bounded local physical memory
-architecture can tolerate ordinary cell turnover while preserving forgetting,
-deterministic replay and semantic agnosticism. It cannot modify production
-physics/defaults/specification. P6.10+ remains frozen; no L4 recall is
-authorized. #93 remains a separate performance/architecture workstream.
+Next frontier: **#132 slow-trace specification proposal**. It owns traceability,
+requirements/behavior/data/test/migration proposal work only. No production
+implementation or accepted default/state change is authorized by #132 itself.
+P6.10+ remains frozen; no L4 recall is authorized. #93 remains a separate performance/architecture workstream.
