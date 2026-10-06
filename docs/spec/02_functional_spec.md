@@ -215,6 +215,51 @@ Values should use binary-friendly grids where practical, without banning empiric
 
 ---
 
+# 26.1 Candidate slow-trace physical parameters (#132)
+
+## SPEC-PARAM-ST-001 — Parameter ownership boundary
+**Status: candidate**
+
+The slow-trace proposal introduces bounded physical parameters:
+
+- `trace_write_cap:uint8`
+- `trace_transfer_cap:uint8`
+- `trace_discharge_cap:uint8`
+- `trace_decay_rate:uint16`
+- `trace_bonus_shift:uint8`
+
+These are physical-universe parameters, not training/evaluation protocol
+semantics. They must not be stored in `ExperimentConfig`.
+
+#132 does not by itself add these fields to the Phase 5 evolved genome/search
+space. Searchability/mutation eligibility requires an explicit accepted
+parameter-status decision and must not be inferred from their presence in a
+physics configuration.
+
+No numeric accepted default is established by this candidate section.
+
+---
+
+## SPEC-PARAM-ST-002 — Compatibility with existing search/evaluation
+**Status: candidate**
+
+Adopting slow trace shall not by itself change:
+
+- Phase 5 absolute fitness;
+- growth-bit meanings;
+- pruning/protection policy;
+- category isolation;
+- seed handling;
+- authoritative-training versus disposable-evaluation separation;
+- Phase 6.1–6.9 experiment protocol semantics.
+
+A later implementation/research owner may expose bounded research overrides for
+slow-trace physics only after the proposal classifies their default/search
+status. Such overrides remain universe-physics inputs and do not become
+semantic experiment parameters.
+
+---
+
 # 27. Experiment parameters
 
 ## SPEC-PARAM-010 — Separate protocol config
