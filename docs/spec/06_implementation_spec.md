@@ -291,8 +291,13 @@ A later implementation must preserve a reversible compatibility boundary:
 - migration produces zero slow trace rather than inferred history;
 - migrated legacy states use the SP3-defined inert compatibility parameter
   profile so old continuation does not silently activate new memory physics;
-- new slow-trace-enabled defaults, if accepted, are distinct from those legacy
-  compatibility values;
+- the candidate implementation/default profile is the same inert tuple
+  `(0,0,0,0,8)` until a later non-inert operating regime is separately
+  accepted;
+- non-inert values are explicit research-only physical overrides and must not be
+  silently promoted to config defaults or the Phase 5 evolved genome;
+- any later non-inert default promotion requires predeclared L3, migration,
+  semantic-cleanliness and TEST-ST-010 performance evidence;
 - no implementation migration rewrites historical repository data in place;
 - if production adoption is rejected after research, rollback is performed by
   ordinary version-controlled change/revert rather than shared-history rewrite.
