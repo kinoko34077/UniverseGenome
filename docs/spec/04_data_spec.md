@@ -361,14 +361,14 @@ The repository currently has **two distinct versioned persistence layers**:
    - current kind `UniverseGenomePhase5SteadyStateOptimizer`;
    - currently reads optimizer envelope versions 4 and 5.
 
-The slow-trace proposal must version these layers independently. There is no
-single repository-wide snapshot version number.
+The accepted slow-trace specification versions these layers independently when
+implemented. There is no single repository-wide snapshot version number.
 
 ## SPEC-SNAP-ST-001 — UniverseState version 2
 **Status: accepted**
 
-Production adoption of D1 changes the authoritative cell-array schema and
-therefore proposes:
+Production implementation of D1 changes the authoritative cell-array schema and
+therefore requires:
 
 `UniverseState.format_version: 1 → 2`
 
@@ -391,7 +391,7 @@ Standalone `persistence/snapshot.py` therefore moves its
 **Status: accepted**
 
 Because every occupied Phase 5 slot embeds an authoritative UniverseState,
-production adoption of D1 also proposes:
+production implementation of D1 also requires:
 
 `SteadyStateOptimizer.format_version: 5 → 6`
 
