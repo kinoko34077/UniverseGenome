@@ -641,6 +641,170 @@ The system shall not require permanent storage of every generation of every univ
 
 ---
 
+# 16.1 Candidate slow-trace persistence architecture (#132)
+
+The requirements in this section are **candidate specification changes** selected
+by #130 for formal review. They are not implemented/accepted production
+behavior until #132 reaches its terminal acceptance and a separate
+implementation owner completes the required production acceptance.
+
+## REQ-ST-001 — Anonymous bounded slow state
+**Status: candidate**
+
+When the slow-trace architecture is enabled, every cell slot shall have one
+authoritative bounded anonymous slow state:
+
+`slow_trace:uint8`, range `0..255`.
+
+Requirements:
+
+- slow-trace values/bits have no byte/token/teacher/target semantic labels;
+- FREE slots contain zero slow trace;
+- newly spawned/noise-created ordinary cells begin with zero slow trace;
+- reusable slot allocation must not inherit a previously freed carrier's trace;
+- the field is part of authoritative UniverseState rather than host-side
+  weights, caches, lookup tables or observer metadata;
+- adding this state must not introduce a permanent Cell ID.
+
+---
+
+## REQ-ST-002 — Generic meaningful-activity write
+**Status: candidate**
+
+Slow trace may be increased only by meaningful physical activity already
+recognized by the local universe.
+
+Initial qualifying sources:
+
+- external physical stimulus received by an ordinary cell;
+- successful local latent signal propagation.
+
+The write law shall consume only the physical activity amount attributed to
+the affected ordinary cell. It shall not receive:
+
+- input/teacher byte value;
+- organ/line identity;
+- target label;
+- tokenizer/vocabulary identity;
+- matched-control outcome.
+
+The same physical write law applies regardless of why the qualifying activity
+occurred.
+
+---
+
+## REQ-ST-003 — Local bounded conservative transfer
+**Status: candidate**
+
+Slow trace may transfer only through an already-local compatible physical
+relation admitted by ordinary contact/transmission processing.
+
+Requirements:
+
+- transfer per selected local pair/event is bounded;
+- transfer uses pre-transfer pair values and is deterministic;
+- transfer is conservative before explicit decay or bounded saturation loss;
+- no arbitrary persistent N² pair graph is added;
+- no global broadcast/search is used;
+- ordinary operation remains bounded by the existing local candidate relation.
+
+---
+
+## REQ-ST-004 — Turnover-tolerant local discharge
+**Status: candidate**
+
+A BLACK_HOLE carrier shall have a bounded local physical path to discharge slow
+trace before final transition to FREE.
+
+Requirements:
+
+- only currently local ACTIVE recipients are eligible;
+- discharge per generation is bounded;
+- transferred quantity is subtracted from the dying carrier;
+- no permanent Cell ID, ghost edge, lineage cache or FREE-slot memory is used;
+- if no eligible local recipient exists before final FREE, trace loss is
+  permitted;
+- revival before FREE retains the carrier's remaining trace.
+
+This requirement provides a turnover path; it does not guarantee that every
+memory survives every carrier loss.
+
+---
+
+## REQ-ST-005 — Explicit physical forgetting
+**Status: candidate**
+
+Slow trace shall be forgettable through an explicit bounded deterministic
+physical process.
+
+Requirements:
+
+- nonzero trace can decay without deleting the entire Universe;
+- decay is deterministic for fixed accepted state/seed/config;
+- event addressing must not depend on permanent/reusable Cell identity;
+- memory may also be lost through isolated carrier deletion or bounded
+  saturation/interference;
+- the architecture shall not create immutable/permanent trace.
+
+---
+
+## REQ-ST-006 — Bounded local causal read effect
+**Status: candidate**
+
+Slow trace shall be capable of influencing later local physics without
+encoding or injecting a target value.
+
+Initial proposed read boundary:
+
+- slow trace may modify only the width of an already-local latent transmission;
+- the four accepted latent operator formulas remain unchanged;
+- effective transmission width remains in `1..16`;
+- a same-generation slow-trace write shall not retroactively amplify the
+  latent event that created that write.
+
+---
+
+## REQ-ST-007 — Deterministic persistence and migration
+**Status: candidate**
+
+All slow-trace state and all accepted physical parameters required for exact
+continuation shall be represented in authoritative persistence.
+
+Requirements:
+
+- save/load/continue remains equivalent to uninterrupted execution;
+- a new snapshot contract version is required when production slow trace is
+  adopted;
+- the immediately prior accepted snapshot version remains readable;
+- missing historical slow trace migrates deterministically to all-zero only;
+- migration must not synthesize historical learned state;
+- malformed new-format slow-trace state is rejected rather than guessed;
+- Phase 5 authoritative slot snapshots round-trip the field;
+- disposable evaluation clones remain non-authoritative/non-persisted.
+
+---
+
+## REQ-ST-008 — Separate L3 persistence acceptance gate
+**Status: candidate**
+
+The slow-trace architecture shall not be classified as L3-persistence-capable
+until a separately predeclared causal audit demonstrates all of:
+
+- the accepted high-contrast B/H physical-write condition;
+- the frozen #122/#127 density-32 primary cohort;
+- at least **8 of 12** teacher-content-specific physical distinctions remain
+  at +1000 generations;
+- declared turnover cases in which an original carrier is freed while the
+  branch distinction survives in other authoritative local state;
+- negative sentinels remain clean;
+- deterministic replay and raw-vs-instrumented authoritative equivalence;
+- no semantic shortcut.
+
+This gate does not establish L4 recall, L5 output reachability, L6 target bias
+or L7 canonical learning.
+
+---
+
 # 17. GUI / observation requirements
 
 ## REQ-160 — Core must run without GUI
