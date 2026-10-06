@@ -641,15 +641,16 @@ The system shall not require permanent storage of every generation of every univ
 
 ---
 
-# 16.1 Candidate slow-trace persistence architecture (#132)
+# 16.1 Anonymous slow-trace persistence architecture (#132)
 
-The requirements in this section are **candidate specification changes** selected
-by #130 for formal review. They are not implemented/accepted production
-behavior until #132 reaches its terminal acceptance and a separate
-implementation owner completes the required production acceptance.
+The requirements in this section are **accepted specification changes** selected
+by #130 and accepted through #132. They define the contract for a separate
+implementation owner. They are not yet implemented production behavior; current
+production remains unchanged until that later owner completes RED-first
+implementation and acceptance.
 
 ## REQ-ST-001 — Anonymous bounded slow state
-**Status: candidate**
+**Status: accepted**
 
 When the slow-trace architecture is enabled, every cell slot shall have one
 authoritative bounded anonymous slow state:
@@ -669,7 +670,7 @@ Requirements:
 ---
 
 ## REQ-ST-002 — Generic meaningful-activity write
-**Status: candidate**
+**Status: accepted**
 
 Slow trace may be increased only by meaningful physical activity already
 recognized by the local universe.
@@ -707,7 +708,7 @@ local-revival eligibility by itself is not a second slow-trace write source.
 ---
 
 ## REQ-ST-003 — Local bounded conservative transfer
-**Status: candidate**
+**Status: accepted**
 
 Slow trace may transfer only through an already-local compatible physical
 relation admitted by ordinary contact/transmission processing.
@@ -727,7 +728,7 @@ Requirements:
 ---
 
 ## REQ-ST-004 — Turnover-tolerant local discharge
-**Status: candidate**
+**Status: accepted**
 
 A BLACK_HOLE carrier shall have a bounded local physical path to discharge slow
 trace before final transition to FREE.
@@ -748,7 +749,7 @@ memory survives every carrier loss.
 ---
 
 ## REQ-ST-005 — Explicit physical forgetting
-**Status: candidate**
+**Status: accepted**
 
 Slow trace shall be forgettable through an explicit bounded deterministic
 physical process.
@@ -765,12 +766,12 @@ Requirements:
 ---
 
 ## REQ-ST-006 — Bounded local causal read effect
-**Status: candidate**
+**Status: accepted**
 
 Slow trace shall be capable of influencing later local physics without
 encoding or injecting a target value.
 
-Initial proposed read boundary:
+Accepted read boundary:
 
 - slow trace may modify only the width of an already-local latent transmission;
 - the four accepted latent operator formulas remain unchanged;
@@ -781,7 +782,7 @@ Initial proposed read boundary:
 ---
 
 ## REQ-ST-007 — Deterministic persistence and migration
-**Status: candidate**
+**Status: accepted**
 
 All slow-trace state and all accepted physical parameters required for exact
 continuation shall be represented in authoritative persistence.
@@ -804,7 +805,7 @@ Requirements:
 ---
 
 ## REQ-ST-008 — Separate L3 persistence acceptance gate
-**Status: candidate**
+**Status: accepted**
 
 The slow-trace architecture shall not be classified as L3-persistence-capable
 until a separately predeclared causal audit demonstrates all of:
