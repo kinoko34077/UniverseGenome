@@ -34,13 +34,18 @@ predeclared route is **ROUTE-MEMORY-ARENA**.
 #127 / PR #129 completed the research-only persistence arena and routed to
 `ROUTE-ARCHITECTURE-RETHINK`. #130 then completed the design-only architecture
 rethink, selected **D1 Anonymous Slow Trace with Conservative Local Transfer**,
-and terminated at **ROUTE-SPEC-PROPOSAL**.
+and terminated at **ROUTE-SPEC-PROPOSAL**. #132 / PR #134 subsequently
+completed formal specification review and terminated at
+**ACCEPT-SPEC-PROPOSAL**.
 
-The active bounded frontier is therefore **#132 specification proposal**.
-#132 may draft requirement/data/behavior/test/migration deltas for D1, but it
-does not authorize production implementation, accepted defaults, snapshot-format
-production mutation, L4 recall, or P6.10+. Canonical `learning_claim=false`
-and the P6.10+ freeze remain authoritative. #93 remains a separate
+The active bounded frontier is therefore **#135 RED-first implementation**.
+The accepted D1 specification adds an implementation-pending anonymous
+`slow_trace:uint8[MAX_CELLS]` contract, UniverseState v2 / optimizer v6
+migration, and inert compatibility/default tuple `(0,0,0,0,8)`. All non-inert
+values remain research-only and are not Phase 5 search-genome defaults. #135 may
+implement only the accepted contract through TEST-ST-010; TEST-ST-012 remains a
+separate later L3 causal research gate. Canonical `learning_claim=false` and
+the P6.10+ freeze remain authoritative. #93 remains a separate
 performance/architecture workstream.
 
 ## Gate 0 — Specification basis
@@ -200,15 +205,17 @@ success claim.
   cluster were rejected as primary specification candidates because they
   respectively confound long-term memory with existing fast latent semantics
   or with morphology/contact dynamics. D1 **Anonymous Slow Trace with
-  Conservative Local Transfer** was selected because it specifies a bounded
-  anonymous carrier, generic activity write, conservative local transfer,
-  BLACK_HOLE discharge, explicit forgetting, bounded read coupling and
-  deterministic snapshot consequences. Terminal route:
-  **ROUTE-SPEC-PROPOSAL**.
-  This selection does not accept D1 as production specification or prove L3.
-  Canonical `learning_claim=false` remains unchanged.
+  Conservative Local Transfer** was selected and routed to formal specification
+  review.
+- #132 / PR #134: accepted D1 as an implementation-pending specification.
+  Accepted surfaces include REQ-ST-001..008, SPEC-ST behavior/data/migration
+  contracts, ADR-009, TEST-ST-001..012, the inert compatibility/default tuple
+  `(0,0,0,0,8)`, and RED-first implementation boundaries. No production
+  slow-trace implementation or non-inert active default was accepted.
 
-Next frontier: **#132 slow-trace specification proposal**. It owns traceability,
-requirements/behavior/data/test/migration proposal work only. No production
-implementation or accepted default/state change is authorized by #132 itself.
-P6.10+ remains frozen; no L4 recall is authorized. #93 remains a separate performance/architecture workstream.
+Next frontier: **#135 slow-trace RED-first implementation**. It owns executable
+RED evidence, production implementation of the accepted D1 contract, inert
+migration/compatibility validation, GREEN verification and TEST-ST-010. It does
+not own TEST-ST-012 causal acceptance, active default promotion, L4 recall or
+P6.10+. `learning_claim=false` remains authoritative. #93 remains a separate
+performance/architecture workstream.
