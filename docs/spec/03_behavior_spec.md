@@ -408,21 +408,37 @@ Purpose:
 ## SPEC-ST-002 — Generic meaningful-activity write
 **Status: candidate**
 
-For each ordinary cell, reuse the same physical meaningful-activity amount
-already resolved for HP recovery. Qualifying activity remains limited to the
-accepted physical sources:
+For each ordinary-cell slot, define one generation-local meaningful-activity
+eligibility bit from the same accepted physical source classes used by HP
+recovery:
 
-- external stimulus received;
-- successful local latent signal propagation.
+- **direct external stimulus**: the slot is in the external `stimulus_slots`
+  supplied to the physical step for this generation;
+- **successful local latent propagation**: the slot participates in the
+  deterministic selected latent-transmission pair set for this generation.
 
-For each qualifying physical contribution with amount `g > 0`:
+Eligibility created only by the local-revival helper is not a second write
+source unless the slot also satisfies one of the two source classes above.
 
-`w = min(g, trace_write_cap)`
+The activity amount is exact:
 
-The generation's write proposal is the bounded nonnegative sum of those
-contributions. After latent propagation is resolved:
+```
+g = recovery_hp if (external_stimulus or latent_activity) else 0
+w = min(g, trace_write_cap)
+```
 
-`T_written = min(255, T(t) + sum(w))`
+There is at most **one** slow-trace write increment per cell per generation.
+If both qualifying source classes occur for the same cell, they do not double
+the write.
+
+A BLACK_HOLE cell revived by direct external stimulus is eligible for this
+single write. Eligibility is determined by the qualifying physical event, not
+by whether a later fusion/fragmentation path causes the ordinary HP-gain loop
+to skip that storage slot.
+
+After latent propagation has resolved and before transfer/fusion:
+
+`T_written = min(255, T(t) + w)`
 
 The write path receives no byte value, organ identity, target label,
 matched-control result or semantic category.
@@ -432,10 +448,12 @@ matched-control result or semantic category.
 ## SPEC-ST-003 — Conservative compatible-contact transfer
 **Status: candidate**
 
-After slow-trace write proposals are applied, an already-selected compatible
-local transmission/contact pair `A,B` may redistribute trace.
+D1 reuses the **exact deterministic non-overlapping pair set already selected
+for ordinary latent transmission in step 7**. It does not perform a second
+independent contact/pair-selection pass.
 
-Using the pair's pre-transfer values `ta,tb`:
+For each selected pair `A,B`, use the pair's post-write/pre-transfer values
+`ta,tb`:
 
 ```
 if ta > tb:
@@ -456,23 +474,21 @@ Properties:
 - `ta'+tb' == ta+tb`;
 - no value leaves `0..255`;
 - no mass-copy amplification occurs;
-- only local pairs already admitted by ordinary bounded contact/transmission
-  discovery are eligible;
-- if a slot would otherwise participate in multiple candidate transfers in one
-  generation, the implementation must deterministically resolve a bounded
-  non-overlapping pair set before applying transfers;
-- pair resolution must not create or persist a Cell identity.
+- each slot participates in at most one ordinary transfer because the reused
+  latent-transmission pair set is already non-overlapping;
+- no extra persistent pair graph or global search is introduced.
 
-All accepted transfer pairs are resolved from pre-transfer values and committed
-synchronously.
+All pair transfers read the complete post-write/pre-transfer trace view and are
+committed synchronously.
 
 ---
 
 ## SPEC-ST-004 — Bounded latent-transmission read coupling
 **Status: candidate**
 
-For an already-compatible selected latent transmission, let `S` be the
-transmitting/source cell and use its generation-start slow trace `T_S(t)`.
+For each directed half of an already-selected compatible latent-transmission
+pair, let `S` be the transmitting/source cell and use its generation-start
+slow trace `T_S(t)`.
 
 Accepted baseline width:
 
@@ -489,6 +505,8 @@ Candidate effective width:
 Requirements:
 
 - `n` remains in `1..16`;
+- the two directions of a selected pair independently use the corresponding
+  source cell's generation-start trace;
 - selected bit positions continue to use accepted deterministic event
   randomness;
 - SPEC-LATENT-C0/C1/C2/C3 formulas are unchanged;
@@ -508,48 +526,82 @@ If fusion occurs after write/transfer resolution:
 Any amount above 255 is explicit bounded saturation loss. Participant slots
 made FREE by fusion are reset to zero trace.
 
-If fragmentation occurs:
+Fragmentation follows the actual accepted fragmentation outcome:
+
+- when a fragmentation event successfully creates a new fragment plus retained
+  core:
 
 ```
 fragment_trace = old_trace // 2
 core_trace = old_trace - fragment_trace
 ```
 
-Thus fragmentation creates no trace mass and both resulting values remain
-bounded.
+  so the two resulting carriers conserve the pre-fragment trace exactly;
 
-These rules carry anonymous physical history through material reorganization;
-they do not carry a semantic label or lineage ID.
+- when a level-0 horizontal/vertical shape degrades in-place to a single cell
+  without allocating a second carrier, the surviving slot retains its current
+  trace unchanged;
+
+- when a level-0 single-cell fragmentation directly frees the slot, the trace
+  is erased with that FREE transition; no synthetic recipient/ghost carrier is
+  created;
+
+- when a fragment allocation attempt fails and the accepted fragmentation
+  operation therefore does not occur, trace remains unchanged.
+
+These rules carry anonymous physical history through material reorganization
+without creating semantic labels or lineage IDs.
 
 ---
 
 ## SPEC-ST-006 — BLACK_HOLE discharge and FREE erasure
 **Status: candidate**
 
-After HP/lifecycle resolution identifies cells that remain BLACK_HOLE, but
-before final BLACK_HOLE→FREE expiration, a carrier may discharge trace to
-currently local ACTIVE recipients.
+D1 preserves the accepted BLACK_HOLE revival/grace semantics. It adds discharge
+only for a slot that **was BLACK_HOLE at generation start and remains
+BLACK_HOLE after the generation-start revival decision**.
 
-Per BLACK_HOLE carrier per generation:
+For such a carrier, discharge occurs after revival eligibility is resolved and
+before the accepted black-hole timer decrement/final FREE erasure.
+
+Eligible recipients are currently local ACTIVE cells whose physical footprints
+overlap the BLACK_HOLE carrier footprint at that lifecycle-resolution point.
+
+Per BLACK_HOLE carrier:
 
 `budget = min(trace_discharge_cap, carrier_trace)`
 
-Requirements:
+Deterministic conflict resolution is exact:
 
-- candidate recipients come only from current local occupancy/neighborhood
-  information;
-- recipients are processed in a deterministic physically addressed order;
-- reusable storage-slot identity is not part of the random/event key and is
-  never persistent lineage;
-- each transfer is capped by remaining budget and recipient uint8 headroom;
-- transferred quantity is subtracted from the BLACK_HOLE carrier;
-- total trace does not increase;
-- if no recipient is available, remaining trace stays with the carrier until a
-  later grace generation or is lost at final FREE;
-- a revived cell retains the trace it still owns;
+1. process BLACK_HOLE carriers in ascending physical-state order
+   `(tile_y, tile_x, y, x, structure, latent, bond_strength, direction,
+   speed_code, age, black_hole_timer, slow_trace)`;
+2. use reusable storage-slot index only as the final total-order tie-break for
+   otherwise identical physical tuples; it is not an RNG/probability key,
+   lineage identity or persisted semantic identity;
+3. for each carrier, process eligible ACTIVE recipients in the same ordering
+   discipline;
+4. for each recipient, transfer
+   `q = min(remaining_budget, carrier_trace, 255 - recipient_trace)`;
+5. subtract every accepted `q` from the carrier immediately and add it to the
+   recipient; later carriers observe the resulting recipient headroom;
+6. stop when budget is exhausted or no ordered recipient has headroom.
+
+Consequences:
+
+- total trace never increases during discharge;
+- a carrier with no eligible recipient keeps its trace until a later grace
+  generation or loses it at final FREE;
+- a revived BLACK_HOLE cell retains its remaining trace and performs no
+  discharge in that generation-start BLACK_HOLE resolution;
+- a cell that enters BLACK_HOLE later in the current generation is not a
+  discharge carrier until the next generation;
+- after discharge, the accepted black-hole timer decrement/free rule runs
+  unchanged;
 - final FREE sets `slow_trace=0`.
 
-No ghost record survives slot release.
+The transient storage-slot tie-break exists only to make an otherwise
+physically equal ordering total; FREE→reuse never transfers trace identity.
 
 ---
 
@@ -584,35 +636,42 @@ forgetting path.
 ## SPEC-ST-008 — Candidate insertion into SPEC-STEP-001
 **Status: candidate**
 
-If D1 is later accepted/implemented, the generation ordering becomes the
-accepted SPEC-STEP-001 order plus the following constrained substeps:
+If D1 is later accepted/implemented, the accepted generation order is preserved
+with these explicit slow-trace insertions:
 
-1. external input / teacher stimulus records ordinary physical activity;
+1. external input / teacher stimulus records direct external-stimulus
+   eligibility;
+1a. generation-start BLACK_HOLE resolution:
+   - determine accepted revival eligibility;
+   - revived cells retain trace and do not discharge;
+   - non-revived BLACK_HOLE carriers perform SPEC-ST-006 discharge;
+   - then run the accepted timer decrement/final FREE rule unchanged;
 2. noise spawn proposal;
 3. movement proposal;
 4. destination placement;
 5. collision;
 6. bond update;
 7. latent propagation:
-   - mask width reads generation-start `slow_trace`;
-   - successful propagation records ordinary physical activity;
-7a. apply slow-trace meaningful-activity write proposals;
-7b. apply synchronous conservative slow-trace transfer on the bounded selected
-    compatible pair set;
+   - each directed mask width reads generation-start `slow_trace`;
+   - the accepted deterministic non-overlapping selected pair set is retained
+     for slow-trace transfer;
+   - successful propagation records latent-activity eligibility;
+7a. apply the single per-cell meaningful-activity write from SPEC-ST-002;
+7b. apply synchronous conservative transfer on the exact reused selected pair
+    set from SPEC-ST-003;
 8. fusion, including candidate trace fusion;
-9. age fragmentation, including candidate trace split;
+9. age fragmentation, including the SPEC-ST-005 outcome-specific trace rule;
 10. HP gain / decay / damage;
-11. lifecycle resolution:
-   - resolve revival / ACTIVE→BLACK_HOLE state;
-   - discharge trace from cells that remain BLACK_HOLE to current local ACTIVE
-     recipients;
-   - apply slow-trace decay to remaining non-FREE carriers;
-   - expire timed-out BLACK_HOLE cells to FREE and zero their trace;
+11. ACTIVE→BLACK_HOLE transition for newly depleted active cells;
+11a. apply slow-trace decay to all remaining non-FREE carriers;
 12. output edge detection;
 13. commit `t+1`.
 
-No substep may consume a value written by a later substep. Transfer reads
-post-write/pre-transfer pair values. Fusion/fragmentation read the post-transfer
+A cell newly entering BLACK_HOLE at step 11 cannot discharge until the next
+generation's step 1a. This preserves the accepted grace/countdown boundary.
+
+No substep may consume a value written by a later substep. Ordinary transfer
+reads post-write/pre-transfer values. Fusion/fragmentation read post-transfer
 trace. Read coupling always uses the generation-start trace view.
 
 ---
