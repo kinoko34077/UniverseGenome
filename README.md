@@ -19,20 +19,25 @@ without padding or truncation while keeping valid mapped inputs prefix-free in
 this bounded step. The bounded P6.9 smoke produced zero trained mapped successes.
 
 Post-P6.9 learning-emergence / learning-path research is accepted through
-#122 / PR #126. #113's matched-snapshot audit localized the deepest reachable
+#127 / PR #129. #113's matched-snapshot audit localized the deepest reachable
 failure at **L3 memory persistence**. #119 identified the physical-transduction
 gap; #120 / PR #121 then established a bounded high-contrast B=66/H=8
 diagnostic condition with 12/32 density-32 immediate teacher-specific writes,
 all HP-only. #122 / PR #126 followed those accepted writes under ordinary
-unchanged physics. The frozen 12-seed primary cohort remains B/H-distinct in
-12/12 cases through +10, 9/12 at +100, but only **1/12 at +1000**. Six cases
-develop non-HP differences, but every such case first splits in lifecycle/
-survival and only afterward reaches latent/structure/bond differences. The
-predeclared #122 route is therefore **ROUTE-MEMORY-ARENA**, not L4 recall.
-Successor #127 owns a research-only design arena for generic local persistence
-coupling candidates; it does not authorize a production physics change.
-Canonical `learning_claim=false` remains authoritative and P6.10+ semantic
-expansion remains frozen.
+unchanged physics: the frozen 12-seed cohort remains B/H-distinct 12/12 through
++10, 9/12 at +100, but only **1/12 at +1000**, routing to
+`ROUTE-MEMORY-ARENA`.
+
+#127 / PR #129 then tested frozen research-only persistence candidates. Both
+ENERGY_TO_LATENT_XOR and ENERGY_TO_STRUCTURE_PROMOTE create pre-lifecycle
+non-HP teacher-specific state in 12/12 primary cases, but each retains only
+**5/12** B/H distinctions at +1000 against the required 8/12. The contact-bond
+candidate was statically unreachable for content-specific writes, and the
+HP-no-decay reference retained 0/12. The terminal route is therefore
+**ROUTE-ARCHITECTURE-RETHINK**. Successor #130 owns the design-only learning-state
+persistence architecture rethink; it does not authorize a production physics or
+specification change. Canonical `learning_claim=false` remains authoritative
+and P6.10+ semantic expansion remains frozen.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
@@ -110,9 +115,13 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   density-32 primary cohort falls from 12/12 B/H-distinct at h0/+10 to 9/12 at
   +100 and **1/12 at +1000**. The non-HP cases are lifecycle-first indirect
   coupling, so the terminal route is `ROUTE-MEMORY-ARENA`.
-- #127 owns the active research-only memory persistence design arena. It may
-  compare isolated generic local coupling candidates but does not authorize a
-  production physics/default change.
+- Memory persistence design arena #127 / PR #129 is accepted on main. C1
+  latent-XOR and C2 structure-promotion both create pre-lifecycle non-HP
+  distinctions in 12/12 primary cases but retain only 5/12 at +1000, below the
+  frozen 8/12 gate. Terminal route: `ROUTE-ARCHITECTURE-RETHINK`.
+- #130 owns the selected design-only learning-state persistence architecture
+  rethink. It cannot modify production physics/defaults or accepted
+  specifications; any production change requires a later explicit owner.
 - No later semantic capability is automatically authorized. `learning_claim=false`
   and the P6.10+ freeze remain unchanged. #93 remains a separate
   performance/architecture workstream.
