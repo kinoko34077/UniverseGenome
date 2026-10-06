@@ -198,7 +198,7 @@ success, loosened after the fact, or bypassed with semantic shortcuts.
 
 P6.1 through P6.9 are accepted capability layers. No later semantic capability
 is currently selected. Post-P6.9 learning-emergence / learning-path research is
-accepted through #122 / PR #126 without changing production physics/defaults.
+accepted through #127 / PR #129 without changing production physics/defaults.
 
 #111 / PR #114 showed that density 32 improves substrate persistence/activity
 but does not produce canonical A→B→NULL learning. #113 / PR #115 localized the
@@ -218,12 +218,19 @@ lifecycle/survival and only afterward reaches latent/structure/bond differences.
 The predeclared terminal classification is therefore
 **ROUTE-MEMORY-ARENA**, not ROUTE-RECALL.
 
-#127 owns the next bounded design/research arena. It may evaluate generic local
-coupling candidates in isolated research variants, but it cannot change
-production physics/defaults. It must test whether durable non-HP distinction
-can occur before lifecycle divergence. `learning_claim=false` and the P6.10+
-freeze remain unchanged. #93 remains a separate performance/architecture
-workstream.
+#127 / PR #129 tested the next bounded research-only persistence arena. Both
+ENERGY_TO_LATENT_XOR and ENERGY_TO_STRUCTURE_PROMOTE create pre-lifecycle non-HP
+B/H distinctions in 12/12 primary cases, but each retains only **5/12** at
++1000, below the frozen 8/12 gate. The contact-bond candidate was statically
+unreachable for content-specific writes and the HP-no-decay reference retained
+0/12. No candidate passes; terminal route is
+**ROUTE-ARCHITECTURE-RETHINK**.
+
+#130 owns the next design-only architecture rethink. It asks how learning state
+could survive ordinary cell turnover while remaining local, deterministic,
+bounded and semantically agnostic. It cannot change production physics/defaults
+or accepted specifications. `learning_claim=false` and the P6.10+ freeze
+remain unchanged. #93 remains a separate performance/architecture workstream.
 
 Any further work must remain bounded rather than becoming a silent change to the
 historical v0.1 physics/search contract.
@@ -265,6 +272,7 @@ snapshot lineage/prune history, and implementation-default performance debt.
 
 These items no longer form an active remediation queue. Readiness #60 has
 passed. P6.1–P6.9 remain terminal capability layers. Learning-path research is
-accepted through #122 / PR #126. The active next gate is #127's bounded
-memory-persistence design arena, entered from #122 ROUTE-MEMORY-ARENA. It is
-research-only and does not authorize a production physics/default change.
+accepted through #127 / PR #129. The active next gate is #130's bounded
+learning-state persistence architecture rethink, entered from #127
+ROUTE-ARCHITECTURE-RETHINK. It is design-only and does not authorize a
+production physics/default/specification change.
