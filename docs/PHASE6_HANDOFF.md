@@ -226,17 +226,22 @@ unreachable for content-specific writes and the HP-no-decay reference retained
 0/12. No candidate passes; terminal route is
 **ROUTE-ARCHITECTURE-RETHINK**.
 
-#130 completed the next design-only architecture rethink. It selected
-**D1 Anonymous Slow Trace with Conservative Local Transfer** for a later
-specification proposal because it gives a separate bounded slow state, explicit
-local turnover transfer and forgetting without reusing teacher semantics.
-B1 latent echo and C1 morphology cluster remain rejected primary candidates.
-#130 terminal route is **ROUTE-SPEC-PROPOSAL**.
+#130 completed the design-only architecture rethink and selected
+**D1 Anonymous Slow Trace with Conservative Local Transfer**, routing it to
+formal specification review. B1 latent echo and C1 morphology cluster remain
+rejected primary candidates.
 
-#132 now owns specification proposal/review only. No `slow_trace` field,
-numeric default, snapshot migration or production physical law is accepted by
-that routing alone. `learning_claim=false` and the P6.10+ freeze remain
-unchanged. #93 remains a separate performance/architecture workstream.
+#132 / PR #134 has now completed that review with
+**ACCEPT-SPEC-PROPOSAL**. D1 is accepted at the specification level only:
+`slow_trace:uint8[MAX_CELLS]`, local generic write/transfer/discharge/decay/read
+semantics, UniverseState v2 / optimizer v6 migration, and inert
+compatibility/default tuple `(0,0,0,0,8)` are specified; production
+implementation is still absent. All non-inert values remain research-only.
+
+#135 owns the RED-first implementation contract through TEST-ST-010.
+TEST-ST-012, L3 causal acceptance and any active default promotion remain a
+separate later research gate. `learning_claim=false` and the P6.10+ freeze
+remain unchanged. #93 remains a separate performance/architecture workstream.
 
 Any further work must remain bounded rather than becoming a silent change to the
 historical v0.1 physics/search contract.
@@ -278,7 +283,8 @@ snapshot lineage/prune history, and implementation-default performance debt.
 
 These items no longer form an active remediation queue. Readiness #60 has
 passed. P6.1–P6.9 remain terminal capability layers. Learning-path research is accepted through #127 / PR #129. #130's bounded
-design-only architecture rethink is complete at `ROUTE-SPEC-PROPOSAL`, with
-D1 Anonymous Slow Trace selected only as the proposal candidate. The active
-next gate is #132's specification proposal/review. #132 still does not
-authorize a production physics/default/state/snapshot implementation change.
+design-only architecture rethink is complete, and #132 / PR #134 has accepted
+D1 Anonymous Slow Trace as an implementation-pending specification. The active
+next gate is #135's RED-first implementation of that accepted contract under
+inert defaults. TEST-ST-012/L3 causal research, L4 recall, active-default
+promotion and P6.10+ remain outside #135.

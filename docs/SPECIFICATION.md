@@ -64,14 +64,14 @@ learning, or full 8-bit physical channel adequacy. No production
 physics/default/P6.10+ semantic change was accepted and
 `learning_claim=false` remains authoritative.
 
-#130 completed the design-only architecture rethink. It rejected B1 latent echo
-and C1 morphology cluster as primary specification candidates and selected
-**D1 Anonymous Slow Trace with Conservative Local Transfer** as sufficiently
-coherent for a specification proposal. #130 terminal route is
-`ROUTE-SPEC-PROPOSAL`. This is not an accepted specification: #132 now owns
-requirements/specification review, and any accepted production law/state-model
-change still requires explicit proposal acceptance plus a separate
-implementation owner.
+#130 completed the design-only architecture rethink and selected
+**D1 Anonymous Slow Trace with Conservative Local Transfer** for formal
+specification review. #132 / PR #134 then completed that review with
+`ACCEPT-SPEC-PROPOSAL`. D1 is now an **accepted implementation-pending
+specification**: the authoritative slow-trace state, local physical semantics,
+v2/v6 migration, inert compatibility/default tuple `(0,0,0,0,8)`, ADR-009 and
+TEST-ST gates are canonical. Production implementation remains separate and is
+owned by #135; all non-inert operating values remain research-only.
 
 ## Status vocabulary
 
@@ -104,11 +104,11 @@ reachable failed causal level at L3 memory persistence; #120 establishes a
 predeclared high-contrast immediate write condition; #122 shows that the
 baseline trace is not robust at +1000; #127 shows that direct generic latent or
 structure consolidation creates pre-lifecycle non-HP state but still reaches
-only 5/12 +1000 persistence. #130 subsequently selected D1 Anonymous Slow Trace
-for a **specification proposal only** and terminated at
-`ROUTE-SPEC-PROPOSAL`. #132 is the active specification-proposal owner; no
-`slow_trace` state or production rule is accepted until that proposal is
-reviewed and later implementation is separately authorized.
+only 5/12 +1000 persistence. #130 subsequently selected D1 Anonymous Slow Trace,
+and #132 / PR #134 accepted its specification with production implementation
+still pending. #135 is the active RED-first implementation owner through
+TEST-ST-010. TEST-ST-012/L3 causal acceptance remains a separate later research
+gate; no active non-inert default has been accepted.
 `learning_claim=false` remains authoritative. See
 `docs/PHASE6_HANDOFF.md`.
 
