@@ -747,9 +747,9 @@ capability decision.
 
 ---
 
-## Candidate slow-trace persistence architecture tests (#132)
+## Slow-trace persistence architecture tests (#132)
 
-These are **candidate specification acceptance tests**, not current passing
+These are **accepted specification acceptance tests**, not current passing
 production tests. A later implementation owner must establish the relevant RED
 evidence on the accepted pre-implementation main before production code is
 added.
@@ -772,7 +772,7 @@ SP2 classifies the evidence stages:
 This matrix is the activation contract for the later implementation owner. It
 does not add executable slow-trace implementation tests in #132. The future
 owner must first materialize the applicable executable tests against the
-accepted pre-implementation main, record RED caused by the missing candidate
+accepted pre-implementation main, record RED caused by the missing specified
 behavior, and only then add production implementation.
 
 | Test | Future executable fixture level | Current-production RED trigger | Future GREEN meaning |
@@ -783,7 +783,7 @@ behavior, and only then add production implementation.
 | TEST-ST-004 | latent-transmission fixtures that hold operator/source/target state fixed while varying generation-start trace | current transmission-mask width has no slow-trace input, so nonzero trace cannot increase width | trace changes only the bounded mask width; all four accepted latent-operator formulas remain bit-for-bit unchanged; same-event writes cannot affect that event |
 | TEST-ST-005 | BLACK_HOLE lifecycle fixtures with zero/one/multiple ACTIVE recipients and competing carriers | current BLACK_HOLE handling resolves revival or timer decrement/final FREE with no pre-free trace discharge | non-revived carriers discharge locally before timer/free according to the declared deterministic order/cap; revival preserves trace; final FREE clears it |
 | TEST-ST-006 | deterministic decay fixtures with fixed seed/generation/physical address and nonzero decay regime | current physics has no trace-decay event/state, so a positive decay assertion cannot be satisfied | at most one unit decays per eligible carrier/generation using physical event addressing rather than reusable slot identity; replay is exact |
-| TEST-ST-007 | fusion/fragmentation unit fixtures for all accepted outcomes and edge values 0/1/254/255 | current fusion/fragmentation have no trace field to conserve, split or erase | saturating fusion, split conservation, level-0 retention/erasure and failed-allocation behavior match the candidate rules exactly |
+| TEST-ST-007 | fusion/fragmentation unit fixtures for all accepted outcomes and edge values 0/1/254/255 | current fusion/fragmentation have no trace field to conserve, split or erase | saturating fusion, split conservation, level-0 retention/erasure and failed-allocation behavior match the specified rules exactly |
 | TEST-ST-008 | standalone persistence plus optimizer-envelope migration/round-trip integration fixtures | current standalone/nested UniverseState is format v1 without trace and optimizer envelope is v5; v2/v6 acceptance cannot pass | v2/v6 round-trip exact trace/config continuation; v1 and optimizer v4/v5 migrate to zero trace only; malformed new payloads are rejected; next save emits new versions |
 | TEST-ST-009 | Phase-5 128-authoritative-slot save/load plus observation-clone isolation integration fixture | current authoritative slots persist nested v1 states with no nonzero trace state to round-trip or isolate | all 128 authoritative slots preserve trace/config; disposable clones copy it for evaluation without becoming authoritative or mutating the source |
 | TEST-ST-010 | structural inspection plus benchmark/snapshot-size measurement after implementation exists | no standalone RED is required; absence of D1 trivially satisfies “no added hidden graph” | fixed storage and existing local-pair/neighborhood bounds are demonstrated, and actual density4/density32 throughput plus snapshot-size overhead are reported |
@@ -901,7 +901,7 @@ RED evidence must reflect the current two-layer version boundary:
 - the Phase 5 optimizer envelope currently emits version 5 and embeds those
   version-1 UniverseState payloads.
 
-Candidate production acceptance requires:
+Production acceptance requires:
 
 1. UniverseState v2 save/load/continue equals uninterrupted continuation with
    nonzero trace and accepted trace parameters;
