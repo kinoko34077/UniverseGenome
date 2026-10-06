@@ -691,6 +691,12 @@ the affected ordinary cell. It shall not receive:
 The same physical write law applies regardless of why the qualifying activity
 occurred.
 
+A cell receives at most one slow-trace write increment per generation. If
+external stimulus and successful latent propagation both qualify for the same
+cell in one generation, they do not multiply the write. Direct external
+stimulation that revives a BLACK_HOLE cell is a qualifying physical stimulus;
+local-revival eligibility by itself is not a second slow-trace write source.
+
 ---
 
 ## REQ-ST-003 — Local bounded conservative transfer
@@ -706,7 +712,10 @@ Requirements:
 - transfer is conservative before explicit decay or bounded saturation loss;
 - no arbitrary persistent N² pair graph is added;
 - no global broadcast/search is used;
-- ordinary operation remains bounded by the existing local candidate relation.
+- ordinary operation remains bounded by the existing local candidate relation;
+- the transfer pair set reuses the same deterministic non-overlapping selected
+  pair set used by ordinary latent transmission for that generation; D1 does
+  not create a second independent pair-selection graph.
 
 ---
 
