@@ -192,17 +192,16 @@ Do not rewrite historical rationale out of existence.
 
 ---
 
-# 45.1 Candidate D1 slow-trace implementation boundary (#132)
+# 45.1 D1 slow-trace implementation boundary (#132)
 
 ## SPEC-IMPL-ST-001 — Specification-first implementation gate
-**Status: candidate**
+**Status: accepted**
 
-#132 is a specification proposal only. It must not introduce production slow
-trace.
+#132 accepts the specification only; it does not introduce production slow
+trace. Production implementation belongs to a separate successor owner.
 
-A later implementation owner may begin only after the proposal has an accepted
-terminal route and must use RED-first acceptance evidence against the accepted
-specification.
+A separate implementation owner may begin only from the accepted #132 terminal
+route and must use RED-first acceptance evidence against this specification.
 
 Expected production surfaces if later authorized:
 
@@ -231,9 +230,9 @@ Not authorized by D1 adoption alone:
 ---
 
 ## SPEC-IMPL-ST-002 — Bounded state/work target
-**Status: candidate**
+**Status: accepted**
 
-The proposed authoritative state cost is one uint8 per cell slot:
+The specified authoritative state cost is one uint8 per cell slot:
 
 - 1024 bytes per max-capacity Universe in compact representation;
 - 128 KiB raw slow-trace arrays across 128 max-capacity Phase 5 Universe slots,
@@ -254,7 +253,7 @@ themselves.
 ---
 
 ## SPEC-IMPL-ST-003 — Deterministic event-addressing boundary
-**Status: candidate**
+**Status: accepted**
 
 Slow-trace **stochastic decay** must reuse the accepted deterministic
 event-address model of SPEC-RNG-001/002.
@@ -278,20 +277,20 @@ local-index/subevent domain remain the event-key basis for stochastic decay.
 ---
 
 ## SPEC-IMPL-ST-004 — Migration / rollback boundary
-**Status: candidate**
+**Status: accepted**
 
 A later implementation must preserve a reversible compatibility boundary:
 
 - the standalone/nested UniverseState snapshot advances independently from
-  version 1 to proposed version 2;
+  version 1 to specified version 2;
 - the Phase 5 optimizer envelope advances independently from version 5 to
-  proposed version 6;
+  specified version 6;
 - accepted optimizer v4/v5 and UniverseState v1 compatibility remains readable
   as defined by the data spec;
 - migration produces zero slow trace rather than inferred history;
 - migrated legacy states use the SP3-defined inert compatibility parameter
   profile so old continuation does not silently activate new memory physics;
-- the candidate implementation/default profile is the same inert tuple
+- the accepted implementation/default profile is the same inert tuple
   `(0,0,0,0,8)` until a later non-inert operating regime is separately
   accepted;
 - non-inert values are explicit research-only physical overrides and must not be
@@ -302,7 +301,7 @@ A later implementation must preserve a reversible compatibility boundary:
 - if production adoption is rejected after research, rollback is performed by
   ordinary version-controlled change/revert rather than shared-history rewrite.
 
-No release/deploy/publication action is implied by this candidate architecture.
+No release/deploy/publication action is implied by this accepted specification.
 
 ---
 
