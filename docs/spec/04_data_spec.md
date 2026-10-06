@@ -436,16 +436,28 @@ legacy migration must also use an **inert slow-trace compatibility profile**:
 no migrated zero trace may begin accumulating or affecting latent transmission
 unless explicitly converted by a later user/research action.
 
-SP3 must assign canonical serialized compatibility values for all new physical
-parameters. At minimum the behavioral compatibility conditions are:
+SP3 assigns these canonical serialized compatibility values:
+
+- `trace_write_cap = 0`;
+- `trace_transfer_cap = 0`;
+- `trace_discharge_cap = 0`;
+- `trace_decay_rate = 0`;
+- `trace_bonus_shift = 8`.
+
+Together with the all-zero migrated trace array, this is the candidate **inert
+compatibility/default profile**. It satisfies:
 
 - effective trace write = disabled;
-- effective transfer/discharge cannot create trace from zero;
-- effective read bonus from zero trace = zero;
-- effective decay cannot alter an all-zero trace.
+- transfer/discharge cannot create trace from zero;
+- `uint8_trace >> 8 == 0`, so trace cannot affect latent mask width even if a
+  nonzero diagnostic trace is loaded;
+- decay does not introduce a stochastic change while the architecture is
+  disabled.
 
-These compatibility values are migration values, not automatically the proposed
-defaults for new slow-trace-enabled Universes.
+These values are the only numeric candidate defaults established by #132.
+They are selected for backward trajectory compatibility, not as an active
+learning regime. Any non-inert profile remains an explicitly selected
+research-only physical override until a later accepted gate promotes it.
 
 ---
 
