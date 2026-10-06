@@ -743,3 +743,110 @@ A mixed protocol rejects a valid mapped input that is a proper prefix of another
 valid mapped input. Prefix-overlap semantics remain deferred to a later explicit
 capability decision.
 
+
+
+---
+
+## Candidate slow-trace persistence architecture tests (#132)
+
+These are **candidate specification acceptance tests**, not current passing
+production tests. A later implementation owner must turn the relevant items
+RED on the accepted pre-implementation main before production code is added.
+
+### TEST-ST-001 Authoritative state / lifecycle / slot reuse
+
+A slow-trace-enabled authoritative state has exactly one uint8 trace value per
+cell slot. FREE and newly allocated cells are zero. ACTIVE→BLACK_HOLE preserves
+trace during grace. Final FREE clears trace. Reusing the slot for a new cell
+does not inherit the previous trace.
+
+### TEST-ST-002 Generic meaningful-activity write
+
+For matched local source state and equal physical activity amount `g`,
+external-stimulus activity and successful-latent-transmission activity use the
+same slow-trace write law. The write path has no byte value, organ-line
+identity, target label, tokenizer/vocabulary input or matched-control result.
+
+### TEST-ST-003 Local conservative transfer
+
+Known pair fixtures cover `ta>tb`, `tb>ta`, equality and transfer-cap
+limits. Each transfer preserves `ta+tb`, keeps both values in uint8 range and
+uses pre-transfer values. Nonlocal/incompatible cells do not transfer.
+Multi-candidate local cases resolve a bounded deterministic non-overlapping pair
+set rather than order-dependent repeated transfer.
+
+### TEST-ST-004 Read coupling preserves latent operators
+
+With generation-start source trace zero, effective mask width equals the
+accepted SPEC-MASK-001 width. Nonzero trace adds only the configured bounded
+bonus and caps width at 16. The selected mask still feeds the unchanged Masked
+Copy / XOR / Rotate Copy / AND formulas. A slow-trace write caused by the
+current latent event cannot increase that same event's width.
+
+### TEST-ST-005 BLACK_HOLE discharge / revival / FREE
+
+A BLACK_HOLE carrier with local ACTIVE recipients moves no more than the
+configured discharge cap, subtracts every transferred unit from itself and
+never increases total pair/neighborhood trace. Recipient uint8 headroom is
+honored. With no recipient, loss at final FREE is permitted. Revival preserves
+the remaining carrier trace. Final FREE always clears it.
+
+### TEST-ST-006 Deterministic decay / physical addressing
+
+Fixed seed, generation, physical state and parameters produce the same decay
+event. At most one trace unit decays per eligible carrier/generation. The event
+key follows SPEC-RNG-001/002 physical addressing and does not use reusable slot
+identity as a probability key. A configured nonzero forgetting regime has
+fixtures that demonstrate trace can decrease without deleting the Universe.
+
+### TEST-ST-007 Fusion / fragmentation trace conservation semantics
+
+Fusion computes the saturating participant sum and clears participant slots made
+FREE. Fragmentation splits `old_trace` as floor-half plus remainder and
+creates no trace mass. Edge fixtures include 0, 1, 254 and 255.
+
+### TEST-ST-008 Snapshot v6 and legacy migration
+
+Candidate v6 save/load/continue equals uninterrupted continuation with
+nonzero trace and all accepted trace parameters. Current v5 and existing v4
+legacy snapshots remain readable and migrate missing trace to all-zero only.
+The next save emits v6. Malformed v6 missing/wrong-length/out-of-range trace,
+nonzero FREE trace, or missing required deterministic parameters is rejected.
+
+### TEST-ST-009 Phase 5 authoritative-slot persistence / clone isolation
+
+All 128 occupied Phase 5 slots round-trip their authoritative slow-trace state
+and parameters. Disposable evaluation clones may copy trace for evaluation but
+do not become separately persisted authoritative state and do not mutate the
+source slot.
+
+### TEST-ST-010 Bounded work / no hidden graph
+
+Slow-trace storage is fixed by `MAX_CELLS`. Transfer uses only bounded local
+candidate relations already produced by physical processing; discharge uses
+bounded local neighborhood information; no persistent all-pairs graph/global
+memory search is introduced. Performance evidence reports actual overhead
+rather than assuming the raw-state bound is sufficient.
+
+### TEST-ST-011 Semantic-shortcut negative boundary
+
+Production slow-trace write/transfer/decay/discharge/read APIs receive no
+teacher/input byte value, organ-line identity, target output, token/vocabulary
+identity or host-side learned table. Physically matched events with the same
+local state/activity follow the same law independent of experiment label.
+
+### TEST-ST-012 L3 persistence / turnover causal gate
+
+Using the predeclared high-contrast B/H condition and frozen #122/#127
+density-32 primary cohort:
+
+- >=8/12 primary seeds remain teacher-content-specific at +1000;
+- negative sentinels remain clean;
+- deterministic replay and raw-vs-instrumented state are equivalent;
+- declared cases demonstrate original carrier FREE while the branch
+  distinction survives in other authoritative local state;
+- no semantic shortcut is used.
+
+Only this gate may support an L3-persistence-capable classification. L4 recall,
+output reachability, target bias and canonical learning remain separate later
+tests.
