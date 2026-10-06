@@ -382,6 +382,241 @@ If this category collapses toward zero, record the result rather than silently r
 
 ---
 
+# 14.1 Candidate anonymous slow-trace dynamics (#132)
+
+The following rules are **candidate** D1 behavior. They extend the accepted
+local-physics step without changing the four latent operator formulas.
+
+## SPEC-ST-001 — Generation-start trace view
+**Status: candidate**
+
+Let `T_i(t)` be the authoritative `slow_trace` of slot `i` at the start of
+a generation.
+
+Any slow-trace contribution to the current generation's latent-transmission
+mask width reads `T(t)`, not a slow-trace value written later in the same
+generation.
+
+Purpose:
+
+- prevent same-generation write→read positive feedback;
+- preserve synchronous `t → t+1` semantics;
+- make the causal ordering directly testable.
+
+---
+
+## SPEC-ST-002 — Generic meaningful-activity write
+**Status: candidate**
+
+For each ordinary cell, reuse the same physical meaningful-activity amount
+already resolved for HP recovery. Qualifying activity remains limited to the
+accepted physical sources:
+
+- external stimulus received;
+- successful local latent signal propagation.
+
+For each qualifying physical contribution with amount `g > 0`:
+
+`w = min(g, trace_write_cap)`
+
+The generation's write proposal is the bounded nonnegative sum of those
+contributions. After latent propagation is resolved:
+
+`T_written = min(255, T(t) + sum(w))`
+
+The write path receives no byte value, organ identity, target label,
+matched-control result or semantic category.
+
+---
+
+## SPEC-ST-003 — Conservative compatible-contact transfer
+**Status: candidate**
+
+After slow-trace write proposals are applied, an already-selected compatible
+local transmission/contact pair `A,B` may redistribute trace.
+
+Using the pair's pre-transfer values `ta,tb`:
+
+```
+if ta > tb:
+    q = min(trace_transfer_cap, (ta - tb) // 2)
+    ta' = ta - q
+    tb' = tb + q
+elif tb > ta:
+    q = min(trace_transfer_cap, (tb - ta) // 2)
+    tb' = tb - q
+    ta' = ta + q
+else:
+    ta' = ta
+    tb' = tb
+```
+
+Properties:
+
+- `ta'+tb' == ta+tb`;
+- no value leaves `0..255`;
+- no mass-copy amplification occurs;
+- only local pairs already admitted by ordinary bounded contact/transmission
+  discovery are eligible;
+- if a slot would otherwise participate in multiple candidate transfers in one
+  generation, the implementation must deterministically resolve a bounded
+  non-overlapping pair set before applying transfers;
+- pair resolution must not create or persist a Cell identity.
+
+All accepted transfer pairs are resolved from pre-transfer values and committed
+synchronously.
+
+---
+
+## SPEC-ST-004 — Bounded latent-transmission read coupling
+**Status: candidate**
+
+For an already-compatible selected latent transmission, let `S` be the
+transmitting/source cell and use its generation-start slow trace `T_S(t)`.
+
+Accepted baseline width:
+
+`base_width = 1 + (bond_strength >> 4)`
+
+Candidate trace bonus:
+
+`trace_bonus = T_S(t) >> trace_bonus_shift`
+
+Candidate effective width:
+
+`n = min(16, base_width + trace_bonus)`
+
+Requirements:
+
+- `n` remains in `1..16`;
+- selected bit positions continue to use accepted deterministic event
+  randomness;
+- SPEC-LATENT-C0/C1/C2/C3 formulas are unchanged;
+- slow trace changes only transmission width, not the transmitted bit value;
+- a trace write caused by the current latent event cannot increase that same
+  event's width.
+
+---
+
+## SPEC-ST-005 — Fusion and fragmentation material continuity
+**Status: candidate**
+
+If fusion occurs after write/transfer resolution:
+
+`result_trace = min(255, sum(participant_trace))`
+
+Any amount above 255 is explicit bounded saturation loss. Participant slots
+made FREE by fusion are reset to zero trace.
+
+If fragmentation occurs:
+
+```
+fragment_trace = old_trace // 2
+core_trace = old_trace - fragment_trace
+```
+
+Thus fragmentation creates no trace mass and both resulting values remain
+bounded.
+
+These rules carry anonymous physical history through material reorganization;
+they do not carry a semantic label or lineage ID.
+
+---
+
+## SPEC-ST-006 — BLACK_HOLE discharge and FREE erasure
+**Status: candidate**
+
+After HP/lifecycle resolution identifies cells that remain BLACK_HOLE, but
+before final BLACK_HOLE→FREE expiration, a carrier may discharge trace to
+currently local ACTIVE recipients.
+
+Per BLACK_HOLE carrier per generation:
+
+`budget = min(trace_discharge_cap, carrier_trace)`
+
+Requirements:
+
+- candidate recipients come only from current local occupancy/neighborhood
+  information;
+- recipients are processed in a deterministic physically addressed order;
+- reusable storage-slot identity is not part of the random/event key and is
+  never persistent lineage;
+- each transfer is capped by remaining budget and recipient uint8 headroom;
+- transferred quantity is subtracted from the BLACK_HOLE carrier;
+- total trace does not increase;
+- if no recipient is available, remaining trace stays with the carrier until a
+  later grace generation or is lost at final FREE;
+- a revived cell retains the trace it still owns;
+- final FREE sets `slow_trace=0`.
+
+No ghost record survives slot release.
+
+---
+
+## SPEC-ST-007 — Deterministic bounded decay
+**Status: candidate**
+
+After discharge and before generation commit, each remaining non-FREE carrier
+with `slow_trace > 0` performs at most one decay event.
+
+```
+if event_u16(trace_decay_event_key) < trace_decay_rate:
+    slow_trace -= 1
+```
+
+The decay key follows SPEC-RNG-001/002:
+
+- universe seed;
+- generation;
+- physical spatial address;
+- dedicated slow-trace decay event type;
+- a physical fixed-point/local subaddress where needed to disambiguate events.
+
+Reusable storage-slot index is not part of the probability key.
+
+Decay is local forgetting. A zero decay-rate reference may be permitted only if
+SP3 explicitly classifies it as a non-default research/reference value; the
+architecture's accepted operating contract must retain a physically available
+forgetting path.
+
+---
+
+## SPEC-ST-008 — Candidate insertion into SPEC-STEP-001
+**Status: candidate**
+
+If D1 is later accepted/implemented, the generation ordering becomes the
+accepted SPEC-STEP-001 order plus the following constrained substeps:
+
+1. external input / teacher stimulus records ordinary physical activity;
+2. noise spawn proposal;
+3. movement proposal;
+4. destination placement;
+5. collision;
+6. bond update;
+7. latent propagation:
+   - mask width reads generation-start `slow_trace`;
+   - successful propagation records ordinary physical activity;
+7a. apply slow-trace meaningful-activity write proposals;
+7b. apply synchronous conservative slow-trace transfer on the bounded selected
+    compatible pair set;
+8. fusion, including candidate trace fusion;
+9. age fragmentation, including candidate trace split;
+10. HP gain / decay / damage;
+11. lifecycle resolution:
+   - resolve revival / ACTIVE→BLACK_HOLE state;
+   - discharge trace from cells that remain BLACK_HOLE to current local ACTIVE
+     recipients;
+   - apply slow-trace decay to remaining non-FREE carriers;
+   - expire timed-out BLACK_HOLE cells to FREE and zero their trace;
+12. output edge detection;
+13. commit `t+1`.
+
+No substep may consume a value written by a later substep. Transfer reads
+post-write/pre-transfer pair values. Fusion/fragmentation read the post-transfer
+trace. Read coupling always uses the generation-start trace view.
+
+---
+
 # 15. Fusion
 
 Implemented in Phase 2C; age-dependent pressure is implemented in Phase 2E.
