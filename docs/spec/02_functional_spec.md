@@ -271,7 +271,7 @@ predeclares a bounded parameter matrix and demonstrates the accepted L3,
 semantic-cleanliness, deterministic-replay, migration and performance gates.
 
 The slow-trace parameters are not added to the Phase 5 mutation/search genome by
-this proposal. Any later searchability decision requires a separate
+this specification. Any later searchability decision requires a separate
 specification change after a non-inert operating regime is accepted.
 
 ### SPEC-PARAM-ST-001A — Inert-default validation plan
@@ -312,8 +312,8 @@ Adopting slow trace shall not by itself change:
 - Phase 6.1–6.9 experiment protocol semantics.
 
 A later implementation/research owner may expose bounded research overrides for
-slow-trace physics only after the proposal classifies their default/search
-status. Such overrides remain universe-physics inputs and do not become
+slow-trace physics only under the accepted default/search classification in
+this specification. Such overrides remain universe-physics inputs and do not become
 semantic experiment parameters.
 
 ---
