@@ -387,6 +387,20 @@ If this category collapses toward zero, record the result rather than silently r
 The following rules are **candidate** D1 behavior. They extend the accepted
 local-physics step without changing the four latent operator formulas.
 
+SP3 defines two configuration classes:
+
+- **inert compatibility/default profile**:
+  `write=0, transfer=0, discharge=0, decay=0, bonus_shift=8`; this profile
+  must not alter any accepted pre-D1 physical trajectory;
+- **active research profile**: `trace_write_cap`, `trace_transfer_cap`,
+  `trace_discharge_cap` and `trace_decay_rate` are all nonzero and
+  `trace_bonus_shift` is in `0..7`. Numeric active values are research-only
+  until a later causal/performance/migration gate promotes them.
+
+A partially enabled mix may be used only as an explicitly named diagnostic or
+reference condition. It is not an accepted active production default merely
+because each value is within its legal type range.
+
 ## SPEC-ST-001 — Generation-start trace view
 **Status: candidate**
 
