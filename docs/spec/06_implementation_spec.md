@@ -255,18 +255,24 @@ themselves.
 ## SPEC-IMPL-ST-003 — Deterministic event-addressing boundary
 **Status: candidate**
 
-Slow-trace stochastic decay/tie behavior must reuse the accepted deterministic
+Slow-trace **stochastic decay** must reuse the accepted deterministic
 event-address model of SPEC-RNG-001/002.
 
-A reusable storage slot may be used as an implementation array reference, but
-it must not:
+BLACK_HOLE discharge ordering is deterministic rather than stochastic. It uses
+the physical-state ordering defined by SPEC-ST-006. A reusable storage-slot
+index may appear only as the final total-order tie-break after the physical
+tuple is equal.
+
+A reusable storage slot may therefore be used as an implementation array
+reference / final deterministic ordering tie-break, but it must not:
 
 - become a permanent Cell identity;
-- enter the slow-trace probability/event key as lineage identity;
+- enter any slow-trace probability/event key;
+- act as lineage identity;
 - preserve trace through FREE-slot reuse.
 
 Physical position/address, generation, event type and a documented physical
-local-index/subevent domain are the intended event-key basis.
+local-index/subevent domain remain the event-key basis for stochastic decay.
 
 ---
 
