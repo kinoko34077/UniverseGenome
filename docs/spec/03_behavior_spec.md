@@ -614,10 +614,11 @@ The decay key follows SPEC-RNG-001/002:
 
 Reusable storage-slot index is not part of the probability key.
 
-Decay is local forgetting. A zero decay-rate reference may be permitted only if
-SP3 explicitly classifies it as a non-default research/reference value; the
-architecture's accepted operating contract must retain a physically available
-forgetting path.
+Decay is local forgetting. SP3 permits `trace_decay_rate=0` only in the
+inert compatibility/default profile or an explicitly named diagnostic/reference
+condition. Any active D1 research profile used to support persistence acceptance
+must use a nonzero decay rate so the architecture retains an exercised,
+physically available forgetting path.
 
 A pending-FREE carrier is erased after its discharge opportunity and need not
 perform a decay event whose result would be discarded immediately.
