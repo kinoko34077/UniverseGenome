@@ -226,11 +226,17 @@ unreachable for content-specific writes and the HP-no-decay reference retained
 0/12. No candidate passes; terminal route is
 **ROUTE-ARCHITECTURE-RETHINK**.
 
-#130 owns the next design-only architecture rethink. It asks how learning state
-could survive ordinary cell turnover while remaining local, deterministic,
-bounded and semantically agnostic. It cannot change production physics/defaults
-or accepted specifications. `learning_claim=false` and the P6.10+ freeze
-remain unchanged. #93 remains a separate performance/architecture workstream.
+#130 completed the next design-only architecture rethink. It selected
+**D1 Anonymous Slow Trace with Conservative Local Transfer** for a later
+specification proposal because it gives a separate bounded slow state, explicit
+local turnover transfer and forgetting without reusing teacher semantics.
+B1 latent echo and C1 morphology cluster remain rejected primary candidates.
+#130 terminal route is **ROUTE-SPEC-PROPOSAL**.
+
+#132 now owns specification proposal/review only. No `slow_trace` field,
+numeric default, snapshot migration or production physical law is accepted by
+that routing alone. `learning_claim=false` and the P6.10+ freeze remain
+unchanged. #93 remains a separate performance/architecture workstream.
 
 Any further work must remain bounded rather than becoming a silent change to the
 historical v0.1 physics/search contract.
@@ -271,8 +277,8 @@ browser E2E depth, fragmentation RNG addressing, optimizer CLI protocol,
 snapshot lineage/prune history, and implementation-default performance debt.
 
 These items no longer form an active remediation queue. Readiness #60 has
-passed. P6.1–P6.9 remain terminal capability layers. Learning-path research is
-accepted through #127 / PR #129. The active next gate is #130's bounded
-learning-state persistence architecture rethink, entered from #127
-ROUTE-ARCHITECTURE-RETHINK. It is design-only and does not authorize a
-production physics/default/specification change.
+passed. P6.1–P6.9 remain terminal capability layers. Learning-path research is accepted through #127 / PR #129. #130's bounded
+design-only architecture rethink is complete at `ROUTE-SPEC-PROPOSAL`, with
+D1 Anonymous Slow Trace selected only as the proposal candidate. The active
+next gate is #132's specification proposal/review. #132 still does not
+authorize a production physics/default/state/snapshot implementation change.

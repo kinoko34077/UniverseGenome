@@ -62,10 +62,16 @@ This remains current-state research evidence, not a new I/O requirement,
 physics default, or specification change. It does not establish L4 recall,
 learning, or full 8-bit physical channel adequacy. No production
 physics/default/P6.10+ semantic change was accepted and
-`learning_claim=false` remains authoritative. Successor #130 owns a
-design-only learning-state persistence architecture rethink; any accepted
-production law/state-model change requires a later explicit
-specification-change owner.
+`learning_claim=false` remains authoritative.
+
+#130 completed the design-only architecture rethink. It rejected B1 latent echo
+and C1 morphology cluster as primary specification candidates and selected
+**D1 Anonymous Slow Trace with Conservative Local Transfer** as sufficiently
+coherent for a specification proposal. #130 terminal route is
+`ROUTE-SPEC-PROPOSAL`. This is not an accepted specification: #132 now owns
+requirements/specification review, and any accepted production law/state-model
+change still requires explicit proposal acceptance plus a separate
+implementation owner.
 
 ## Status vocabulary
 
@@ -98,8 +104,11 @@ reachable failed causal level at L3 memory persistence; #120 establishes a
 predeclared high-contrast immediate write condition; #122 shows that the
 baseline trace is not robust at +1000; #127 shows that direct generic latent or
 structure consolidation creates pre-lifecycle non-HP state but still reaches
-only 5/12 +1000 persistence, routing the next bounded question to #130's
-design-only learning-state persistence architecture rethink.
+only 5/12 +1000 persistence. #130 subsequently selected D1 Anonymous Slow Trace
+for a **specification proposal only** and terminated at
+`ROUTE-SPEC-PROPOSAL`. #132 is the active specification-proposal owner; no
+`slow_trace` state or production rule is accepted until that proposal is
+reviewed and later implementation is separately authorized.
 `learning_claim=false` remains authoritative. See
 `docs/PHASE6_HANDOFF.md`.
 
