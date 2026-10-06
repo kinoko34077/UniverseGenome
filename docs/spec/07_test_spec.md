@@ -767,6 +767,43 @@ SP2 classifies the evidence stages:
   baseline is already below the gate (1/12 at +1000 in #122); it is not a unit
   test substitute for TEST-ST-001..011.
 
+### SP2 RED activation matrix
+
+This matrix is the activation contract for the later implementation owner. It
+does not add executable slow-trace implementation tests in #132. The future
+owner must first materialize the applicable executable tests against the
+accepted pre-implementation main, record RED caused by the missing candidate
+behavior, and only then add production implementation.
+
+| Test | Future executable fixture level | Current-production RED trigger | Future GREEN meaning |
+|---|---|---|---|
+| TEST-ST-001 | `UniverseState` unit fixtures covering construction, spawn, BLACK_HOLE grace/revival, final `free()` and slot reuse | current authoritative state has no `slow_trace` array; spawn/free cannot satisfy trace lifecycle assertions | one bounded uint8 trace value exists per slot; FREE/new allocation are zero; grace preserves; final FREE clears; reused storage does not inherit trace |
+| TEST-ST-002 | isolated `step()` physics fixtures for external stimulus, selected latent activity, simultaneous qualification and BLACK_HOLE revival | current qualifying activity changes HP/lifecycle/latent only and has no slow-trace write state or parameters | each qualifying cell receives exactly one generic per-generation write with the declared magnitude and no semantic source identity |
+| TEST-ST-003 | deterministic local-contact fixture using the same generation's selected non-overlapping latent-transmission pair set | current latent transmission selects pairs but performs no slow-trace transfer | only the already-selected pair set transfers trace; transfer is conservative, capped and uses post-write/pre-transfer values |
+| TEST-ST-004 | latent-transmission fixtures that hold operator/source/target state fixed while varying generation-start trace | current transmission-mask width has no slow-trace input, so nonzero trace cannot increase width | trace changes only the bounded mask width; all four accepted latent-operator formulas remain bit-for-bit unchanged; same-event writes cannot affect that event |
+| TEST-ST-005 | BLACK_HOLE lifecycle fixtures with zero/one/multiple ACTIVE recipients and competing carriers | current BLACK_HOLE handling resolves revival or timer decrement/final FREE with no pre-free trace discharge | non-revived carriers discharge locally before timer/free according to the declared deterministic order/cap; revival preserves trace; final FREE clears it |
+| TEST-ST-006 | deterministic decay fixtures with fixed seed/generation/physical address and nonzero decay regime | current physics has no trace-decay event/state, so a positive decay assertion cannot be satisfied | at most one unit decays per eligible carrier/generation using physical event addressing rather than reusable slot identity; replay is exact |
+| TEST-ST-007 | fusion/fragmentation unit fixtures for all accepted outcomes and edge values 0/1/254/255 | current fusion/fragmentation have no trace field to conserve, split or erase | saturating fusion, split conservation, level-0 retention/erasure and failed-allocation behavior match the candidate rules exactly |
+| TEST-ST-008 | standalone persistence plus optimizer-envelope migration/round-trip integration fixtures | current standalone/nested UniverseState is format v1 without trace and optimizer envelope is v5; v2/v6 acceptance cannot pass | v2/v6 round-trip exact trace/config continuation; v1 and optimizer v4/v5 migrate to zero trace only; malformed new payloads are rejected; next save emits new versions |
+| TEST-ST-009 | Phase-5 128-authoritative-slot save/load plus observation-clone isolation integration fixture | current authoritative slots persist nested v1 states with no nonzero trace state to round-trip or isolate | all 128 authoritative slots preserve trace/config; disposable clones copy it for evaluation without becoming authoritative or mutating the source |
+| TEST-ST-010 | structural inspection plus benchmark/snapshot-size measurement after implementation exists | no standalone RED is required; absence of D1 trivially satisfies “no added hidden graph” | fixed storage and existing local-pair/neighborhood bounds are demonstrated, and actual density4/density32 throughput plus snapshot-size overhead are reported |
+| TEST-ST-011 | paired positive/negative physics/API fixtures: physically identical events under different experiment labels plus a positive trace-write/read case | an absence-only semantic-input inspection may pass today, but the required paired positive slow-trace behavior cannot; therefore current production must still be RED on the positive half | trace behavior is physically active yet invariant to byte/organ/target/token/label identity; no host-side learned table or semantic argument enters the rule |
+| TEST-ST-012 | post-implementation research harness using the frozen B/H cohort and turnover evidence | not a pre-implementation unit-test RED: accepted unchanged-physics baseline is already 1/12 at +1000 and remains reference evidence | after TEST-ST-001..011 are GREEN, a predeclared causal run reaches >=8/12 at +1000 with clean sentinels/replay/raw equivalence and declared carrier-turnover survival |
+
+Required future RED evidence is therefore:
+- at least one behavior-positive failing assertion for each of TEST-ST-001..009;
+- TEST-ST-011 must fail on its positive physical-behavior half, not merely pass an
+  API-signature/absence check;
+- TEST-ST-010 is activated only after an implementation exists to measure;
+- TEST-ST-012 is activated only after the implementation-contract suite is
+  GREEN and remains a causal research gate rather than a unit-test replacement.
+
+The later implementation owner may choose concrete test-file names and public
+helper boundaries, but it may not weaken these observable fixtures merely to fit
+an implementation layout. In particular, private-function names are not part of
+the contract; the observable state transition, snapshot contract and causal
+controls are.
+
 ### TEST-ST-001 Authoritative state / lifecycle / slot reuse
 
 A slow-trace-enabled authoritative state has exactly one uint8 trace value per
