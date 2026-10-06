@@ -382,10 +382,11 @@ If this category collapses toward zero, record the result rather than silently r
 
 ---
 
-# 14.1 Candidate anonymous slow-trace dynamics (#132)
+# 14.1 Anonymous slow-trace dynamics (#132)
 
-The following rules are **candidate** D1 behavior. They extend the accepted
-local-physics step without changing the four latent operator formulas.
+The following rules are the **accepted D1 behavior specification**. They are
+implementation-pending and extend the accepted local-physics contract without
+changing the four latent operator formulas.
 
 SP3 defines two configuration classes:
 
@@ -402,7 +403,7 @@ reference condition. It is not an accepted active production default merely
 because each value is within its legal type range.
 
 ## SPEC-ST-001 — Generation-start trace view
-**Status: candidate**
+**Status: accepted**
 
 Let `T_i(t)` be the authoritative `slow_trace` of slot `i` at the start of
 a generation.
@@ -420,7 +421,7 @@ Purpose:
 ---
 
 ## SPEC-ST-002 — Generic meaningful-activity write
-**Status: candidate**
+**Status: accepted**
 
 For each ordinary cell, derive one **recovery-equivalent activity amount**
 `g_i(t)` from the meaningful-activity recovery applications that the accepted
@@ -458,7 +459,7 @@ matched-control result or semantic category.
 ---
 
 ## SPEC-ST-003 — Conservative compatible-contact transfer
-**Status: candidate**
+**Status: accepted**
 
 After slow-trace write proposals are applied, an already-selected compatible
 local latent-transmission pair `A,B` may redistribute trace.
@@ -498,7 +499,7 @@ contact topology or extra per-cell pair fanout.
 ---
 
 ## SPEC-ST-004 — Bounded latent-transmission read coupling
-**Status: candidate**
+**Status: accepted**
 
 For an already-compatible selected latent transmission, let `S` be the
 transmitting/source cell and use its generation-start slow trace `T_S(t)`.
@@ -507,11 +508,11 @@ Accepted baseline width:
 
 `base_width = 1 + (bond_strength >> 4)`
 
-Candidate trace bonus:
+Trace bonus:
 
 `trace_bonus = T_S(t) >> trace_bonus_shift`
 
-Candidate effective width:
+Effective width:
 
 `n = min(16, base_width + trace_bonus)`
 
@@ -528,7 +529,7 @@ Requirements:
 ---
 
 ## SPEC-ST-005 — Fusion and fragmentation material continuity
-**Status: candidate**
+**Status: accepted**
 
 If fusion occurs after write/transfer resolution:
 
@@ -553,12 +554,12 @@ they do not carry a semantic label or lineage ID.
 ---
 
 ## SPEC-ST-006 — BLACK_HOLE discharge and FREE erasure
-**Status: candidate**
+**Status: accepted**
 
 A BLACK_HOLE carrier may discharge trace before final BLACK_HOLE→FREE
 expiration.
 
-This requires one explicit candidate change to current lifecycle ordering:
+This requires one explicit specified change to the current lifecycle ordering:
 a pre-existing BLACK_HOLE whose timer reaches the expiration boundary is marked
 **pending FREE** for the current generation rather than being erased
 immediately at generation start. It remains immobile and does not participate
@@ -572,7 +573,7 @@ Per BLACK_HOLE carrier per generation:
 
 Requirements:
 
-- candidate recipients come only from current local ACTIVE
+- recipients come only from current local ACTIVE
   occupancy/neighborhood information;
 - recipients are processed in a deterministic physically addressed order;
 - reusable storage-slot identity is not part of the random/event key and is
@@ -594,7 +595,7 @@ No ghost record survives slot release.
 ---
 
 ## SPEC-ST-007 — Deterministic bounded decay
-**Status: candidate**
+**Status: accepted**
 
 After discharge and before generation commit, each non-FREE carrier that will
 survive the commit and has `slow_trace > 0` performs at most one decay event.
@@ -625,8 +626,8 @@ perform a decay event whose result would be discarded immediately.
 
 ---
 
-## SPEC-ST-008 — Candidate insertion into SPEC-STEP-001
-**Status: candidate**
+## SPEC-ST-008 — Insertion into SPEC-STEP-001
+**Status: accepted**
 
 If D1 is later accepted/implemented, the generation ordering becomes the
 accepted SPEC-STEP-001 order plus the following constrained substeps:
@@ -652,8 +653,8 @@ accepted SPEC-STEP-001 order plus the following constrained substeps:
 7a. apply slow-trace meaningful-activity write proposals;
 7b. apply synchronous conservative slow-trace transfer on exactly that selected
     pair set;
-8. fusion, including candidate trace fusion;
-9. age fragmentation, including candidate trace split;
+8. fusion, including slow-trace fusion;
+9. age fragmentation, including slow-trace split;
 10. HP gain / decay / damage;
 11. lifecycle completion:
     - ACTIVE cells reaching HP zero enter BLACK_HOLE;
@@ -669,7 +670,7 @@ No substep may consume a value written by a later substep. Transfer reads
 post-write/pre-transfer pair values. Fusion/fragmentation read the post-transfer
 trace. Read coupling always uses the generation-start trace view.
 
-This candidate ordering intentionally differs from current production only
+This ordering intentionally differs from current production only
 where required to give an expiring BLACK_HOLE a bounded discharge opportunity
 before slot erasure; SP2 acceptance tests must make that difference RED before
 implementation.
