@@ -1,0 +1,452 @@
+{
+  "base_main": "a9eed5ca34466f665845f9850ad0b179a004e233",
+  "baseline_reference": {
+    "primary_h0": 12,
+    "primary_h1000": 1,
+    "route": "ROUTE-MEMORY-ARENA",
+    "source_issue": 122,
+    "source_main": "1355bb8fbdaed66e58166cdd19a8d74fa7bf1c5b"
+  },
+  "candidate_results": {
+    "BASELINE": {
+      "candidate": "BASELINE",
+      "density32_negative_sentinel_count": 4,
+      "duplicate_control_clean": true,
+      "horizons": {
+        "0": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "1": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "10": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "100": {
+          "distinct_count": 9,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            12,
+            14,
+            18,
+            19,
+            22,
+            24
+          ]
+        },
+        "1000": {
+          "distinct_count": 1,
+          "distinct_seeds": [
+            22
+          ]
+        }
+      },
+      "input_candidate_write_count": 0,
+      "negative_sentinels_clean": true,
+      "non_hp_by_1000_count": 6,
+      "non_hp_by_1000_seeds": [
+        5,
+        8,
+        14,
+        18,
+        22,
+        24
+      ],
+      "persistence_capable": false,
+      "pre_lifecycle_non_hp_count": 0,
+      "pre_lifecycle_non_hp_seeds": [],
+      "primary_case_count": 12,
+      "raw_instrumented_clean": true,
+      "replay_clean": true,
+      "route_eligible": false,
+      "teacher_candidate_write_count": 0,
+      "verified_case_count": 3,
+      "verified_primary_count": 1
+    },
+    "ENERGY_TO_LATENT_XOR": {
+      "candidate": "ENERGY_TO_LATENT_XOR",
+      "density32_negative_sentinel_count": 4,
+      "duplicate_control_clean": true,
+      "horizons": {
+        "0": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "1": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "10": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "100": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "1000": {
+          "distinct_count": 5,
+          "distinct_seeds": [
+            12,
+            19,
+            20,
+            22,
+            24
+          ]
+        }
+      },
+      "input_candidate_write_count": 28,
+      "negative_sentinels_clean": true,
+      "non_hp_by_1000_count": 12,
+      "non_hp_by_1000_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ],
+      "persistence_capable": false,
+      "pre_lifecycle_non_hp_count": 12,
+      "pre_lifecycle_non_hp_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ],
+      "primary_case_count": 12,
+      "raw_instrumented_clean": true,
+      "replay_clean": true,
+      "route_eligible": true,
+      "teacher_candidate_write_count": 42,
+      "verified_case_count": 12,
+      "verified_primary_count": 12
+    },
+    "ENERGY_TO_STRUCTURE_PROMOTE": {
+      "candidate": "ENERGY_TO_STRUCTURE_PROMOTE",
+      "density32_negative_sentinel_count": 4,
+      "duplicate_control_clean": true,
+      "horizons": {
+        "0": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "1": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "10": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "100": {
+          "distinct_count": 12,
+          "distinct_seeds": [
+            0,
+            5,
+            8,
+            9,
+            12,
+            14,
+            18,
+            19,
+            20,
+            22,
+            24,
+            29
+          ]
+        },
+        "1000": {
+          "distinct_count": 5,
+          "distinct_seeds": [
+            0,
+            9,
+            12,
+            19,
+            22
+          ]
+        }
+      },
+      "input_candidate_write_count": 28,
+      "negative_sentinels_clean": true,
+      "non_hp_by_1000_count": 12,
+      "non_hp_by_1000_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ],
+      "persistence_capable": false,
+      "pre_lifecycle_non_hp_count": 12,
+      "pre_lifecycle_non_hp_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ],
+      "primary_case_count": 12,
+      "raw_instrumented_clean": true,
+      "replay_clean": true,
+      "route_eligible": true,
+      "teacher_candidate_write_count": 42,
+      "verified_case_count": 12,
+      "verified_primary_count": 12
+    },
+    "HP_NO_DECAY_REFERENCE": {
+      "candidate": "HP_NO_DECAY_REFERENCE",
+      "density32_negative_sentinel_count": 4,
+      "duplicate_control_clean": true,
+      "horizons": {
+        "0": {
+          "distinct_count": 0,
+          "distinct_seeds": []
+        },
+        "1": {
+          "distinct_count": 0,
+          "distinct_seeds": []
+        },
+        "10": {
+          "distinct_count": 0,
+          "distinct_seeds": []
+        },
+        "100": {
+          "distinct_count": 0,
+          "distinct_seeds": []
+        },
+        "1000": {
+          "distinct_count": 0,
+          "distinct_seeds": []
+        }
+      },
+      "input_candidate_write_count": 0,
+      "negative_sentinels_clean": true,
+      "non_hp_by_1000_count": 0,
+      "non_hp_by_1000_seeds": [],
+      "persistence_capable": false,
+      "pre_lifecycle_non_hp_count": 0,
+      "pre_lifecycle_non_hp_seeds": [],
+      "primary_case_count": 12,
+      "raw_instrumented_clean": true,
+      "replay_clean": true,
+      "route_eligible": false,
+      "teacher_candidate_write_count": 0,
+      "verified_case_count": 3,
+      "verified_primary_count": 1
+    }
+  },
+  "issue": 127,
+  "learning_claim": false,
+  "p6_10_plus": "frozen",
+  "passing_candidates": [],
+  "production_physics_change": false,
+  "production_step_source_sha256": "1ba8f37e6ace35ead830f38535cf6a8358716c11ffaf0fce9c32656df966dab4",
+  "protocol": {
+    "density32_negative_sentinels": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "density4_negative_sentinels": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "density4_write_positive": [
+      9
+    ],
+    "horizons": [
+      0,
+      1,
+      10,
+      100,
+      1000
+    ],
+    "primary_density32_seeds": [
+      0,
+      5,
+      8,
+      9,
+      12,
+      14,
+      18,
+      19,
+      20,
+      22,
+      24,
+      29
+    ],
+    "required_primary": 8,
+    "teacher_pair": [
+      66,
+      8
+    ]
+  },
+  "terminal_route": "ROUTE-ARCHITECTURE-RETHINK"
+}

@@ -1,0 +1,99 @@
+{
+  "candidate": "BASELINE",
+  "density32_negative_sentinel_count": 4,
+  "duplicate_control_clean": true,
+  "horizons": {
+    "0": {
+      "distinct_count": 12,
+      "distinct_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ]
+    },
+    "1": {
+      "distinct_count": 12,
+      "distinct_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ]
+    },
+    "10": {
+      "distinct_count": 12,
+      "distinct_seeds": [
+        0,
+        5,
+        8,
+        9,
+        12,
+        14,
+        18,
+        19,
+        20,
+        22,
+        24,
+        29
+      ]
+    },
+    "100": {
+      "distinct_count": 9,
+      "distinct_seeds": [
+        0,
+        5,
+        8,
+        12,
+        14,
+        18,
+        19,
+        22,
+        24
+      ]
+    },
+    "1000": {
+      "distinct_count": 1,
+      "distinct_seeds": [
+        22
+      ]
+    }
+  },
+  "input_candidate_write_count": 0,
+  "negative_sentinels_clean": true,
+  "non_hp_by_1000_count": 6,
+  "non_hp_by_1000_seeds": [
+    5,
+    8,
+    14,
+    18,
+    22,
+    24
+  ],
+  "persistence_capable": false,
+  "pre_lifecycle_non_hp_count": 0,
+  "pre_lifecycle_non_hp_seeds": [],
+  "primary_case_count": 12,
+  "raw_instrumented_clean": true,
+  "replay_clean": true,
+  "route_eligible": false,
+  "teacher_candidate_write_count": 0,
+  "verified_case_count": 3,
+  "verified_primary_count": 1
+}
