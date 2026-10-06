@@ -691,6 +691,13 @@ the affected ordinary cell. It shall not receive:
 The same physical write law applies regardless of why the qualifying activity
 occurred.
 
+The write source is the accepted **meaningful-activity recovery event**, not the
+net HP delta after uint8 saturation. A physically valid stimulus or successful
+latent-transmission recovery may therefore write slow trace even when HP is
+already saturated. Raw organ-bit multiplicity, overlapping teacher anchors and
+other semantic presentation details must not multiply the write once the
+ordinary-cell activity event has been resolved.
+
 A cell receives at most one slow-trace write increment per generation. If
 external stimulus and successful latent propagation both qualify for the same
 cell in one generation, they do not multiply the write. Direct external
@@ -782,9 +789,12 @@ continuation shall be represented in authoritative persistence.
 Requirements:
 
 - save/load/continue remains equivalent to uninterrupted execution;
-- a new snapshot contract version is required when production slow trace is
-  adopted;
-- the immediately prior accepted snapshot version remains readable;
+- both versioned persistence layers affected by production slow trace must be
+  explicit: the standalone/nested UniverseState snapshot and the Phase 5
+  optimizer envelope;
+- each layer increments from its own current version rather than sharing one
+  global version number;
+- the immediately prior accepted versions remain readable;
 - missing historical slow trace migrates deterministically to all-zero only;
 - migration must not synthesize historical learned state;
 - malformed new-format slow-trace state is rejected rather than guessed;
