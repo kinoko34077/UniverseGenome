@@ -236,7 +236,64 @@ space. Searchability/mutation eligibility requires an explicit accepted
 parameter-status decision and must not be inferred from their presence in a
 physics configuration.
 
-No numeric accepted default is established by this candidate section.
+SP3 classifies these parameters as follows. The classification is part of the
+candidate specification; D1 is still not accepted production behavior while
+#132 is open.
+
+| Parameter | Legal serialized range | Candidate inert/default value | Non-inert status |
+|---|---:|---:|---|
+| `trace_write_cap` | 0..255 | 0 | research-only tuning; active profile requires 1..255 |
+| `trace_transfer_cap` | 0..255 | 0 | research-only tuning; active profile requires 1..255 |
+| `trace_discharge_cap` | 0..255 | 0 | research-only tuning; active turnover profile requires 1..255 |
+| `trace_decay_rate` | 0..65535 | 0 | research-only tuning; active forgetting profile requires 1..65535 |
+| `trace_bonus_shift` | 0..8 | 8 | research-only tuning; active read profile requires 0..7 |
+
+The tuple
+
+`(trace_write_cap=0, trace_transfer_cap=0, trace_discharge_cap=0, trace_decay_rate=0, trace_bonus_shift=8)`
+
+is the **candidate inert compatibility/default profile**. It is selected for
+backward behavioral compatibility, not learning performance:
+
+- write/transfer/discharge cannot create trace from an all-zero migrated state;
+- `uint8_value >> 8 == 0`, so slow trace cannot affect latent mask width even
+  if a nonzero trace value is present in a diagnostic/new-format snapshot;
+- zero decay makes the disabled profile deterministic without introducing a
+  stochastic event that cannot affect accepted physics;
+- fusion/fragmentation may still carry an explicitly present trace value, but
+  with write/read/transfer/discharge disabled that bookkeeping cannot alter the
+  accepted physical trajectory.
+
+No **non-inert** numeric value is an accepted default candidate in #132.
+Non-inert values remain research-only physical overrides until a later owner
+predeclares a bounded parameter matrix and demonstrates the accepted L3,
+semantic-cleanliness, deterministic-replay, migration and performance gates.
+
+The slow-trace parameters are not added to the Phase 5 mutation/search genome by
+this proposal. Any later searchability decision requires a separate
+specification change after a non-inert operating regime is accepted.
+
+### SPEC-PARAM-ST-001A — Candidate inert-default validation plan
+**Status: candidate**
+
+A later implementation owner must validate the inert profile before any
+non-inert research result can be promoted:
+
+1. v1 UniverseState and optimizer v4/v5 migration produces all-zero trace plus
+   exactly the inert values above;
+2. matched inert-profile continuation versus the accepted pre-D1 behavior uses
+   density 4 and diagnostic density 32, seeds 0..31, for 1024 ordinary
+   generations with no external stimulus, and must match all pre-existing
+   authoritative state arrays/generation counters exactly;
+3. canonical experiment/optimizer smoke evidence must remain unchanged in
+   learning outcome and counterfactual cleanliness under the inert profile;
+4. snapshot save/load continuation under v2/v6 must equal uninterrupted inert
+   continuation;
+5. TEST-ST-010 must report the actual storage/snapshot/runtime overhead even
+   though the semantic/physical trajectory is inert.
+
+This plan validates **compatibility only**. It does not select active learning
+parameters.
 
 ---
 
