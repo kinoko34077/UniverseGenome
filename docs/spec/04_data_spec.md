@@ -131,12 +131,12 @@ No bit may be named as a semantic category in the simulation core.
 
 ---
 
-# 12.1 Candidate slow-trace state (#132)
+# 12.1 Slow-trace state (#132)
 
 ## SPEC-ST-DATA-001 — Authoritative storage
-**Status: candidate**
+**Status: accepted**
 
-If the D1 slow-trace proposal is accepted, authoritative UniverseState adds:
+The accepted D1 specification adds to authoritative UniverseState:
 
 `slow_trace:uint8[MAX_CELLS]`
 
@@ -155,7 +155,7 @@ Universe before container/serialization overhead.
 ---
 
 ## SPEC-ST-DATA-002 — Lifecycle initialization and erasure
-**Status: candidate**
+**Status: accepted**
 
 Per-slot data rules:
 
@@ -163,7 +163,7 @@ Per-slot data rules:
 - newly allocated initial/noise/spawn ordinary cell: `slow_trace=0`;
 - ACTIVE: ordinary write/transfer/decay rules apply;
 - BLACK_HOLE: retains its current trace during grace and may discharge it
-  locally according to candidate behavior;
+  locally according to accepted slow-trace behavior;
 - revival: remaining trace is retained;
 - final FREE: trace is set to 0 before the slot can be reused.
 
@@ -347,7 +347,7 @@ snapshot-format increment.
 
 ---
 
-# 37.1 Candidate slow-trace snapshot migration (#132)
+# 37.1 Slow-trace snapshot migration (#132)
 
 The repository currently has **two distinct versioned persistence layers**:
 
@@ -364,8 +364,8 @@ The repository currently has **two distinct versioned persistence layers**:
 The slow-trace proposal must version these layers independently. There is no
 single repository-wide snapshot version number.
 
-## SPEC-SNAP-ST-001 — UniverseState version 2 proposal
-**Status: candidate**
+## SPEC-SNAP-ST-001 — UniverseState version 2
+**Status: accepted**
 
 Production adoption of D1 changes the authoritative cell-array schema and
 therefore proposes:
@@ -387,8 +387,8 @@ Standalone `persistence/snapshot.py` therefore moves its
 
 ---
 
-## SPEC-SNAP-ST-002 — Phase 5 optimizer envelope version 6 proposal
-**Status: candidate**
+## SPEC-SNAP-ST-002 — Phase 5 optimizer envelope version 6
+**Status: accepted**
 
 Because every occupied Phase 5 slot embeds an authoritative UniverseState,
 production adoption of D1 also proposes:
@@ -410,7 +410,7 @@ not interchangeable.
 ---
 
 ## SPEC-SNAP-ST-003 — Legacy migration / inert compatibility profile
-**Status: candidate**
+**Status: accepted**
 
 Backward-read compatibility must preserve both current layers.
 
@@ -444,7 +444,7 @@ SP3 assigns these canonical serialized compatibility values:
 - `trace_decay_rate = 0`;
 - `trace_bonus_shift = 8`.
 
-Together with the all-zero migrated trace array, this is the candidate **inert
+Together with the all-zero migrated trace array, this is the accepted **inert
 compatibility/default profile**. It satisfies:
 
 - effective trace write = disabled;
@@ -454,7 +454,7 @@ compatibility/default profile**. It satisfies:
 - decay does not introduce a stochastic change while the architecture is
   disabled.
 
-These values are the only numeric candidate defaults established by #132.
+These values are the only numeric accepted defaults established by #132.
 They are selected for backward trajectory compatibility, not as an active
 learning regime. Any non-inert profile remains an explicitly selected
 research-only physical override until a later accepted gate promotes it.
@@ -462,7 +462,7 @@ research-only physical override until a later accepted gate promotes it.
 ---
 
 ## SPEC-SNAP-ST-004 — Malformed new-format rejection
-**Status: candidate**
+**Status: accepted**
 
 A version-2 UniverseState snapshot is malformed and must be rejected when:
 
