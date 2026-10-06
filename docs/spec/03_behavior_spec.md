@@ -629,7 +629,7 @@ perform a decay event whose result would be discarded immediately.
 ## SPEC-ST-008 — Insertion into SPEC-STEP-001
 **Status: accepted**
 
-If D1 is later accepted/implemented, the generation ordering becomes the
+When D1 is implemented, the generation ordering becomes the
 accepted SPEC-STEP-001 order plus the following constrained substeps:
 
 0. capture generation-start `slow_trace T(t)`;
