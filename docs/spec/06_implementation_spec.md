@@ -213,7 +213,8 @@ Expected production surfaces if later authorized:
 - fusion/fragmentation trace material handling;
 - BLACK_HOLE discharge / FREE erasure;
 - deterministic decay event addressing;
-- Universe and Phase 5 optimizer snapshot/version migration;
+- independent UniverseState snapshot v1→v2 and Phase 5 optimizer envelope
+  v5→v6 migration;
 - clone/replay/equality and relevant observer serialization where authoritative
   state is projected;
 - unit/integration/research-gate tests.
@@ -281,8 +282,17 @@ local-index/subevent domain remain the event-key basis for stochastic decay.
 
 A later implementation must preserve a reversible compatibility boundary:
 
-- legacy accepted snapshot formats remain readable as defined by the data spec;
+- the standalone/nested UniverseState snapshot advances independently from
+  version 1 to proposed version 2;
+- the Phase 5 optimizer envelope advances independently from version 5 to
+  proposed version 6;
+- accepted optimizer v4/v5 and UniverseState v1 compatibility remains readable
+  as defined by the data spec;
 - migration produces zero slow trace rather than inferred history;
+- migrated legacy states use the SP3-defined inert compatibility parameter
+  profile so old continuation does not silently activate new memory physics;
+- new slow-trace-enabled defaults, if accepted, are distinct from those legacy
+  compatibility values;
 - no implementation migration rewrites historical repository data in place;
 - if production adoption is rejected after research, rollback is performed by
   ordinary version-controlled change/revert rather than shared-history rewrite.
