@@ -349,62 +349,128 @@ snapshot-format increment.
 
 # 37.1 Candidate slow-trace snapshot migration (#132)
 
-## SPEC-SNAP-ST-001 — Version 6 proposal
+The repository currently has **two distinct versioned persistence layers**:
+
+1. standalone/nested `UniverseState` snapshot:
+   - current `format_version = 1`;
+   - current kind `UniverseGenomePhase1`;
+   - used directly by `persistence/snapshot.py` and embedded inside optimizer
+     slot records;
+2. Phase 5 optimizer envelope:
+   - current `format_version = 5`;
+   - current kind `UniverseGenomePhase5SteadyStateOptimizer`;
+   - currently reads optimizer envelope versions 4 and 5.
+
+The slow-trace proposal must version these layers independently. There is no
+single repository-wide snapshot version number.
+
+## SPEC-SNAP-ST-001 — UniverseState version 2 proposal
 **Status: candidate**
 
-Production adoption of D1 requires a new snapshot contract because authoritative
-UniverseState gains a new cell array.
+Production adoption of D1 changes the authoritative cell-array schema and
+therefore proposes:
 
-Proposed next format:
+`UniverseState.format_version: 1 → 2`
 
-`format_version = 6`
+The existing snapshot kind remains stable unless a later implementation review
+finds a concrete compatibility reason to change it.
 
-A version-6 authoritative Universe snapshot must include:
+A version-2 UniverseState snapshot must contain:
 
 - the complete `slow_trace` array with exactly `MAX_CELLS` uint8 values;
-- every accepted slow-trace physical parameter needed for exact continuation;
-- all pre-existing authoritative fields required by SPEC-SNAP-001.
+- every accepted slow-trace physical parameter needed for exact continuation in
+  its serialized physics config;
+- all pre-existing authoritative arrays/fields required by SPEC-SNAP-001.
 
-For the Phase 5 optimizer, every occupied authoritative Universe slot
-round-trips the version-6 UniverseState. Disposable evaluation clones remain
-non-persisted.
-
----
-
-## SPEC-SNAP-ST-002 — Legacy migration
-**Status: candidate**
-
-The version-6 reader must preserve the repository's accepted backward-read
-boundary.
-
-For currently readable legacy snapshots:
-
-- v5 remains readable;
-- existing v4 readability is not removed by this proposal;
-- absent `slow_trace` maps deterministically to an all-zero array;
-- no historical trace/learning state is inferred from HP, latent, structure,
-  output history or any other field;
-- after successful legacy restore, the next save emits the new accepted format.
-
-Legacy migration does not alter existing experiment-protocol fields or Phase 5
-lineage/prune-history semantics.
+Standalone `persistence/snapshot.py` therefore moves its
+`SNAPSHOT_FORMAT_VERSION` from 1 to 2 when D1 is implemented.
 
 ---
 
-## SPEC-SNAP-ST-003 — Malformed version-6 rejection
+## SPEC-SNAP-ST-002 — Phase 5 optimizer envelope version 6 proposal
 **Status: candidate**
 
-A version-6 snapshot is malformed and must be rejected when the authoritative
-slow-trace representation is incomplete or inconsistent, including:
+Because every occupied Phase 5 slot embeds an authoritative UniverseState,
+production adoption of D1 also proposes:
 
-- missing `slow_trace` for an authoritative UniverseState;
-- array length different from effective `MAX_CELLS`;
-- value outside uint8 range;
-- FREE-slot trace that is nonzero after canonical restore validation;
-- missing accepted slow-trace parameter required for deterministic
-  continuation.
+`SteadyStateOptimizer.format_version: 5 → 6`
 
-The loader must not silently invent nonzero trace or infer a replacement value.
+A version-6 optimizer envelope must:
+
+- retain existing Phase 5 scheduler, lineage, prune-history, fitness/growth and
+  experiment-protocol semantics;
+- serialize every occupied slot with a version-2 UniverseState;
+- serialize the accepted slow-trace physical parameters in the effective base
+  and per-state physics configuration needed by current consistency checks;
+- keep disposable evaluation clones non-authoritative/non-persisted.
+
+The optimizer envelope version and nested UniverseState version are related but
+not interchangeable.
+
+---
+
+## SPEC-SNAP-ST-003 — Legacy migration / inert compatibility profile
+**Status: candidate**
+
+Backward-read compatibility must preserve both current layers.
+
+UniverseState migration:
+
+- version 1 remains readable;
+- v1→v2 initializes `slow_trace` to an all-zero array;
+- no historical trace is inferred from HP, latent, structure, output history or
+  any other field.
+
+Optimizer migration:
+
+- accepted outer versions 4 and 5 remain readable;
+- embedded version-1 UniverseState payloads migrate to version 2 using the same
+  all-zero rule;
+- existing v4/v5 lineage, prune-history and scheduler compatibility behavior is
+  preserved;
+- after successful legacy restore, the next save emits optimizer v6 containing
+  nested UniverseState v2 payloads.
+
+To preserve old trajectories rather than silently activating new memory physics,
+legacy migration must also use an **inert slow-trace compatibility profile**:
+no migrated zero trace may begin accumulating or affecting latent transmission
+unless explicitly converted by a later user/research action.
+
+SP3 must assign canonical serialized compatibility values for all new physical
+parameters. At minimum the behavioral compatibility conditions are:
+
+- effective trace write = disabled;
+- effective transfer/discharge cannot create trace from zero;
+- effective read bonus from zero trace = zero;
+- effective decay cannot alter an all-zero trace.
+
+These compatibility values are migration values, not automatically the proposed
+defaults for new slow-trace-enabled Universes.
+
+---
+
+## SPEC-SNAP-ST-004 — Malformed new-format rejection
+**Status: candidate**
+
+A version-2 UniverseState snapshot is malformed and must be rejected when:
+
+- `slow_trace` is missing;
+- its length differs from effective `MAX_CELLS`;
+- any value is outside uint8 range;
+- a FREE slot carries nonzero trace after canonical restore validation;
+- an accepted slow-trace parameter required for deterministic continuation is
+  missing or invalid.
+
+A version-6 optimizer snapshot is malformed and must be rejected when:
+
+- any authoritative slot lacks a valid version-2 UniverseState;
+- required slow-trace physical configuration is absent/inconsistent between the
+  slot state and accepted effective config;
+- existing v5 integrity requirements such as durable parent-genome references
+  for allocated children are violated.
+
+The loader must not silently invent nonzero trace, infer historical learned
+state or downgrade malformed new-format payloads to legacy semantics.
 
 ---
 
