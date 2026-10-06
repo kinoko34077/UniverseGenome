@@ -1,5 +1,5 @@
-# ADR-009 — Candidate anonymous slow-trace persistence architecture
-Status: proposed / candidate (#132)
+# ADR-009 — Anonymous slow-trace persistence architecture
+Status: accepted specification decision (#132); implementation pending
 
 ## Context
 
@@ -13,15 +13,16 @@ Accepted learning-path evidence through #120, #122 and #127 shows that:
 Transfer — as the least-collateral architecture coherent enough for formal
 specification review. That selection did not accept production implementation.
 
-## Proposed decision
+## Decision
 
-If #132 terminates at ACCEPT-SPEC-PROPOSAL and a later implementation owner
-passes the accepted RED/causal gates, add one anonymous authoritative
-per-cell slow state:
+#132 accepts D1 as the specification architecture for a separate RED-first
+implementation/research owner. Production behavior remains unchanged until that
+later owner passes the accepted implementation and causal gates. The specified
+authoritative per-cell slow state is:
 
 `slow_trace:uint8[MAX_CELLS]`.
 
-The candidate architecture is inseparable from these constraints:
+The accepted architecture specification is inseparable from these constraints:
 - values carry no byte/token/teacher/target semantics;
 - qualifying write sources are generic physical activity only;
 - ordinary transfer reuses the selected local latent-transmission pair set and
@@ -58,8 +59,9 @@ This proposal does not by itself change:
 - `learning_claim=false`;
 - the P6.10+ freeze.
 
-Production adoption would require the proposed snapshot v6 boundary with
-legacy v4/v5 zero-trace migration and a separate implementation owner.
+Production implementation requires the specified UniverseState v2 / optimizer
+v6 boundaries with legacy v1 and optimizer v4/v5 zero-trace migration and a
+separate implementation owner.
 
 ## Acceptance / falsification boundary
 
@@ -78,7 +80,7 @@ L4 recall remains a later independent gate.
 
 ## Status boundary
 
-This ADR remains **candidate** while #132 is open. It becomes an accepted
-architecture decision only if #132 terminates at ACCEPT-SPEC-PROPOSAL and the
-repository's accepted specification/ADR state is reconciled accordingly.
-A rejected #132 leaves production state/physics unchanged.
+This ADR is **accepted at the specification level** by #132. That acceptance
+does not claim implementation or L3 capability. Production state/physics remain
+unchanged until a separate successor owner completes RED-first implementation,
+verification and the accepted causal gate.
