@@ -37,27 +37,34 @@ The accepted P6.9 bounded smoke produced zero trained mapped successes and
 `learning_claim=false`.
 
 Accepted post-P6.9 learning-emergence / learning-path research now extends
-through #122 / PR #126. #113 / PR #115 localized the formal deepest reachable
+through #127 / PR #129. #113 / PR #115 localized the formal deepest reachable
 failed causal level at **L3 memory persistence**. #119 identified the
 research/specification-completeness gap between logical byte representation and
-substrate-level physical distinguishability. #120 / PR #121 then established a
+substrate-level physical distinguishability. #120 / PR #121 established a
 usable high-contrast B=66/H=8 diagnostic condition under unchanged accepted
 physics: 12/32 density-32 seeds receive teacher-specific immediate HP-only
 writes, terminal route `ROUTE-MEMORY`.
 
 #122 / PR #126 tested the exact accepted write-positive cohort through
 h0/+1/+10/+100/+1000 with no further external stimulation. Primary B/H
-distinction is 12/12 through +10, 9/12 at +100 and **1/12 at +1000**. Six
-cases develop non-HP differences, but all six first diverge in lifecycle/
-survival and only later in latent/structure/bond state. The predeclared terminal
-classification is `ROUTE-MEMORY-ARENA`.
+distinction is 12/12 through +10, 9/12 at +100 and **1/12 at +1000**,
+routing to `ROUTE-MEMORY-ARENA`.
 
-This remains current-state research evidence, not a new I/O requirement or
-physics default. It does not establish L4 recall, learning, or full 8-bit
-physical channel adequacy. No production physics/default/P6.10+ semantic
-change was accepted and `learning_claim=false` remains authoritative.
-Successor #127 owns a research-only design arena for generic local persistence
-coupling candidates; any production law change requires a later explicit
+#127 / PR #129 then tested frozen research-only local consolidation candidates.
+ENERGY_TO_LATENT_XOR and ENERGY_TO_STRUCTURE_PROMOTE each create
+teacher-specific pre-lifecycle non-HP distinctions in 12/12 primary cases, but
+each retains only **5/12** B/H distinctions at +1000, below the frozen 8/12
+gate. Contact-bond reinforcement was statically unreachable for content-specific
+writes and HP_NO_DECAY_REFERENCE retained 0/12. No candidate passes; terminal
+route is `ROUTE-ARCHITECTURE-RETHINK`.
+
+This remains current-state research evidence, not a new I/O requirement,
+physics default, or specification change. It does not establish L4 recall,
+learning, or full 8-bit physical channel adequacy. No production
+physics/default/P6.10+ semantic change was accepted and
+`learning_claim=false` remains authoritative. Successor #130 owns a
+design-only learning-state persistence architecture rethink; any accepted
+production law/state-model change requires a later explicit
 specification-change owner.
 
 ## Status vocabulary
@@ -85,13 +92,15 @@ P6.3 through #85 / PR #86, P6.4 through #88 / PR #89, P6.5 through
 #91 / PR #92, P6.6 through #95 / PR #96, P6.7 through #98 / PR #99,
 P6.8 through #101 / PR #102, and P6.9 through #104 / PR #105. Phase 6 remains
 a bounded capability ladder, but no P6.10 or later capability is currently
-selected. Accepted learning-path research extends through #122 / PR #126 and
+selected. Accepted learning-path research extends through #127 / PR #129 and
 has not demonstrated canonical learning. #113 localizes the formal deepest
 reachable failed causal level at L3 memory persistence; #120 establishes a
-predeclared high-contrast immediate write condition; #122 shows that this trace
-is not robust at +1000 and that observed non-HP coupling is lifecycle-first,
-routing the next bounded question to #127's research-only persistence design
-arena. `learning_claim=false` remains authoritative. See
+predeclared high-contrast immediate write condition; #122 shows that the
+baseline trace is not robust at +1000; #127 shows that direct generic latent or
+structure consolidation creates pre-lifecycle non-HP state but still reaches
+only 5/12 +1000 persistence, routing the next bounded question to #130's
+design-only learning-state persistence architecture rethink.
+`learning_claim=false` remains authoritative. See
 `docs/PHASE6_HANDOFF.md`.
 
 See `docs/ROADMAP.md`.
