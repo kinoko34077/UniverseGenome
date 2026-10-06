@@ -762,18 +762,31 @@ does not inherit the previous trace.
 
 ### TEST-ST-002 Generic meaningful-activity write
 
-For matched local source state and equal physical activity amount `g`,
-external-stimulus activity and successful-latent-transmission activity use the
-same slow-trace write law. The write path has no byte value, organ-line
-identity, target label, tokenizer/vocabulary input or matched-control result.
+Fixtures verify the exact per-cell/per-generation rule:
+- direct external stimulus alone writes
+  `min(recovery_hp, trace_write_cap)`;
+- successful selected latent transmission alone writes the same amount;
+- simultaneous external stimulus + latent activity still writes exactly once;
+- direct external stimulation that revives a BLACK_HOLE cell is eligible;
+- local-revival-only eligibility without either qualifying source does not
+  create a second write;
+- later fusion/fragmentation does not retroactively change whether the
+  qualifying event created the write proposal.
+
+The write path has no byte value, organ-line identity, target label,
+tokenizer/vocabulary input or matched-control result.
 
 ### TEST-ST-003 Local conservative transfer
 
 Known pair fixtures cover `ta>tb`, `tb>ta`, equality and transfer-cap
 limits. Each transfer preserves `ta+tb`, keeps both values in uint8 range and
-uses pre-transfer values. Nonlocal/incompatible cells do not transfer.
-Multi-candidate local cases resolve a bounded deterministic non-overlapping pair
-set rather than order-dependent repeated transfer.
+uses post-write/pre-transfer values.
+
+The test must prove that the slow-trace transfer pair set is **exactly the same
+deterministic non-overlapping pair set selected for ordinary latent
+transmission** in that generation. Nonlocal/incompatible or compatible-but-not-
+selected cells do not transfer, and D1 does not perform a second pair-selection
+pass.
 
 ### TEST-ST-004 Read coupling preserves latent operators
 
@@ -785,11 +798,25 @@ current latent event cannot increase that same event's width.
 
 ### TEST-ST-005 BLACK_HOLE discharge / revival / FREE
 
-A BLACK_HOLE carrier with local ACTIVE recipients moves no more than the
-configured discharge cap, subtracts every transferred unit from itself and
-never increases total pair/neighborhood trace. Recipient uint8 headroom is
-honored. With no recipient, loss at final FREE is permitted. Revival preserves
-the remaining carrier trace. Final FREE always clears it.
+Fixtures cover generation-start BLACK_HOLE carriers with zero/one/multiple
+local ACTIVE recipients and multiple BLACK_HOLE carriers competing for the same
+recipient headroom.
+
+They verify:
+- revival is resolved before discharge and a revived carrier retains its trace;
+- non-revived carriers discharge before the accepted timer decrement/final
+  FREE rule;
+- carrier and recipient processing follow the declared physical-state order,
+  with storage-slot index only as a final deterministic tie-break and never an
+  RNG/probability or lineage key;
+- later carriers observe headroom consumed by earlier ordered carriers;
+- no carrier moves more than its configured discharge cap;
+- every transferred unit is subtracted from the source and total trace never
+  increases;
+- a cell newly entering BLACK_HOLE later in the generation does not discharge
+  until the next generation;
+- with no recipient, loss at final FREE is permitted;
+- final FREE always clears trace and slot reuse never inherits it.
 
 ### TEST-ST-006 Deterministic decay / physical addressing
 
@@ -802,8 +829,17 @@ fixtures that demonstrate trace can decrease without deleting the Universe.
 ### TEST-ST-007 Fusion / fragmentation trace conservation semantics
 
 Fusion computes the saturating participant sum and clears participant slots made
-FREE. Fragmentation splits `old_trace` as floor-half plus remainder and
-creates no trace mass. Edge fixtures include 0, 1, 254 and 255.
+FREE.
+
+Fragmentation fixtures distinguish every accepted outcome:
+- successful core+fragment creation splits `old_trace` as floor-half plus
+  remainder and conserves the sum;
+- level-0 horizontal/vertical in-place degradation retains trace unchanged;
+- level-0 single-cell direct FREE erases trace without creating a ghost
+  recipient;
+- failed fragment allocation leaves trace unchanged.
+
+Edge fixtures include 0, 1, 254 and 255.
 
 ### TEST-ST-008 Snapshot v6 and legacy migration
 
