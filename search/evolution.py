@@ -22,6 +22,7 @@ from .outer_search import (
     LEGACY_LATENT_OPERATORS,
     EvidenceSeedAssignment,
     ResolvedComparisonStratum,
+    SelectionRecord,
     allocate_matched_evidence_seed,
     build_default_search_registry,
     build_mutation_replacement,
@@ -33,6 +34,13 @@ from .outer_search import (
     legacy_mutation_plan_for_base_config,
     legacy_search_plan,
     mutate_legacy_candidate,
+    promising_group_keys,
+    protected_selection_indices,
+    prune_selection_indices,
+    select_parent_index,
+    select_promising_parent_index,
+    select_prune_target_index,
+    selection_eligible_indices,
 )
 from .pruning import (
     RESPONSE_HISTORY_LIMIT,
@@ -40,7 +48,6 @@ from .pruning import (
     SHORT_WINDOW,
     absolute_failure_reason,
     growth_flags,
-    prune_candidates,
     short_health_flags,
 )
 
@@ -730,6 +737,27 @@ class SteadyStateOptimizer:
             for key, group in groups.items()
         }
 
+    def _selection_records(
+        self,
+        records: Iterable[UniverseSlot],
+    ) -> tuple[SelectionRecord, ...]:
+        values = list(records)
+        counts = self._evidence_group_counts(values)
+        aggregates = self.group_fitnesses(values)
+        return tuple(
+            SelectionRecord(
+                index=slot.index,
+                group_key=slot.evidence_group,
+                objective_key=aggregates[slot.evidence_group].sort_key(),
+                evidence_count=counts[slot.evidence_group],
+                candidate_tie_key=slot.genome_key,
+                growth_windows=tuple(slot.growth_windows),
+                absolute_failure=slot.absolute_failure,
+                evidence_mature=slot.evidence_mature,
+            )
+            for slot in values
+        )
+
     def _selection_key(
         self,
         slot: UniverseSlot,
@@ -753,11 +781,21 @@ class SteadyStateOptimizer:
     ) -> list[UniverseSlot]:
         values = list(records)
         counts = cls._evidence_group_counts(values)
-        return [
-            slot
+        policy_records = tuple(
+            SelectionRecord(
+                index=slot.index,
+                group_key=slot.evidence_group,
+                objective_key=(),
+                evidence_count=counts[slot.evidence_group],
+                candidate_tie_key=slot.genome_key,
+            )
             for slot in values
-            if counts[slot.evidence_group] >= MINIMUM_EVIDENCE_SEEDS
-        ]
+        )
+        eligible = selection_eligible_indices(
+            policy_records,
+            minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
+        )
+        return [slot for slot in values if slot.index in eligible]
 
     def _refresh_evidence_maturity(self, group_key: tuple[str, str]) -> None:
         group = [slot for slot in self.slots if slot.evidence_group == group_key]
@@ -799,18 +837,12 @@ class SteadyStateOptimizer:
         *,
         excluded_index: int,
     ) -> UniverseSlot:
-        eligible_indices = {
-            slot.index for slot in self._selection_eligible_slots(local)
-        }
-        sources = [
-            slot
-            for slot in local
-            if slot.index != excluded_index and slot.index in eligible_indices
-        ]
-        if not sources:
-            raise ValueError("a category must retain a minimum-evidence parent source")
-        aggregates = self.group_fitnesses(local)
-        return min(sources, key=lambda slot: self._selection_key(slot, aggregates))
+        selected_index = select_parent_index(
+            self._selection_records(local),
+            excluded_index=excluded_index,
+            minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
+        )
+        return next(slot for slot in local if slot.index == selected_index)
 
     @staticmethod
     def _promising_tier_divisor(seed_count: int) -> int | None:
@@ -837,36 +869,13 @@ class SteadyStateOptimizer:
         categories = {slot.category for slot in local}
         if len(categories) != 1:
             raise ValueError("promising ranking must be category-local")
-
-        counts = self._evidence_group_counts(local)
-        aggregates = self.group_fitnesses(local)
-        eligible_keys = [
-            group_key
-            for group_key, count in counts.items()
-            if count >= MINIMUM_EVIDENCE_SEEDS
-        ]
-        ranked = sorted(
-            eligible_keys,
-            key=lambda group_key: (
-                aggregates[group_key].sort_key(),
-                group_key[1],
-            ),
+        return set(
+            promising_group_keys(
+                self._selection_records(local),
+                policy_id=self.promising_policy,
+                minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
+            )
         )
-        rank_by_group = {
-            group_key: rank
-            for rank, group_key in enumerate(ranked)
-        }
-
-        promising: set[tuple[str, str]] = set()
-        for group_key in ranked:
-            count = counts[group_key]
-            divisor = self._promising_tier_divisor(count)
-            if divisor is None:
-                continue
-            cutoff = max(1, len(ranked) // divisor)
-            if rank_by_group[group_key] < cutoff:
-                promising.add(group_key)
-        return promising
 
     def _is_promising(self, slot: UniverseSlot, local: list[UniverseSlot]) -> bool:
         return slot.evidence_group in self._promising_group_keys(local)
@@ -882,29 +891,14 @@ class SteadyStateOptimizer:
             for slot in local
             if excluded_group is None or slot.evidence_group != excluded_group
         ]
-        promising = self._promising_group_keys(candidates)
-        if not promising:
-            return None
-
-        counts = self._evidence_group_counts(candidates)
-        aggregates = self.group_fitnesses(candidates)
-        representatives: dict[tuple[str, str], UniverseSlot] = {}
-        for slot in candidates:
-            if slot.evidence_group not in promising:
-                continue
-            current = representatives.get(slot.evidence_group)
-            if current is None or slot.index < current.index:
-                representatives[slot.evidence_group] = slot
-
-        return min(
-            representatives.values(),
-            key=lambda slot: (
-                counts[slot.evidence_group],
-                aggregates[slot.evidence_group].sort_key(),
-                slot.genome_key,
-                slot.index,
-            ),
+        selected_index = select_promising_parent_index(
+            self._selection_records(candidates),
+            policy_id=self.promising_policy,
+            minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
         )
+        if selected_index is None:
+            return None
+        return next(slot for slot in candidates if slot.index == selected_index)
 
     def _next_allocation_mode(
         self,
@@ -922,11 +916,10 @@ class SteadyStateOptimizer:
         return "seed_evidence" if cursor % 2 == 0 else "mutation_child"
 
     def _protected_indices(self, local: list[UniverseSlot]) -> set[int]:
-        aggregates = self.group_fitnesses(local)
-        eligible = self._selection_eligible_slots(local)
-        count = min(max(1, len(local) // 8), len(eligible))
-        ordered = sorted(eligible, key=lambda slot: self._selection_key(slot, aggregates))
-        return {slot.index for slot in ordered[:count]}
+        return protected_selection_indices(
+            self._selection_records(local),
+            minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
+        )
 
     def group_counts(self) -> dict[str, int]:
         counts: dict[tuple[str, str], int] = {}
@@ -985,20 +978,17 @@ class SteadyStateOptimizer:
             if any(slot.category != category for slot in local):
                 raise ValueError("comparison stratum mixed legacy categories")
             protected = self._protected_indices(local)
-            eligible = self._selection_eligible_slots(local)
-            pruning_eligible = self._pruning_eligible_slots(local)
-            pruned = prune_candidates(pruning_eligible, protected=protected)
+            pruned = prune_selection_indices(
+                self._selection_records(local),
+                protected=protected,
+            )
             pruned_count += len(pruned)
             if not pruned:
                 continue
 
-            aggregates = self.group_fitnesses(local)
-            target_index = max(
+            target_index = select_prune_target_index(
+                self._selection_records(local),
                 pruned,
-                key=lambda index: self._selection_key(
-                    next(item for item in local if item.index == index),
-                    aggregates,
-                ),
             )
             reason = "growth_pruned"
 

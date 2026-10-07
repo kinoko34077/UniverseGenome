@@ -10,6 +10,7 @@ from dataclasses import dataclass, field, replace
 import hashlib
 import json
 from itertools import product
+from statistics import median
 from typing import Any, Mapping
 
 from core.physics import PhysicsConfig, create_universe
@@ -693,6 +694,32 @@ class EvidenceSeedDecision:
 
 
 @dataclass(frozen=True)
+class SelectionRecord:
+    """Outer-only comparable evidence record for one occupied slot."""
+
+    index: int
+    group_key: Any
+    objective_key: tuple[Any, ...]
+    evidence_count: int
+    candidate_tie_key: Any
+    growth_windows: tuple[int, ...] = ()
+    absolute_failure: bool = False
+    evidence_mature: bool = False
+
+    def __post_init__(self) -> None:
+        if self.index < 0:
+            raise ValueError("selection record index must be non-negative")
+        if self.evidence_count < 0:
+            raise ValueError("selection record evidence_count must be non-negative")
+        if any(int(window) < 0 for window in self.growth_windows):
+            raise ValueError("selection record growth windows must be non-negative")
+
+    @property
+    def selection_key(self) -> tuple[tuple[Any, ...], Any, int]:
+        return self.objective_key, self.group_key, self.index
+
+
+@dataclass(frozen=True)
 class CandidateReplacement:
     target_index: int
     seed: int
@@ -1046,6 +1073,229 @@ def legacy_comparison_strata(
     resolved_registry = registry or build_default_search_registry()
     resolved_plan = plan or legacy_search_plan()
     return enumerate_comparison_strata(resolved_plan, resolved_registry)
+
+
+def selection_eligible_indices(
+    records: tuple[SelectionRecord, ...] | list[SelectionRecord],
+    *,
+    minimum_evidence: int = 4,
+) -> set[int]:
+    if minimum_evidence < 1:
+        raise ValueError("minimum_evidence must be positive")
+    return {
+        record.index
+        for record in records
+        if record.evidence_count >= minimum_evidence
+    }
+
+
+def select_parent_index(
+    records: tuple[SelectionRecord, ...] | list[SelectionRecord],
+    *,
+    excluded_index: int,
+    minimum_evidence: int = 4,
+) -> int:
+    eligible = selection_eligible_indices(
+        records,
+        minimum_evidence=minimum_evidence,
+    )
+    sources = [
+        record
+        for record in records
+        if record.index != excluded_index and record.index in eligible
+    ]
+    if not sources:
+        raise ValueError("a stratum must retain a minimum-evidence parent source")
+    return min(sources, key=lambda record: record.selection_key).index
+
+
+def protected_selection_indices(
+    records: tuple[SelectionRecord, ...] | list[SelectionRecord],
+    *,
+    minimum_evidence: int = 4,
+) -> set[int]:
+    values = list(records)
+    eligible = [
+        record
+        for record in values
+        if record.evidence_count >= minimum_evidence
+    ]
+    count = min(max(1, len(values) // 8), len(eligible))
+    ordered = sorted(eligible, key=lambda record: record.selection_key)
+    return {record.index for record in ordered[:count]}
+
+
+def _promising_tier_divisor(seed_count: int, *, minimum_evidence: int) -> int | None:
+    if minimum_evidence <= seed_count < 8:
+        return 2
+    if 8 <= seed_count < 16:
+        return 4
+    if 16 <= seed_count < 32:
+        return 8
+    return None
+
+
+def _selection_groups(
+    records: tuple[SelectionRecord, ...] | list[SelectionRecord],
+) -> dict[Any, SelectionRecord]:
+    groups: dict[Any, SelectionRecord] = {}
+    for record in records:
+        current = groups.get(record.group_key)
+        if current is None:
+            groups[record.group_key] = record
+            continue
+        if (
+            current.evidence_count != record.evidence_count
+            or current.objective_key != record.objective_key
+            or current.candidate_tie_key != record.candidate_tie_key
+        ):
+            raise ValueError("selection group records must share aggregate metadata")
+        if record.index < current.index:
+            groups[record.group_key] = record
+    return groups
+
+
+def promising_group_keys(
+    records: tuple[SelectionRecord, ...] | list[SelectionRecord],
+    *,
+    policy_id: str | None,
+    minimum_evidence: int = 4,
+) -> set[Any]:
+    if policy_id is None:
+        return set()
+    if policy_id != LEGACY_PROMISING_POLICY:
+        raise ValueError(f"unsupported promising allocation policy: {policy_id}")
+
+    groups = _selection_groups(records)
+    ranked = sorted(
+        (
+            record
+            for record in groups.values()
+            if record.evidence_count >= minimum_evidence
+        ),
+        key=lambda record: (
+            record.objective_key,
+            record.candidate_tie_key,
+        ),
+    )
+    rank_by_group = {
+        record.group_key: rank
+        for rank, record in enumerate(ranked)
+    }
+    promising: set[Any] = set()
+    for record in ranked:
+        divisor = _promising_tier_divisor(
+            record.evidence_count,
+            minimum_evidence=minimum_evidence,
+        )
+        if divisor is None:
+            continue
+        cutoff = max(1, len(ranked) // divisor)
+        if rank_by_group[record.group_key] < cutoff:
+            promising.add(record.group_key)
+    return promising
+
+
+def select_promising_parent_index(
+    records: tuple[SelectionRecord, ...] | list[SelectionRecord],
+    *,
+    policy_id: str | None,
+    minimum_evidence: int = 4,
+    excluded_group: Any | None = None,
+) -> int | None:
+    candidates = [
+        record
+        for record in records
+        if excluded_group is None or record.group_key != excluded_group
+    ]
+    promising = promising_group_keys(
+        candidates,
+        policy_id=policy_id,
+        minimum_evidence=minimum_evidence,
+    )
+    if not promising:
+        return None
+    representatives = _selection_groups(candidates)
+    selected = [
+        record
+        for group_key, record in representatives.items()
+        if group_key in promising
+    ]
+    return min(
+        selected,
+        key=lambda record: (
+            record.evidence_count,
+            record.objective_key,
+            record.candidate_tie_key,
+            record.index,
+        ),
+    ).index
+
+
+def prune_selection_indices(
+    records: tuple[SelectionRecord, ...] | list[SelectionRecord],
+    *,
+    protected: set[int] | None = None,
+) -> set[int]:
+    values = [
+        record
+        for record in records
+        if record.evidence_mature or record.absolute_failure
+    ]
+    result = {
+        record.index
+        for record in values
+        if record.absolute_failure
+    }
+    live = [record for record in values if not record.absolute_failure]
+    if not live:
+        return result
+
+    category_protected = protected or set()
+    recent_by_record = {
+        record.index: tuple(
+            int(window).bit_count()
+            for window in record.growth_windows[-4:]
+        )
+        for record in live
+    }
+    complete = [
+        record
+        for record in live
+        if len(recent_by_record[record.index]) == 4
+    ]
+    if not complete:
+        return result
+
+    medians = tuple(
+        median(recent_by_record[record.index][offset] for record in complete)
+        for offset in range(4)
+    )
+    thresholds = tuple(int(value) >> 1 for value in medians)
+    for record in complete:
+        if record.index in category_protected:
+            continue
+        recent_windows = recent_by_record[record.index]
+        if all(
+            window < threshold
+            for window, threshold in zip(recent_windows, thresholds)
+        ):
+            result.add(record.index)
+    return result
+
+
+def select_prune_target_index(
+    records: tuple[SelectionRecord, ...] | list[SelectionRecord],
+    pruned_indices: set[int],
+) -> int:
+    candidates = [
+        record
+        for record in records
+        if record.index in pruned_indices
+    ]
+    if not candidates:
+        raise ValueError("prune target selection requires a pruned record")
+    return max(candidates, key=lambda record: record.selection_key).index
 
 
 def build_seed_evidence_replacement(
