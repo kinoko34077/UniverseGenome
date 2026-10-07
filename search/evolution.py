@@ -19,8 +19,11 @@ from core.state import UniverseState
 from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
 from .outer_search import (
+    LEGACY_LATENT_OPERATORS,
+    ResolvedComparisonStratum,
     build_default_search_registry,
     legacy_candidate_values,
+    legacy_comparison_strata,
     legacy_mutation_directions,
     legacy_mutation_plan_for_base_config,
     legacy_search_plan,
@@ -37,7 +40,7 @@ from .pruning import (
 )
 
 IMPLEMENTATION_PHASE = 5
-CATEGORY_OPERATORS = ("masked_copy", "masked_xor", "rotate_copy", "masked_and")
+CATEGORY_OPERATORS = LEGACY_LATENT_OPERATORS
 SLOTS_PER_CATEGORY = 32
 OPTIMIZER_POPULATION_SIZE = 128
 GROWTH_WINDOW_GENERATIONS = 128
@@ -281,7 +284,8 @@ class SteadyStateOptimizer:
             "evaluation_count": 0,
             "promising_policy": promising_policy,
         }
-        for category in CATEGORY_OPERATORS:
+        for stratum in legacy_comparison_strata():
+            category = str(stratum.primary_value)
             self.scheduler[f"allocation_mode_cursor:{category}"] = 0
         if scheduler is not None:
             for key, value in scheduler.items():
@@ -316,7 +320,8 @@ class SteadyStateOptimizer:
         protocol = experiment or ExperimentConfig()
         slots: list[UniverseSlot] = []
         index = 0
-        for category in CATEGORY_OPERATORS:
+        for stratum in legacy_comparison_strata():
+            category = str(stratum.primary_value)
             for genome_id, genome in enumerate(UniverseGenome.initial_population()):
                 for seed_offset in range(4):
                     seed = int(base_seed) + (genome_id * 4) + seed_offset
@@ -894,10 +899,33 @@ class SteadyStateOptimizer:
             for (category, genome), count in sorted(counts.items())
         }
 
+    def _comparison_strata(
+        self,
+    ) -> tuple[tuple[ResolvedComparisonStratum, list[UniverseSlot]], ...]:
+        strata = legacy_comparison_strata()
+        groups: dict[ResolvedComparisonStratum, list[UniverseSlot]] = {
+            stratum: [] for stratum in strata
+        }
+        by_category = {
+            str(stratum.primary_value): stratum
+            for stratum in strata
+        }
+        if len(by_category) != len(strata):
+            raise ValueError("legacy comparison strata must map to unique categories")
+        for slot in self.slots:
+            stratum = by_category.get(slot.category)
+            if stratum is None:
+                raise ValueError(
+                    f"slot category is outside declared legacy strata: {slot.category}"
+                )
+            groups[stratum].append(slot)
+        return tuple((stratum, groups[stratum]) for stratum in strata)
+
     def _category_counts(self) -> dict[str, int]:
         return {
-            category: sum(slot.category == category for slot in self.slots)
-            for category in CATEGORY_OPERATORS
+            local[0].category: len(local)
+            for _, local in self._comparison_strata()
+            if local
         }
 
     def step(self) -> dict[str, Any]:
@@ -912,8 +940,12 @@ class SteadyStateOptimizer:
 
         replacements: list[dict[str, Any]] = []
         pruned_count = 0
-        for category in CATEGORY_OPERATORS:
-            local = [slot for slot in self.slots if slot.category == category]
+        for _stratum, local in self._comparison_strata():
+            if not local:
+                continue
+            category = local[0].category
+            if any(slot.category != category for slot in local):
+                raise ValueError("comparison stratum mixed legacy categories")
             protected = self._protected_indices(local)
             eligible = self._selection_eligible_slots(local)
             pruning_eligible = self._pruning_eligible_slots(local)
