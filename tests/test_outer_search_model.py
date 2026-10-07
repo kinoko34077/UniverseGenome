@@ -111,10 +111,12 @@ class OuterSearchModelTests(unittest.TestCase):
             CandidateValues(scalars={"conditional": 8}, rules={}),
         )
 
-        self.assertEqual(first.scalar_values["conditional"], 4)
-        self.assertEqual(second.scalar_values["conditional"], 4)
+        self.assertEqual(first.universe_spec.scalar_values["conditional"], 4)
+        self.assertEqual(second.universe_spec.scalar_values["conditional"], 4)
         self.assertEqual(first.candidate_identity, second.candidate_identity)
         self.assertEqual(first.active_dimensions, ("mode",))
+        self.assertNotIn("candidate_identity", first.universe_spec.to_dict())
+        self.assertNotIn("active_dimensions", first.universe_spec.to_dict())
 
     def test_plan_validation_rejects_conditional_dependency_cycle(self):
         registry = SearchRegistry(
@@ -210,7 +212,7 @@ class OuterSearchModelTests(unittest.TestCase):
             self.assertEqual(slot.seed, expected["seed"])
             self.assertEqual(slot.legacy_genome_values, expected["genome"])
             self.assertEqual(
-                slot.resolved_spec.to_physics_config(base).to_dict(),
+                slot.resolved_candidate.universe_spec.to_physics_config(base).to_dict(),
                 expected["state"]["config"],
             )
             self.assertEqual(slot.state.generation, 0)
@@ -222,10 +224,10 @@ class OuterSearchModelTests(unittest.TestCase):
             key = (expected["category"], json.dumps(expected["genome"], sort_keys=True))
             previous = identity_by_genome_and_category.setdefault(
                 key,
-                slot.resolved_spec.candidate_identity,
+                slot.resolved_candidate.candidate_identity,
             )
-            self.assertEqual(previous, slot.resolved_spec.candidate_identity)
-            seeds_by_identity.setdefault(slot.resolved_spec.candidate_identity, set()).add(slot.seed)
+            self.assertEqual(previous, slot.resolved_candidate.candidate_identity)
+            seeds_by_identity.setdefault(slot.resolved_candidate.candidate_identity, set()).add(slot.seed)
 
         self.assertEqual(len(identity_by_genome_and_category), 32)
         self.assertTrue(all(len(seeds) == 4 for seeds in seeds_by_identity.values()))
