@@ -858,6 +858,12 @@ class SteadyStateOptimizer:
         self,
         local: list[UniverseSlot],
     ) -> set[tuple[str, str]]:
+        if self.promising_policy is None:
+            return set()
+        if self.promising_policy != PROMISING_POLICY_TIERED_CATEGORY_RANK:
+            raise ValueError(
+                f"unsupported promising allocation policy: {self.promising_policy}"
+            )
         if not local:
             return set()
         categories = {slot.category for slot in local}
