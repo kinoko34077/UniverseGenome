@@ -136,14 +136,6 @@ def _build_variant_step():
     )
     source = replace_once(
         source,
-        "    stimulated = set(int(slot) for slot in stimulus_slots)\n"
-        "    stimulated.update(_local_revival_slots(state))",
-        "    external_stimulated = set(int(slot) for slot in stimulus_slots)\n"
-        "    stimulated = set(external_stimulated)\n"
-        "    stimulated.update(_local_revival_slots(state))",
-    )
-    source = replace_once(
-        source,
         "        if slot in stimulated and slot not in recovered_slots:\n"
         "            state.hp[slot] = min(0xFF, state.hp[slot] + resolved.recovery_hp)\n"
         "        elif slot in latent_activity_slots:\n"
