@@ -268,6 +268,10 @@ class SteadyStateOptimizer:
         self.base_config = base_config or PhysicsConfig()
         self.experiment = experiment or ExperimentConfig()
         self.generation = int(generation)
+        self._bound_objective_profile = bind_objective_profile(
+            legacy_search_plan(),
+            build_default_search_registry(),
+        )
         self.prune_history: list[dict[str, Any]] = []
         for raw_event in prune_history:
             if not isinstance(raw_event, Mapping):
@@ -320,9 +324,7 @@ class SteadyStateOptimizer:
         return self.scheduler["promising_policy"]
 
     def _objective_profile(self) -> ObjectiveProfile:
-        registry = build_default_search_registry()
-        plan = legacy_search_plan()
-        return bind_objective_profile(plan, registry)
+        return self._bound_objective_profile
 
     def _objective_growth_flags(self, previous: Fitness, current: Fitness) -> int:
         return objective_growth_flags(
