@@ -70,8 +70,12 @@ specification review. #132 / PR #134 accepted that specification with
 `ACCEPT-SPEC-PROPOSAL`, and #135 / PR #139 has now implemented the canonical
 D1 contract through TEST-ST-010. The authoritative slow-trace state, local
 physical semantics, v2/v6 migration and inert compatibility/default tuple
-`(0,0,0,0,8)` are production-implemented. All non-inert operating values
-remain research-only; #140 owns the separate TEST-ST-012 L3 causal gate.
+`(0,0,0,0,8)` are production-implemented. #140 / PR #142 has completed the
+separate frozen TEST-ST-012 L3 causal gate with
+`FAIL-L3-PERSISTENCE`: 12/12 primary cases remained B/H-distinct through
++100, but only 1/12 remained distinct at +1000 against the >=8/12 threshold.
+All non-inert operating values remain research-only and no successor profile or
+mechanism has been accepted.
 
 ## Status vocabulary
 
@@ -105,11 +109,13 @@ predeclared high-contrast immediate write condition; #122 shows that the
 baseline trace is not robust at +1000; #127 shows that direct generic latent or
 structure consolidation creates pre-lifecycle non-HP state but still reaches
 only 5/12 +1000 persistence. #130 subsequently selected D1 Anonymous Slow Trace,
-#132 / PR #134 accepted its specification, and #135 / PR #139 implemented it
-through TEST-ST-010 with inert compatibility preserved. #140 is now the active
-TEST-ST-012/L3 persistence-turnover research owner; no active non-inert default
-has been accepted.
-`learning_claim=false` remains authoritative. See
+#132 / PR #134 accepted its specification, #135 / PR #139 implemented it
+through TEST-ST-010 with inert compatibility preserved, and #140 / PR #142
+completed TEST-ST-012 with `FAIL-L3-PERSISTENCE`. The frozen profile retained
+teacher-specific slow trace through +100 in all 12 primary cases and supplied
+one turnover-surviving witness, but only 1/12 remained distinct at +1000.
+No active non-inert default or successor learning-path mechanism has been
+accepted. `learning_claim=false` remains authoritative. See
 `docs/PHASE6_HANDOFF.md`.
 
 See `docs/ROADMAP.md`.
