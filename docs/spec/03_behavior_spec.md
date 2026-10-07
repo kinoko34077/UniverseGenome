@@ -979,3 +979,240 @@ domain, so chance and split draws remain deterministic but separate.
 Exact hash/generator choice is implementation-specific but must be documented.
 
 ---
+
+
+---
+
+# 22. Generalized Outer Search behavior (#144 / #145)
+
+## OSG-BEH-001 — Deterministic validation order
+**Status: accepted**
+
+A SearchPlan shall be validated in this order before any authoritative
+Universe is instantiated:
+
+1. schema/version and required top-level identifiers;
+2. referenced registry IDs;
+3. fixed/search/rule declaration uniqueness;
+4. domain and strategy compatibility;
+5. structured conditional dependency graph;
+6. fixed/search overlap and activation consistency;
+7. stratum definitions and population arithmetic;
+8. ObjectiveProfile and cohort declarations;
+9. cross-field combination constraints;
+10. canonicalization and plan digest.
+
+The first failing stage shall return a deterministic validation error class.
+Plan validation shall not consume simulation randomness.
+
+## OSG-BEH-002 — Candidate resolution order
+**Status: accepted**
+
+For each candidate, resolution shall proceed deterministically:
+
+1. load registered canonical physical defaults;
+2. apply SearchPlan fixed values;
+3. apply candidate values for unconditional searchable dimensions;
+4. resolve rule dimensions required by conditional dependencies;
+5. evaluate conditional activation in dependency order;
+6. apply active conditional candidate/fixed values;
+7. force inactive conditional dimensions to their canonical fixed/inert values;
+8. validate all resolved cross-dimension constraints;
+9. construct canonical candidate identity;
+10. construct immutable ResolvedUniverseSpec.
+
+No unresolved search domain may cross the Inner boundary.
+
+## OSG-BEH-003 — Conditional dependency behavior
+**Status: accepted**
+
+Conditional predicates shall be structured, registered comparisons over already
+resolved Universe-level values/rule IDs. They shall not execute arbitrary
+expressions or inspect runtime fitness/evidence.
+
+Conditional dependency graphs must be acyclic. If dimension B depends on A,
+A must resolve before B.
+
+When a dimension becomes inactive under a candidate:
+
+- its SearchPlan candidate value, if any, is ignored for physical resolution;
+- the canonical inactive/fixed value is used;
+- it is excluded from mutation eligibility;
+- it does not distinguish candidate identity.
+
+## OSG-BEH-004 — Mutation eligibility
+**Status: accepted**
+
+A dimension is mutation eligible iff all are true:
+
+- it is registered;
+- SearchPlan marks it searchable;
+- its activation condition is currently true;
+- the selected mutation/search strategy is compatible;
+- at least one legal non-no-op successor value exists;
+- changing it can produce a valid ResolvedUniverseSpec.
+
+Mutation selection shall be deterministic from persisted scheduler state and
+the accepted deterministic search seed inputs.
+
+Legacy SearchPlan must reproduce the current mutation-field order, direction
+choice/fallback and resulting candidate values frozen in the Phase A oracle.
+
+## OSG-BEH-005 — Rule-dimension behavior
+**Status: accepted**
+
+Rule dimensions are ordinary finite candidate axes at the Outer layer, but the
+selected rule implementation is bound at the Inner resolver boundary.
+
+The Inner hot loop shall execute the already resolved rule binding. It shall
+not query SearchPlan, candidate rank, rule-stratum rank or ObjectiveProfile.
+
+An unknown/unregistered rule variant is a validation/load error and shall never
+fall back to a guessed/default implementation.
+
+## OSG-BEH-006 — Comparison-stratum behavior
+**Status: accepted**
+
+Each occupied slot belongs to exactly the comparison stratum derived from the
+plan's declared grouping dimensions.
+
+For `selection_scope=within`:
+
+- parent selection;
+- promising-group ranking;
+- growth-only protection thresholds;
+- prune competition;
+- replacement source selection;
+
+shall not cross into another stratum except where the plan explicitly declares
+matched-evidence coordination that does not perform selection.
+
+For `selection_scope=across`, cross-stratum selection is allowed only by the
+predeclared plan/objective semantics.
+
+Legacy SearchPlan uses four within-stratum `latent_operator` groups and
+reproduces current no-cross-category-elimination behavior exactly.
+
+## OSG-BEH-007 — Matched evidence behavior
+**Status: accepted**
+
+When a plan requests matched evidence, the allocator shall prefer the same
+candidate-equivalent evidence seed across declared comparison strata where
+practical and legal, without making seed part of candidate identity or coupling
+selection decisions between strata.
+
+Legacy SearchPlan shall reproduce the current post-initial cross-category
+same-genome seed-reuse preference.
+
+## OSG-BEH-008 — Evidence escalation and replacement
+**Status: accepted**
+
+Evidence escalation changes occupied seed slots for an existing candidate; it
+does not change candidate identity.
+
+Mutation replacement creates a new candidate identity with durable parent
+candidate identity/provenance.
+
+Replacement may occur only in a real free/prune-eligible slot. No generalized
+mode may introduce forced replacement of an otherwise live non-prunable slot
+unless a future specification explicitly changes that policy.
+
+Legacy SearchPlan shall reproduce the current 4→8→16→32 evidence tiers,
+minimum-evidence maturity, per-stratum 1:1 promising/mutation alternation,
+prune history and allocation reasons.
+
+## OSG-BEH-009 — Objective evaluation boundary
+**Status: accepted**
+
+Evaluation may read Inner snapshots/clones and produce Outer evidence according
+to the bound ObjectiveProfile.
+
+Evaluation shall not:
+
+- write rank/fitness/acceptance back into authoritative UniverseState;
+- alter candidate physical values;
+- change the active SearchPlan after outcome inspection;
+- convert non-evaluable evidence into success.
+
+The current Phase 5 ObjectiveProfile preserves current absolute fitness,
+growth bits/windows, health/response failure handling and pruning semantics.
+
+## OSG-BEH-010 — Cohort-role behavior
+**Status: accepted**
+
+Every evidence seed used in a declared run has a provenance role at minimum:
+
+- `search`; or
+- `validation`.
+
+A seed that contributes to adaptive candidate selection/tuning is search
+evidence for that run lineage. It shall not later be treated as untouched
+held-out evidence for the same acceptance claim.
+
+Changing cohort membership after outcome inspection creates a new run
+provenance and cannot retroactively alter the original run.
+
+## OSG-BEH-011 — Invalid-plan fail-closed behavior
+**Status: accepted / blocking**
+
+Invalid plans shall fail before population construction or authoritative state
+mutation.
+
+No invalid condition shall be repaired by:
+
+- silently dropping unknown dimensions;
+- substituting unknown rule IDs;
+- clamping undeclared out-of-domain values;
+- moving protocol values into physics;
+- removing conflicting strata;
+- inventing missing cohort or ObjectiveProfile declarations.
+
+## OSG-BEH-012 — Legacy exact-equivalence behavior
+**Status: accepted / blocking**
+
+Under Legacy SearchPlan, generalized execution must match the frozen Phase A
+oracle for every deterministic frozen surface:
+
+- all 128 initial slot assignments/configs/states;
+- short-health boundary;
+- generation 128, 512 and 1024 observations;
+- candidate/genome values;
+- fitness/growth/response/health state;
+- mutation field/direction/result;
+- evidence allocation/escalation;
+- pruning/replacement;
+- parent/lineage/allocation reason;
+- scheduler state;
+- optimizer persistence/continuation.
+
+A first mismatch is a blocking compatibility defect. The implementation shall
+not compensate by regenerating or updating the legacy oracle.
+
+## OSG-BEH-013 — Legacy persistence continuation
+**Status: accepted / blocking**
+
+A migrated legacy optimizer snapshot shall continue under the canonical Legacy
+SearchPlan. Restored continuation shall equal uninterrupted generalized Legacy
+SearchPlan continuation at the same resolved state.
+
+Migration shall not make any previously fixed field searchable and shall not
+activate non-inert slow-trace physics.
+
+## OSG-BEH-014 — Instrumentation non-interference
+**Status: accepted**
+
+Adding generalized search provenance, reporting or diagnostic instrumentation
+shall not alter candidate scheduling, Inner RNG/event addressing, authoritative
+UniverseState or optimizer decisions.
+
+## OSG-BEH-015 — Performance behavior
+**Status: accepted quantitative gate**
+
+Legacy generalized mode shall be measured against the frozen Phase A benchmark
+conditions on the same environment/process conditions.
+
+For both density4 and density32 independently, median throughput regression
+shall be no more than 5% unless a separate reviewed exception is accepted.
+
+The frozen timing artifact is provenance evidence, not a deterministic
+cross-machine performance constant.

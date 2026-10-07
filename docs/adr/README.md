@@ -9,3 +9,4 @@
 - ADR-007: evaluation clone
 - ADR-008: no cross-category elimination during initial comparison
 - ADR-009: anonymous slow-trace persistence architecture (accepted specification; implementation pending)
+- ADR-010: generalized registered Outer Search with blocking legacy-equivalence oracle

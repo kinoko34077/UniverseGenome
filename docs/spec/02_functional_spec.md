@@ -1264,3 +1264,246 @@ Canonical and bounded-smoke configs use the same mixed-length semantics. CI
 executes real P6.9 experiment and optimizer entrypoints while P6.1–P6.8 and
 browser regressions remain GREEN.
 
+
+
+---
+
+# 43. Generalized Outer Search functional contract (#144 / #145)
+
+This section defines the executable functional boundary for OSG-REQ-001..020.
+It does not activate new search dimensions. The canonical Legacy SearchPlan
+remains the only behavior required to reproduce production behavior until a
+later accepted research plan explicitly enables other registered dimensions.
+
+## OSG-FUNC-001 — SearchPlan validation
+**Status: accepted**
+
+Before population construction, the Outer layer shall validate a complete,
+versioned SearchPlan against the registered dimension/rule/strategy/objective
+registry.
+
+Validation shall reject, before any authoritative Universe is instantiated:
+
+- unknown dimension, rule variant, strategy or ObjectiveProfile IDs;
+- duplicate dimension declarations;
+- the same dimension declared both fixed and searchable;
+- domains outside a registered legal domain;
+- rule variants outside the registered finite family;
+- conditional dependencies that are missing, cyclic or unresolved;
+- illegal stratum grouping/selection/allocation combinations;
+- population/slot allocations that cannot satisfy the declared plan;
+- seed as a searchable dimension;
+- experiment/protocol-only fields as Universe search dimensions;
+- executable source/function/import payloads supplied by the plan.
+
+Validation errors are deterministic plan errors, not evolutionary deaths.
+
+## OSG-FUNC-002 — Candidate construction
+**Status: accepted**
+
+The Outer engine constructs a candidate from:
+
+1. SearchPlan fixed values;
+2. active searchable scalar values;
+3. active registered rule-variant selections;
+4. canonical values for any conditionally inactive dimensions.
+
+Candidate construction shall never include seed, slot index, fitness, rank,
+lineage or experiment-protocol values in candidate identity.
+
+A candidate with an unresolved active dimension is invalid and shall not be
+instantiated.
+
+## OSG-FUNC-003 — ResolvedUniverseSpec
+**Status: accepted / blocking**
+
+Resolving one valid candidate shall produce exactly one immutable
+`ResolvedUniverseSpec` containing all Universe-level physical values and rule
+bindings required by the Inner runtime.
+
+A ResolvedUniverseSpec shall contain no search domains, mutation strategies,
+fitness, rank, cohort role, evidence seed set, allocation reason or other
+Outer-only metadata.
+
+It shall include:
+
+- complete resolved scalar physical values;
+- complete resolved physical rule-variant IDs/bindings;
+- canonical fixed/inert values for inactive conditional dimensions;
+- sufficient schema/registry identity for deterministic reconstruction.
+
+The same ResolvedUniverseSpec + seed + accepted external input sequence shall
+produce the same Inner trajectory.
+
+## OSG-FUNC-004 — Inner instantiation boundary
+**Status: accepted / blocking**
+
+The Inner runtime is instantiated only from:
+
+- a validated ResolvedUniverseSpec;
+- one evidence/initialization seed;
+- accepted initial-state/external-input inputs.
+
+The Inner runtime shall not receive the SearchPlan object or any Outer ranking,
+lineage, mutation, cohort or objective metadata.
+
+Rule resolution shall occur before the hot Inner step path where the selected
+rule can be bound once.
+
+## OSG-FUNC-005 — Generic scalar mutation
+**Status: accepted**
+
+For an active searchable scalar dimension, the Outer engine shall apply only a
+registered strategy compatible with that dimension's declared domain.
+
+A mutation result must:
+
+- change exactly the selected candidate dimension for a one-dimension mutation
+  strategy;
+- remain inside the registered legal domain;
+- satisfy all active combination/conditional constraints after resolution;
+- never mutate seed or protocol state;
+- produce no no-op child.
+
+Legacy SearchPlan shall reproduce current adjacent binary-grid mutation,
+direction fallback and mutation-field scheduling exactly.
+
+## OSG-FUNC-006 — Generic finite-rule mutation
+**Status: accepted**
+
+For an active searchable Rule Dimension, mutation/search may select only one of
+the plan-authorized registered variant IDs.
+
+The generic search engine shall treat rule IDs as finite values. It shall not
+receive or evaluate executable rule source from SearchPlan.
+
+A rule variant change is a candidate-level change, not an Inner cell-state
+mutation.
+
+## OSG-FUNC-007 — Conditional activation
+**Status: accepted**
+
+After resolving all prerequisite dimensions, each conditional dimension shall
+be classified active or inactive using only its registered structured
+condition.
+
+If active, the dimension follows the plan's fixed/searchable declaration.
+If inactive:
+
+- it is not mutation eligible;
+- it resolves to the registered/plan-declared canonical fixed or inert value;
+- alternative inactive values do not create distinct candidates.
+
+A dependency cycle or condition that cannot be decided deterministically is an
+invalid plan.
+
+## OSG-FUNC-008 — Population and comparison-stratum allocation
+**Status: accepted**
+
+The Outer layer maps candidates and evidence seeds into the declared population
+while enforcing:
+
+- total slot capacity;
+- stratum grouping and selection scope;
+- evidence minimums;
+- matched candidate/seed requirements;
+- allocation/escalation policy;
+- no cross-stratum elimination when the active stratum declares
+  `selection_scope=within`.
+
+Legacy SearchPlan shall allocate exactly 128 slots as four 32-slot
+`latent_operator` strata, with eight initial candidates and four seeds per
+candidate in each stratum.
+
+## OSG-FUNC-009 — Evidence allocation and candidate lineage
+**Status: accepted**
+
+Additional seed evidence allocates a fresh authoritative Universe with the same
+candidate identity and a new evidence seed. It does not create a new candidate.
+
+A mutation child has a distinct candidate identity and records durable
+candidate-parent lineage in Outer state.
+
+Allocation reason, parent relationship, evidence maturity and scheduler state
+remain Outer metadata and shall not be injected into Inner state.
+
+Legacy SearchPlan shall reproduce current 4→8→16→32 evidence escalation and
+current `tiered_category_rank` behavior exactly.
+
+## OSG-FUNC-010 — ObjectiveProfile binding
+**Status: accepted / blocking**
+
+A search run binds one versioned ObjectiveProfile before outcome inspection.
+The ObjectiveProfile defines the measurable fields, eligibility, comparison
+order/direction, tie breakers, evidence minimums, invalid/non-evaluable
+handling and negative-control gates used by Outer selection.
+
+The current Phase 5 behavior shall be represented as a canonical legacy
+ObjectiveProfile without changing its existing fitness/growth/pruning
+semantics.
+
+Research ObjectiveProfiles remain separate from canonical learning acceptance.
+
+## OSG-FUNC-011 — Search and held-out validation cohorts
+**Status: accepted / blocking**
+
+SearchPlan shall bind distinct cohort declarations for adaptive search/tuning
+and held-out validation when final acceptance requires unbiased validation.
+
+Seeds used adaptively to choose candidate values shall be recorded as search
+evidence and shall not later be relabeled as untouched held-out acceptance
+evidence.
+
+The known #140 12-seed acceptance cohort shall not be both adaptive tuning data
+and final acceptance evidence for a later memory-physics search.
+
+## OSG-FUNC-012 — Candidate freeze/export
+**Status: accepted**
+
+The Outer layer shall be able to export a selected candidate as:
+
+- canonical candidate identity;
+- complete ResolvedUniverseSpec;
+- SearchPlan/registry/ObjectiveProfile provenance;
+- evidence summary and cohort role.
+
+A later staged search may import the resolved physical values/rule IDs as fixed
+values in a new predeclared SearchPlan.
+
+Export or reuse does not promote a value/rule to production default.
+
+## OSG-FUNC-013 — Legacy SearchPlan
+**Status: accepted / blocking**
+
+The repository shall provide one canonical Legacy SearchPlan representing the
+accepted pre-generalization Phase 5 search.
+
+It shall preserve:
+
+- 128 slots;
+- `latent_operator` finite rule variants
+  `masked_copy|masked_xor|rotate_copy|masked_and`;
+- 32 slots per legacy stratum;
+- eight initial genomes × four seeds/category;
+- all current UniverseGenome scalar dimensions and exact initial-variation
+  sequence;
+- existing adjacent-grid mutation and scheduling;
+- current evidence, fitness, growth, health, pruning, lineage and replacement
+  behavior;
+- existing experiment/default separation;
+- slow-trace physical values fixed at `(0,0,0,0,8)`.
+
+No newly registered dimension is searchable unless Legacy SearchPlan explicitly
+declares it searchable.
+
+## OSG-FUNC-014 — Frozen oracle comparison
+**Status: accepted / blocking**
+
+Legacy generalized execution shall be comparable against the immutable Phase A
+oracle generated from source
+`211d84b18fe68e70f89c8921d156e1b7c0592895` at
+`research/artifacts/legacy_outer_search_oracle_v1/manifest.json`.
+
+Passing requires exact deterministic parity for the frozen deterministic
+surfaces. Performance is evaluated separately under matched runtime conditions
+because wall-clock timing is observational.

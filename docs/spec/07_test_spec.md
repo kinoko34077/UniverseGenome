@@ -970,3 +970,215 @@ density-32 primary cohort:
 Only this gate may support an L3-persistence-capable classification. L4 recall,
 output reachability, target bias and canonical learning remain separate later
 tests.
+
+
+---
+
+## Generalized Outer Search acceptance tests (#144 / #145)
+
+### OSG-TEST-001 — Legacy static reconstruction
+Construct canonical Legacy SearchPlan and compare all 128 initial slots to the
+frozen Phase A oracle:
+
+- slot index;
+- `latent_operator` stratum/value;
+- eight initial candidates × four evidence seeds/category;
+- candidate/genome values;
+- effective PhysicsConfig;
+- initial authoritative UniverseState;
+- initial scheduler state.
+
+Exact mismatch is blocking.
+
+### OSG-TEST-002 — Legacy dynamic equivalence
+Run generalized Legacy SearchPlan through the frozen oracle checkpoints and
+require exact deterministic equality for every recorded slot at:
+
+- short-health generation 16;
+- generation 128;
+- generation 512;
+- generation 1024.
+
+Compare authoritative state digests/fields, fitness, growth references/windows,
+response/health windows, evidence maturity and failure state.
+
+### OSG-TEST-003 — Legacy optimizer-decision equivalence
+Compare the generalized engine to the frozen optimizer-decision evidence for:
+
+- mutation dimension/field;
+- mutation direction/result;
+- seed-evidence allocation;
+- 4→8→16→32 escalation;
+- allocation-mode cursor behavior;
+- pruning/protection;
+- replacement target/source;
+- allocation reason;
+- parent/lineage;
+- prune history;
+- scheduler state.
+
+### OSG-TEST-004 — Legacy ObjectiveProfile equivalence
+The generalized legacy ObjectiveProfile shall reproduce current Phase 5
+absolute-fitness ordering, growth-window behavior, short-health/response
+failures, protection and pruning outcomes without new fields changing the
+comparison result.
+
+### OSG-TEST-005 — SearchPlan invalid-input matrix
+Reject deterministically before Universe construction:
+
+- unknown scalar dimension;
+- unknown Rule Dimension;
+- unknown rule variant;
+- unknown strategy;
+- unknown ObjectiveProfile;
+- duplicate/conflicting declaration;
+- fixed/search overlap;
+- out-of-domain scalar values/domain;
+- conditional cycle/unresolved dependency;
+- invalid stratum grouping/scope/allocation;
+- population arithmetic that cannot be satisfied;
+- seed declared searchable;
+- experiment/protocol field declared as candidate physics;
+- arbitrary executable source/function/import payload.
+
+### OSG-TEST-006 — Conditional Dimension
+For a registered test conditional dimension, verify:
+
+- activation uses only resolved declared dependencies;
+- inactive dimension is not mutation eligible;
+- inactive dimension resolves to canonical fixed/inert value;
+- irrelevant inactive alternatives do not create distinct candidate identity;
+- active legal values do create the expected candidate identity difference;
+- cyclic/unresolved conditions fail closed.
+
+### OSG-TEST-007 — Generic Scalar Dimension extensibility
+Register a bounded test-only Scalar Dimension and prove candidate construction,
+mutation eligibility, canonicalization and scheduling work without adding a
+dimension-name-specific branch to generic scheduler/selection code.
+
+The test dimension must remain outside production Legacy SearchPlan.
+
+### OSG-TEST-008 — Generic Rule Dimension extensibility
+Register a finite test-only Rule Dimension and prove population/stratum,
+candidate resolution and rule selection work without generic code enumerating
+its variant names.
+
+SearchPlan deserialization selects only registered IDs and cannot provide
+executable rule code.
+
+### OSG-TEST-009 — Seed non-evolvability
+Prove seed:
+
+- is absent from candidate identity;
+- cannot be registered/enabled as a searchable candidate dimension under the
+  accepted registry;
+- may vary only as evidence allocation;
+- does not change parent candidate identity.
+
+### OSG-TEST-010 — Experiment/search separation
+Prove experiment-only fields such as teacher repetitions, byte hold/gap,
+evaluation timeout and mapping/held-out declarations:
+
+- are absent from candidate identity;
+- are not generic mutation targets;
+- cannot be referenced as Universe search dimensions by the accepted registry.
+
+### OSG-TEST-011 — ResolvedUniverseSpec Inner boundary
+Instrument Inner construction/step and prove it receives complete resolved
+physical values/rule bindings plus seed/accepted inputs, but no SearchPlan,
+rank, fitness, lineage, allocation reason, stratum, cohort or ObjectiveProfile
+metadata.
+
+### OSG-TEST-012 — Deterministic replay
+Same repository revision + registry + SearchPlan + ObjectiveProfile + base seed
++ evidence seed + protocol shall produce identical:
+
+- candidate identities;
+- slot allocation;
+- mutation/replacement decisions;
+- Inner authoritative states;
+- persisted scheduler/provenance state.
+
+### OSG-TEST-013 — Instrumentation equivalence
+Run generalized Legacy SearchPlan with and without search/report
+instrumentation. Authoritative Inner states and optimizer decisions must be
+identical.
+
+### OSG-TEST-014 — Optimizer v6→v7 migration
+Load the frozen/current optimizer v6 fixture and require deterministic migration
+to v7:
+
+- canonical Legacy SearchPlan bound;
+- legacy ObjectiveProfile bound;
+- all 128 UniverseState payloads unchanged;
+- all existing fitness/growth/health/response/evidence/scheduler/lineage/prune
+  state preserved;
+- generalized candidate identities reconstructed deterministically;
+- slow trace remains fixed at `(0,0,0,0,8)`;
+- next save emits v7;
+- restore/continue equals uninterrupted generalized Legacy SearchPlan.
+
+Malformed v7 unknown IDs or inconsistent plan/registry/candidate identity shall
+fail closed.
+
+### OSG-TEST-015 — Frozen oracle immutability
+After generalized production search/physics code changes, the Phase A generator
+shall refuse regeneration against changed protected paths.
+
+Tests shall read the frozen artifacts rather than updating expected values from
+the generalized implementation.
+
+### OSG-TEST-016 — Slow-trace representability without activation
+Verify all five slow-trace physical parameters can be represented by the
+registry while canonical Legacy SearchPlan fixes them to
+`(0,0,0,0,8)` and exposes none as a searchable axis.
+
+This test is representability/compatibility only and is not L3 evidence.
+
+### OSG-TEST-017 — Search/validation cohort separation
+Prove adaptive search evidence and held-out validation evidence have distinct
+provenance roles, and that a seed used for adaptive selection cannot be
+reported as untouched held-out evidence for the same run lineage.
+
+A test shall explicitly prevent using the known #140 acceptance cohort both as
+adaptive tuning evidence and final held-out acceptance evidence.
+
+### OSG-TEST-018 — Candidate freeze/export
+Exporting a candidate shall round-trip candidate identity,
+ResolvedUniverseSpec and provenance into a new predeclared plan with those
+physical values fixed.
+
+The export path must not alter production defaults or imply acceptance.
+
+### OSG-TEST-019 — No arbitrary rule code
+Attempted plan payloads containing executable code, callable/import references
+or unregistered dynamic expressions shall be rejected.
+
+Only finite registered rule variant IDs may cross the SearchPlan boundary.
+
+### OSG-TEST-020 — Performance gate
+Under matched environment/process conditions and the existing Phase A
+density4/density32 benchmark protocol:
+
+- run accepted pre-generalization baseline conditions;
+- run generalized Legacy SearchPlan conditions;
+- compare median throughput independently for density4 and density32;
+- require regression ≤5% for each, or block acceptance pending an explicit
+  reviewed exception.
+
+The frozen raw timing values are not expected to match across machines.
+
+### OSG-TEST-021 — Full legacy exact-equivalence gate
+Before any new production/research search dimension is enabled, all
+OSG-TEST-001..020 applicable to Legacy SearchPlan plus the repository's existing
+regression/browser tests shall be GREEN on the exact reviewed head.
+
+Terminal implementation acceptance requires the frozen deterministic oracle to
+match without modifying the oracle.
+
+### OSG specification acceptance boundary
+These tests define the required implementation evidence only. Phase B itself
+does not implement production generalization.
+
+Production work may begin only after #144/#145 records terminal
+`ACCEPT-OUTER-SEARCH-GENERALIZATION-SPEC`.

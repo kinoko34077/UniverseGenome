@@ -1635,3 +1635,261 @@ Parent implementation/bootstrap task: #1
 
 This Issue owns **requirements**.  
 Exact equations, field layouts, generation ordering, and implementation defaults belong in the detailed specification Issue.
+
+
+---
+
+# 24. Generalized Outer Search requirements (#144 / #145)
+
+This section generalizes the existing Phase 5 search machinery without changing
+the accepted Inner physics or silently enabling new research dimensions.
+REQ-120..REQ-124 remain authoritative as the exact legacy SearchPlan behavior.
+
+## OSG-REQ-001 — Inner / Outer responsibility separation
+**Status: accepted**
+
+The system shall maintain a testable boundary between:
+
+1. **Inner Universe Runtime** — executes one fully resolved Universe
+   deterministically.
+2. **Outer Search Engine** — constructs, allocates, compares, mutates, selects
+   and records candidate Universe specifications.
+
+The Inner runtime shall not receive candidate/population rank, parent fitness,
+mutation reason, search stratum, cohort role, acceptance result, or whether a
+resolved value was fixed or searched. The Outer engine shall not directly
+mutate authoritative cell arrays to create a preferred result.
+
+## OSG-REQ-002 — Declarative SearchPlan
+**Status: accepted**
+
+Every generalized search run shall consume a versioned declarative
+`SearchPlan` that declares fixed Universe-level values, enabled searchable
+dimensions, finite rule families, structured conditional constraints,
+population size, comparison strata, matched-evidence policy, mutation/search
+policy identifiers, objective profile, search/held-out validation cohorts and
+deterministic scheduler/base-seed inputs.
+
+## OSG-REQ-003 — Registered dimensions only / no executable payload
+**Status: accepted**
+
+A SearchPlan may reference only registered dimension IDs, rule-dimension IDs,
+rule-variant IDs, strategy IDs, objective-profile IDs and structured constraint
+forms. Unknown IDs, invalid domains, incompatible strategies or illegal
+combinations shall fail closed with deterministic validation errors.
+
+A SearchPlan shall never contain source code, runtime-evaluated expressions,
+function pointers/import paths supplied by the plan, or other arbitrary
+executable rule payloads.
+
+## OSG-REQ-004 — Scalar Dimension
+**Status: accepted**
+
+A registered scalar dimension shall declare at minimum:
+
+- stable dimension ID;
+- Universe-level physical destination;
+- value type;
+- finite allowed values or explicit legal bounds;
+- canonical fixed/default value;
+- compatible mutation/search strategy IDs;
+- optional structured activation condition;
+- validation constraints and serialization semantics.
+
+Registration makes a dimension representable, not automatically searchable.
+
+## OSG-REQ-005 — Rule Dimension
+**Status: accepted**
+
+A Rule Dimension shall select from a finite registered family of stable rule
+variant IDs. Every rule variant shall resolve to an Inner-owned implementation,
+declare the physical hook it controls, remain deterministic/bounded/local where
+required by existing physics, be snapshot/replay safe and receive no semantic
+search metadata or candidate fitness.
+
+The existing latent operator family
+`masked_copy|masked_xor|rotate_copy|masked_and` shall be representable as one
+Rule Dimension.
+
+## OSG-REQ-006 — Conditional Dimension
+**Status: accepted**
+
+A dimension may be active only when its declared structured condition is
+satisfied by already resolved Universe-level values/rule IDs. An inactive
+dimension shall:
+
+- resolve to its declared fixed/inert value for physical construction;
+- not be eligible for mutation/search;
+- not produce distinct candidates merely through an irrelevant inactive value.
+
+Conditional constraints shall be deterministic and fail closed when their
+dependencies cannot be resolved.
+
+## OSG-REQ-007 — Fixed values and staged search
+**Status: accepted**
+
+Any registered dimension may be fixed by a SearchPlan. Research may therefore
+search one bounded axis, validate/freeze a result in a new predeclared plan,
+then search another axis. A search result shall never silently promote itself
+to a canonical default or mutate the active plan in place after outcome
+inspection.
+
+## OSG-REQ-008 — Seed is evidence, never candidate identity
+**Status: accepted / blocking**
+
+Seed shall remain outside candidate identity and outside all mutation domains.
+Outer Search may allocate more seeds to collect evidence, but seed shall not
+mutate or become a lucky candidate property. Ranking shall aggregate the
+declared evidence cohort/policy.
+
+## OSG-REQ-009 — Experiment/search separation
+**Status: accepted / blocking**
+
+Experiment/protocol values such as teacher repetitions, byte hold/gap,
+evaluation horizon, target mappings and held-out mappings remain outside
+Universe-level candidate dimensions unless a future explicit specification
+reclassifies a value as physical Universe law.
+
+Experiment fields shall not enter candidate identity or generic mutation merely
+because they are available to evaluation code.
+
+## OSG-REQ-010 — Comparison strata
+**Status: accepted**
+
+SearchPlan shall support declared comparison strata. A stratum declares:
+
+- grouping dimension IDs and allowed values;
+- within-stratum or across-strata selection scope;
+- slot/evidence allocation policy;
+- matched dimensions and matched-seed/evidence policy.
+
+The current four latent categories shall be exactly reproducible as the legacy
+stratum configuration with no unintended cross-category elimination.
+
+## OSG-REQ-011 — Multiple simultaneous dimensions
+**Status: accepted**
+
+A SearchPlan may search one or many scalar dimensions, one or many rule
+dimensions, or mixtures of both, subject to registered domains and explicit
+combination constraints. Generic scheduling/selection shall not require a
+separate implementation path for each dimension combination.
+
+## OSG-REQ-012 — Versioned predeclared ObjectiveProfile
+**Status: accepted / blocking**
+
+Each run shall bind before outcome inspection to a versioned objective profile
+that defines measurable evidence fields, eligibility, comparison
+order/direction, tie breakers, invalid/non-evaluable handling, evidence
+minimums and any negative-control gates.
+
+Changing that profile after observing outcomes creates a new run identity and
+provenance; it shall not be treated as continuation of the original
+predeclared run.
+
+## OSG-REQ-013 — Canonical and research objectives remain distinct
+**Status: accepted**
+
+Research ObjectiveProfiles may rank precursor properties such as L3
+persistence without changing canonical Phase 5 fitness or the canonical
+learning claim. Research results are research evidence only until a separate
+promotion/acceptance decision.
+
+`learning_claim=false` remains authoritative for the current repository
+state. L4 remains unevaluated.
+
+## OSG-REQ-014 — Search cohort / held-out validation cohort separation
+**Status: accepted / blocking**
+
+A tuning/search run shall support a distinct held-out validation cohort. A
+frozen acceptance cohort shall not be adaptively tuned against and then reused
+as an unbiased final acceptance cohort.
+
+In particular, the known 12-seed #140 acceptance cohort shall not be used for
+adaptive slow-trace tuning and then reused as final acceptance evidence.
+
+## OSG-REQ-015 — Search provenance
+**Status: accepted**
+
+Persisted/reportable search runs shall expose enough provenance to reproduce
+candidate assignment and evaluation:
+
+- repository/code revision;
+- SearchPlan ID/version/digest;
+- dimension/rule registry version or digest;
+- base physical config digest;
+- experiment protocol digest;
+- ObjectiveProfile ID/version;
+- scheduler/base-seed inputs;
+- candidate identity;
+- evidence seed set and cohort role;
+- lineage/parent relationship;
+- fixed/searched/inactive status for each declared dimension.
+
+Search provenance remains Outer state and shall not become ordinary-cell learned
+state.
+
+## OSG-REQ-016 — No Outer-result leakage into Inner state
+**Status: accepted / blocking**
+
+The Inner runtime shall never receive fitness, rank, acceptance result,
+matched-control outcome, branch/cohort labels or target identity as search
+metadata. Teacher/input semantics reach the Universe only through the already
+accepted physical I/O protocol.
+
+Outer selection may choose which resolved Universe runs next, but shall not
+inject search outcomes into authoritative cell state.
+
+## OSG-REQ-017 — Extensibility without generic scheduler field-name edits
+**Status: accepted**
+
+Adding a registered scalar or rule dimension shall not require editing generic
+search scheduling/selection code solely to enumerate or recognize that
+dimension name. Dimension-specific physical validation/resolution belongs at
+the registry/resolver or Inner rule boundary.
+
+## OSG-REQ-018 — Legacy exact-equivalence contract
+**Status: accepted / blocking**
+
+A canonical Legacy SearchPlan shall reproduce the accepted pre-generalization
+behavior frozen from source main:
+
+`211d84b18fe68e70f89c8921d156e1b7c0592895`.
+
+Static initialization, authoritative evolution checkpoints, optimizer
+decisions, persistence/continuation and accepted public/config semantics are a
+blocking exact-equivalence requirement, not a best-effort compatibility goal.
+
+The frozen oracle is
+`research/artifacts/legacy_outer_search_oracle_v1/manifest.json`.
+
+## OSG-REQ-019 — No automatic search-space broadening
+**Status: accepted / blocking**
+
+A field becoming registered does not make it searchable. Only dimensions
+explicitly enabled by the active SearchPlan may vary.
+
+The implemented slow-trace physical fields are representable by the registry
+but remain fixed at the accepted production D1 inert/default tuple
+`(0,0,0,0,8)` in Legacy SearchPlan. This specification does not select or
+manually tune a second D1 profile.
+
+## OSG-REQ-020 — Bounded generalized overhead
+**Status: accepted quantitative gate**
+
+Generalized Legacy SearchPlan execution shall introduce no new N²
+all-Universe/all-cell search and no per-cell dynamic rule lookup where rule
+resolution can occur before the Inner hot loop.
+
+Under the existing density4 and density32 benchmark conditions, matched
+baseline-vs-generalized measurements on the same environment shall show no more
+than 5% median throughput regression unless an explicit reviewed exception is
+accepted. The frozen Phase A timing artifact is provenance/baseline evidence;
+raw timing values are observational rather than deterministic oracle data.
+
+## Phase boundary invariants
+**Status: accepted**
+
+This architecture/specification change does not authorize P6.10+ work, does not
+activate slow-trace search, does not evaluate L4, and does not absorb #93.
+Memory-physics search is a later separate research workstream after generalized
+legacy parity is accepted.
