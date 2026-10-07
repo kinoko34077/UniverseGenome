@@ -1223,9 +1223,7 @@ class SteadyStateOptimizer:
             markers = {slot.evidence_mature for slot in group}
             if len(markers) != 1:
                 raise ValueError("evidence maturity must be consistent within one genome group")
-            if len(group) >= legacy_search_plan().bind_objective_profile(
-                build_default_search_registry()
-            ).minimum_evidence and not next(iter(markers)):
+            if len(group) >= MINIMUM_EVIDENCE_SEEDS and not next(iter(markers)):
                 raise ValueError("minimum-evidence group must be marked mature")
         scheduler = payload.get("scheduler", {})
         promising_policy = (
