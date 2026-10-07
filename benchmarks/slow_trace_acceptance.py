@@ -65,10 +65,9 @@ def compatibility_fingerprint(*, density: int, generations: int) -> str:
     for seed in range(32):
         state = create_universe(seed=seed, config=config)
         digest.update(int(seed).to_bytes(4, "little", signed=False))
-        _update_state_digest(digest, state)
         for _ in range(generations):
             step(state)
-            _update_state_digest(digest, state)
+        _update_state_digest(digest, state)
     return digest.hexdigest()
 
 
