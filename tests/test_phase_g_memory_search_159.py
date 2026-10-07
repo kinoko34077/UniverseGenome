@@ -15,6 +15,7 @@ from research.phase_g_memory_search_159 import (
     SEARCH_POOL,
     build_phase_g_registry,
     decay_candidate,
+    phase_g_protocol_payload,
     phase_g_search_plan,
     qualify_case_h0,
     select_qualification_cohort,
@@ -101,6 +102,13 @@ class PhaseGMemorySearch159Tests(unittest.TestCase):
         selected = select_qualification_cohort(cases, positive_count=2, negative_count=2)
         self.assertEqual(selected["positive"], [32, 34])
         self.assertEqual(selected["negative"], [33, 35])
+
+    def test_protocol_provenance_binds_teacher_pair_and_adaptive_horizons(self) -> None:
+        protocol = phase_g_protocol_payload()
+        self.assertEqual(protocol["teacher_pair"], [66, 8])
+        self.assertEqual(protocol["qualification_horizon"], 0)
+        self.assertEqual(protocol["adaptive_horizons"], [100, 1000])
+        self.assertTrue(protocol["no_further_external_stimulation_after_h0"])
 
     def test_h0_qualification_has_no_post_teacher_horizon(self) -> None:
         case = qualify_case_h0(seed=32)
