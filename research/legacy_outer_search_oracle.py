@@ -71,9 +71,7 @@ def canonical_digest(payload: Any) -> str:
 
 
 def _file_bytes(payload: Any) -> bytes:
-    return (
-        json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
-    ).encode("utf-8")
+    return canonical_json_bytes(payload) + b"\n"
 
 
 def _file_digest(path: Path) -> str:
