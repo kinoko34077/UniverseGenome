@@ -464,6 +464,16 @@ class SearchPlan:
                     f"conditional dependency {dependency} is not declared in SearchPlan"
                 )
 
+        completed: set[str] = set()
+        for dimension_id in sorted(declared):
+            _check_activation_cycle(
+                dimension_id,
+                registry,
+                declared,
+                set(),
+                completed,
+            )
+
         for constraint in self.constraints:
             if constraint.dimension_id not in declared:
                 raise ValueError(
