@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -16,6 +19,38 @@ from search.outer_search import (
     select_promising_parent_index,
     select_prune_target_index,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
+ORACLE_PATH = ROOT / "research" / "artifacts" / "legacy_outer_search_oracle_v1" / "oracle.json"
+
+
+def oracle_selection_records(items: list[dict[str, object]]) -> tuple[SelectionRecord, ...]:
+    groups: dict[str, list[dict[str, object]]] = {}
+    for item in items:
+        groups.setdefault(str(item["genome_key"]), []).append(item)
+    aggregates = {
+        genome_key: SteadyStateOptimizer._aggregate_fitness(
+            [
+                SimpleNamespace(fitness=Fitness.from_dict(dict(record["fitness"])))
+                for record in group
+            ]
+        )
+        for genome_key, group in groups.items()
+    }
+    return tuple(
+        SelectionRecord(
+            index=int(item["index"]),
+            group_key=(str(item["category"]), str(item["genome_key"])),
+            objective_key=aggregates[str(item["genome_key"])].sort_key(),
+            evidence_count=len(groups[str(item["genome_key"])]),
+            candidate_tie_key=str(item["genome_key"]),
+            growth_windows=tuple(int(value) for value in item["growth_windows"]),
+            absolute_failure=bool(item["absolute_failure"]),
+            evidence_mature=bool(item["evidence_mature"]),
+        )
+        for item in items
+    )
+
 
 
 def record(
@@ -108,6 +143,44 @@ class OuterSearchSelectionTests(unittest.TestCase):
         self.assertIn(8, pruned)
         self.assertNotIn(0, pruned)
         self.assertEqual(select_prune_target_index(records, pruned), 8)
+
+    def test_frozen_generation_1024_selection_matches_phase_a_replacement_evidence(self):
+        oracle = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))
+        checkpoint = oracle["dynamic"]["checkpoints"]["1024"]
+        expected_replacements = {
+            item["category"]: item
+            for item in oracle["dynamic"]["integrated_step"]["replacements"]
+        }
+
+        pruned_total = 0
+        for category, expected in expected_replacements.items():
+            local = [item for item in checkpoint if item["category"] == category]
+            records = oracle_selection_records(local)
+            protected = protected_selection_indices(records)
+            pruning_records = tuple(
+                record
+                for record in records
+                if record.evidence_mature or record.absolute_failure
+            )
+            pruned = prune_selection_indices(pruning_records, protected=protected)
+            pruned_total += len(pruned)
+            target_index = select_prune_target_index(records, pruned)
+            self.assertEqual(target_index, expected["index"])
+
+            target_group = next(
+                record.group_key for record in records if record.index == target_index
+            )
+            source_items = [item for item in local if int(item["index"]) != target_index]
+            source_records = oracle_selection_records(source_items)
+            parent_index = select_promising_parent_index(
+                source_records,
+                policy_id="tiered_category_rank",
+                minimum_evidence=4,
+                excluded_group=target_group,
+            )
+            self.assertEqual(parent_index, expected["parent_index"])
+
+        self.assertEqual(pruned_total, oracle["dynamic"]["integrated_step"]["pruned_count"])
 
     def test_integrated_step_routes_protection_pruning_and_target_through_generic_policy(self):
         protocol = ExperimentConfig(
