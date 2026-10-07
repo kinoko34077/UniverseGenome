@@ -93,17 +93,21 @@ class OuterSearchSelectionTests(unittest.TestCase):
         records = (
             record(0, group="a", success=1.0, growth_windows=(15, 15, 15, 15)),
             record(1, group="b", success=0.4, growth_windows=(0, 0, 0, 0)),
-            record(2, group="c", success=0.2, growth_windows=(8, 8, 8, 8)),
-            record(3, group="d", success=0.1, growth_windows=(8, 8, 8, 8)),
-            record(4, group="e", success=0.0, absolute_failure=True),
+            record(2, group="c", success=0.3, growth_windows=(15, 15, 15, 15)),
+            record(3, group="d", success=0.2, growth_windows=(15, 15, 15, 15)),
+            record(4, group="e", success=0.2, growth_windows=(15, 15, 15, 15)),
+            record(5, group="f", success=0.2, growth_windows=(15, 15, 15, 15)),
+            record(6, group="g", success=0.2, growth_windows=(8, 8, 8, 8)),
+            record(7, group="h", success=0.2, growth_windows=(8, 8, 8, 8)),
+            record(8, group="i", success=0.0, absolute_failure=True),
         )
         protected = {0}
         pruned = prune_selection_indices(records, protected=protected)
 
         self.assertIn(1, pruned)
-        self.assertIn(4, pruned)
+        self.assertIn(8, pruned)
         self.assertNotIn(0, pruned)
-        self.assertEqual(select_prune_target_index(records, pruned), 4)
+        self.assertEqual(select_prune_target_index(records, pruned), 8)
 
     def test_integrated_step_routes_protection_pruning_and_target_through_generic_policy(self):
         protocol = ExperimentConfig(
