@@ -1,0 +1,44 @@
+name: Phase F Legacy Equivalence
+
+on:
+  pull_request:
+    paths:
+      - "research/outer_search_phase_f_acceptance.py"
+      - ".github/workflows/phase-f-legacy-equivalence.yml"
+      - "search/**"
+      - "core/**"
+      - "config/default.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "research/outer_search_phase_f_acceptance.py"
+      - ".github/workflows/phase-f-legacy-equivalence.yml"
+      - "search/**"
+      - "core/**"
+      - "config/default.json"
+
+permissions:
+  contents: read
+
+jobs:
+  phase_f_acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10.6"
+      - name: Full legacy equivalence and matched performance gate
+        run: |
+          python -m research.outer_search_phase_f_acceptance all --output phase_f_report.json
+      - name: Upload Phase F acceptance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-f-acceptance-${{ github.sha }}
+          path: phase_f_report.json
+          if-no-files-found: error
