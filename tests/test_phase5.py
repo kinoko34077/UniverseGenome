@@ -461,7 +461,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         payload = optimizer.to_snapshot()
         restored = SteadyStateOptimizer.from_snapshot(payload)
         self.assertEqual(restored.to_snapshot(), payload)
-        self.assertEqual(payload["format_version"], 6)
+        self.assertEqual(payload["format_version"], 7)
         self.assertEqual(len(payload["slots"]), 128)
         self.assertTrue(all("state" in slot for slot in payload["slots"]))
 
@@ -598,7 +598,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertIn("experiment", payload)
         self.assertIn("scheduler", payload)
         self.assertEqual(len(payload["slots"]), 128)
-        self.assertEqual(payload["format_version"], 6)
+        self.assertEqual(payload["format_version"], 7)
         self.assertTrue(all("state" in slot for slot in payload["slots"]))
         self.assertTrue(all("training_states" not in slot for slot in payload["slots"]))
 
@@ -731,7 +731,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=108)
         payload = optimizer.to_snapshot()
 
-        self.assertEqual(payload["format_version"], 6)
+        self.assertEqual(payload["format_version"], 7)
         self.assertEqual(len(payload["slots"]), 128)
         self.assertTrue(all("state" in record for record in payload["slots"]))
         self.assertTrue(all("training_states" not in record for record in payload["slots"]))
@@ -1506,7 +1506,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         )
 
         payload = optimizer.to_snapshot()
-        self.assertEqual(payload["format_version"], 6)
+        self.assertEqual(payload["format_version"], 7)
         restored = SteadyStateOptimizer.from_snapshot(payload)
         self.assertEqual(
             restored.slots[31].parent_genome_key,
@@ -1558,6 +1558,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         optimizer = SteadyStateOptimizer.from_defaults(base_seed=203)
         payload = optimizer.to_snapshot()
         payload["format_version"] = 4
+        payload.pop("outer_search", None)
         payload.pop("prune_history", None)
         for slot in payload["slots"]:
             slot.pop("parent_genome_key", None)
@@ -1568,7 +1569,7 @@ class Phase5OptimizerTests(unittest.TestCase):
         self.assertTrue(
             all(slot.parent_genome_key is None for slot in restored.slots)
         )
-        self.assertEqual(restored.to_snapshot()["format_version"], 6)
+        self.assertEqual(restored.to_snapshot()["format_version"], 7)
 
 
     def test_p5_056_snapshot_v5_rejects_missing_durable_parent_genome_key_for_child(self):
@@ -1585,6 +1586,7 @@ class Phase5OptimizerTests(unittest.TestCase):
 
         payload = optimizer.to_snapshot()
         payload["format_version"] = 5
+        payload.pop("outer_search", None)
         self.assertEqual(payload["format_version"], 5)
         child_payload = payload["slots"][31]
         self.assertEqual(child_payload["allocation_reason"], "mutation_child")
