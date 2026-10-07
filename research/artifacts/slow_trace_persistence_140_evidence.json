@@ -1,0 +1,73 @@
+{
+  "artifact_digest": "sha256:53e7796853c3adb99a27745c417c8073a3cbf561e283efcd6bc2e71177b71194",
+  "artifact_id": 11474618100,
+  "controls": {
+    "duplicate_control_clean": true,
+    "negative_sentinels_clean": true,
+    "raw_instrumented_clean": true,
+    "replay_clean": true
+  },
+  "field_distinct_counts": {
+    "0": {"age": 0, "bond_strength": 0, "hp": 12, "latent": 0, "lifecycle": 0, "slow_trace": 12, "structure": 0},
+    "1": {"age": 0, "bond_strength": 0, "hp": 12, "latent": 0, "lifecycle": 0, "slow_trace": 12, "structure": 0},
+    "10": {"age": 0, "bond_strength": 0, "hp": 12, "latent": 0, "lifecycle": 0, "slow_trace": 12, "structure": 0},
+    "100": {"age": 0, "bond_strength": 0, "hp": 9, "latent": 0, "lifecycle": 0, "slow_trace": 12, "structure": 0},
+    "1000": {"age": 1, "bond_strength": 0, "hp": 1, "latent": 1, "lifecycle": 1, "slow_trace": 1, "structure": 1}
+  },
+  "issue": 140,
+  "learning_claim": false,
+  "original_carrier_free": {
+    "5": {"b": {"20": 320}, "h": {}},
+    "8": {"b": {}, "h": {"30": 256}},
+    "9": {"b": {"3": 420, "22": null}, "h": {}},
+    "14": {"b": {"20": 288}, "h": {}},
+    "18": {"b": {"10": 256}, "h": {}},
+    "20": {"b": {"5": 518, "10": 500}, "h": {}},
+    "22": {"b": {"23": 480}, "h": {"7": 568, "23": 473}},
+    "24": {"b": {"28": 480}, "h": {"21": 448}},
+    "29": {"b": {"5": 456, "10": 458}, "h": {}}
+  },
+  "primary_horizon_distinct": {
+    "0": [0, 5, 8, 9, 12, 14, 18, 19, 20, 22, 24, 29],
+    "1": [0, 5, 8, 9, 12, 14, 18, 19, 20, 22, 24, 29],
+    "10": [0, 5, 8, 9, 12, 14, 18, 19, 20, 22, 24, 29],
+    "100": [0, 5, 8, 9, 12, 14, 18, 19, 20, 22, 24, 29],
+    "1000": [22]
+  },
+  "profile": {
+    "trace_bonus_shift": 5,
+    "trace_decay_rate": 256,
+    "trace_discharge_cap": 16,
+    "trace_transfer_cap": 8,
+    "trace_write_cap": 32
+  },
+  "profile_name": "D1_ACTIVE_32_8_16_256_5",
+  "slow_trace_migrated_outside_h0_carriers": {
+    "1": {},
+    "10": {"20": [29], "29": [16]},
+    "100": {"9": [26], "14": [31], "20": [23, 29, 30], "29": [18]},
+    "1000": {"22": [3]}
+  },
+  "source_job": 112741805929,
+  "source_run": 37606092639,
+  "terminal_gate": {
+    "observed_h1000": 1,
+    "passed": false,
+    "required_h1000": 8,
+    "route": "FAIL-L3-PERSISTENCE"
+  },
+  "turnover_witnesses": {
+    "22": {
+      "first_free_generation": {
+        "b": {"23": 480},
+        "h": {"7": 568, "23": 473}
+      },
+      "h1000_changed_fields": ["age", "direction", "hp", "latent", "lifecycle", "slow_trace", "speed_code", "structure", "x", "y"],
+      "h1000_changed_slots": [3],
+      "original_trace_carriers": {
+        "b": [23],
+        "h": [7, 23]
+      }
+    }
+  }
+}
