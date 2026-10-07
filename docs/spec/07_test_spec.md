@@ -864,8 +864,8 @@ They verify:
 - no carrier moves more than its configured discharge cap;
 - every transferred unit is subtracted from the source and total trace never
   increases;
-- a cell newly entering BLACK_HOLE later in the generation does not discharge
-  until the next generation;
+- a cell newly entering BLACK_HOLE later in the generation is eligible for
+  the same bounded discharge rule in that generation;
 - with no recipient, loss at final FREE is permitted;
 - final FREE always clears trace and slot reuse never inherits it.
 
