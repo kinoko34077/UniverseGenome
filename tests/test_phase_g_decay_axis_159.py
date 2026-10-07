@@ -89,9 +89,9 @@ class PhaseGDecayAxis159Tests(unittest.TestCase):
             )
 
     def _synthetic_results(self, path: Path, *, reference_valid=True,
-                           improved=True, tamper=False):
+                           improved=True, tamper=False, winner_count=11):
         for rate in DECAY_DOMAIN:
-            h1000 = 4 if rate == 0 and improved else 3
+            h1000 = winner_count if rate == 0 and improved else 3
             result = {
                 "schema_version": 1,
                 "issue": 159,
@@ -136,6 +136,9 @@ class PhaseGDecayAxis159Tests(unittest.TestCase):
             result = aggregate_candidates(list(path.glob("candidate-*.json")))
             self.assertEqual(result["selected_rate"], 0)
             self.assertEqual(result["terminal_route"], "ROUTE-PHASE-H")
+            self._synthetic_results(path, improved=True, winner_count=10)
+            result = aggregate_candidates(list(path.glob("candidate-*.json")))
+            self.assertEqual(result["terminal_route"], "CHANGE_PATH")
             self._synthetic_results(path, improved=False)
             result = aggregate_candidates(list(path.glob("candidate-*.json")))
             self.assertEqual(result["terminal_route"], "CHANGE_PATH")
