@@ -2,7 +2,7 @@
 
 UniverseGenome is a local-physics artificial-universe research project descended from the SCA v2 design lineage.
 
-The inner system is intended to learn through deterministic time evolution of anonymous local cells. A separate outer layer will later search universe-level physical parameters (the universe genome).
+The inner system is intended to learn through deterministic time evolution of anonymous local cells. A separate generalized outer layer searches declared universe-level physical parameters and registered finite rule families while preserving deterministic Inner execution.
 
 ## Current state
 
@@ -40,8 +40,9 @@ accepted the D1 specification, and #135 / PR #139 then implemented that contract
 through TEST-ST-010 on main
 `9091bbbc0fdbf261859d7f1b68772601b963548e`. Production now includes the
 anonymous `slow_trace:uint8[MAX_CELLS]` state, deterministic local
-write/transfer/discharge/forgetting/read semantics, UniverseState v2 / optimizer
-v6 migration, and the inert compatibility/default tuple `(0,0,0,0,8)`.
+write/transfer/discharge/forgetting/read semantics, UniverseState v2, and the
+inert compatibility/default tuple `(0,0,0,0,8)`. Optimizer persistence is now
+v7 with deterministic legacy v4/v5/v6 migration.
 The density-4/density-32 inert compatibility matrix is pre-D1-identical and
 TEST-ST-010 overhead evidence is recorded in #135. #140 / PR #142 then ran the
 frozen TEST-ST-012 research-only profile `D1_ACTIVE_32_8_16_256_5`.
@@ -49,9 +50,16 @@ Teacher-specific distinction remained 12/12 through +100 but only **1/12** at
 +1000, below the accepted >=8/12 gate. Seed 22 demonstrated that trace can
 survive original-carrier turnover and remain elsewhere, but robust L3
 persistence was not established. All non-inert values remain research-only.
-No successor learning-path mechanism/profile is currently accepted.
-Canonical `learning_claim=false` remains authoritative and P6.10+ semantic
-expansion remains frozen.
+
+#144/#145 then generalized the existing Outer Search without changing the
+accepted learning result. Phase F / PR #157 ended in
+`ACCEPT-OUTER-SEARCH-GENERALIZATION-IMPLEMENTATION` on main
+`69cd7e99092bda565eec89daed2bb0873fd3c184`: the Legacy SearchPlan is
+exactly equivalent to the frozen pre-generalization oracle and the matched
+density4/density32 performance gate passes. No successor memory-physics profile
+is accepted and no Phase G search is currently active. Canonical
+`learning_claim=false` remains authoritative and P6.10+ semantic expansion
+remains frozen.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
