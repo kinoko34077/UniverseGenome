@@ -10,7 +10,7 @@ from core.physics import PhysicsConfig
 from core.state import UniverseState
 
 
-SNAPSHOT_FORMAT_VERSION = 1
+SNAPSHOT_FORMAT_VERSION = 2
 
 
 def save_snapshot(path: str | Path, state: UniverseState) -> None:
@@ -24,10 +24,23 @@ def load_snapshot(path: str | Path) -> UniverseState:
         payload: Any = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError("unable to read UniverseState snapshot") from exc
-    if not isinstance(payload, dict) or payload.get("format_version") != SNAPSHOT_FORMAT_VERSION:
+    if not isinstance(payload, dict):
+        raise ValueError("unsupported snapshot format")
+    format_version = int(payload.get("format_version", -1))
+    if format_version not in (1, SNAPSHOT_FORMAT_VERSION):
         raise ValueError("unsupported snapshot format")
     raw_config = payload.get("config")
     if not isinstance(raw_config, dict):
         raise ValueError("snapshot config is required")
+    if format_version == SNAPSHOT_FORMAT_VERSION:
+        required_trace_config = {
+            "trace_write_cap",
+            "trace_transfer_cap",
+            "trace_discharge_cap",
+            "trace_decay_rate",
+            "trace_bonus_shift",
+        }
+        if not required_trace_config.issubset(raw_config):
+            raise ValueError("version-2 snapshot requires slow-trace configuration")
     config = PhysicsConfig.from_mapping(raw_config)
     return UniverseState.from_snapshot(payload, config=config)

@@ -1029,7 +1029,7 @@ class SteadyStateOptimizer:
                 f"integrated optimizer requires {OPTIMIZER_POPULATION_SIZE} authoritative slots"
             )
         return {
-            "format_version": 5,
+            "format_version": 6,
             "kind": "UniverseGenomePhase5SteadyStateOptimizer",
             "generation": self.generation,
             "base_config": self.base_config.to_dict(),
@@ -1043,10 +1043,24 @@ class SteadyStateOptimizer:
     def from_snapshot(cls, payload: Mapping[str, Any]) -> "SteadyStateOptimizer":
         format_version = int(payload.get("format_version", -1))
         if (
-            format_version not in (4, 5)
+            format_version not in (4, 5, 6)
             or payload.get("kind") != "UniverseGenomePhase5SteadyStateOptimizer"
         ):
             raise ValueError("unsupported authoritative Phase 5 optimizer snapshot")
+        trace_config_fields = {
+            "trace_write_cap",
+            "trace_transfer_cap",
+            "trace_discharge_cap",
+            "trace_decay_rate",
+            "trace_bonus_shift",
+        }
+        if format_version == 6:
+            raw_base_config = payload.get("base_config")
+            if (
+                not isinstance(raw_base_config, Mapping)
+                or not trace_config_fields.issubset(raw_base_config)
+            ):
+                raise ValueError("v6 optimizer requires slow-trace base configuration")
         raw_slots = payload.get("slots")
         if not isinstance(raw_slots, list) or len(raw_slots) != OPTIMIZER_POPULATION_SIZE:
             raise ValueError("authoritative optimizer snapshot must contain 128 slots")
@@ -1054,6 +1068,19 @@ class SteadyStateOptimizer:
             for record in raw_slots:
                 if not isinstance(record, Mapping):
                     raise ValueError("authoritative slot records must be objects")
+                if format_version == 6:
+                    raw_state = record.get("state")
+                    if (
+                        not isinstance(raw_state, Mapping)
+                        or int(raw_state.get("format_version", -1)) != 2
+                    ):
+                        raise ValueError("v6 optimizer requires nested UniverseState v2")
+                    raw_state_config = raw_state.get("config")
+                    if (
+                        not isinstance(raw_state_config, Mapping)
+                        or not trace_config_fields.issubset(raw_state_config)
+                    ):
+                        raise ValueError("v6 optimizer requires nested slow-trace configuration")
                 allocation_reason = str(record.get("allocation_reason", "initial"))
                 if (
                     allocation_reason in ("seed_evidence", "mutation_child")
@@ -1063,6 +1090,16 @@ class SteadyStateOptimizer:
                         "v5 allocated child requires durable parent_genome_key"
                     )
         base_config = PhysicsConfig.from_mapping(payload["base_config"])
+        if format_version in (4, 5):
+            values = base_config.to_dict()
+            values.update({
+                "trace_write_cap": 0,
+                "trace_transfer_cap": 0,
+                "trace_discharge_cap": 0,
+                "trace_decay_rate": 0,
+                "trace_bonus_shift": 8,
+            })
+            base_config = PhysicsConfig(**values)
         slots = [
             UniverseSlot.from_dict(record, base_config=base_config)
             for record in raw_slots
