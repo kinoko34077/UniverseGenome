@@ -65,8 +65,8 @@ SearchPlan matches the immutable pre-generalization oracle across static state,
 generations 16/128/512/1024, optimizer decisions and continuation; matched
 density4/density32 throughput regression is within the accepted 5% gate.
 
-Phase G research child **#159 is active**. G0 / PR #160 is accepted on
-main `311d391c8264f19aae59ec699151a902bbbca2ce`. It freezes a
+Phase G research child **#159 is active**. G0 / PR #160 plus provenance-correction PR #161 are accepted on
+main `a776c8e11c608e322735e325d47a253fc1e7af84`. It freezes a
 trace-decay-only research SearchPlan plus disjoint h0-qualified adaptive-search
 and held-out cohorts while leaving the production optimizer legacy-only. The
 first unfinished checkpoint is G1: evaluate only the frozen decay domain on

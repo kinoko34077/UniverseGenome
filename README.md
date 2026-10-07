@@ -57,8 +57,8 @@ accepted learning result. Phase F / PR #157 ended in
 `69cd7e99092bda565eec89daed2bb0873fd3c184`: the Legacy SearchPlan is
 exactly equivalent to the frozen pre-generalization oracle and the matched
 density4/density32 performance gate passes. Phase G research child #159 is
-now active. G0 / PR #160 is accepted on main
-`311d391c8264f19aae59ec699151a902bbbca2ce`: the decay-only research
+now active. G0 / PR #160 plus provenance-correction PR #161 are accepted on main
+`a776c8e11c608e322735e325d47a253fc1e7af84`: the decay-only research
 SearchPlan consumer is bounded away from the production optimizer, disjoint
 adaptive-search / held-out cohorts are frozen using h0 qualification only, and
 G1 adaptive decay-axis search is the first unfinished checkpoint. No successor
