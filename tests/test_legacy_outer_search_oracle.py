@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 import unittest
 
 from core.physics import PhysicsConfig
@@ -7,6 +9,16 @@ from research.legacy_outer_search_oracle import (
     build_dynamic_oracle,
     build_static_oracle,
     canonical_digest,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+FROZEN_V6 = (
+    ROOT
+    / "research"
+    / "artifacts"
+    / "legacy_outer_search_oracle_v1"
+    / "initial_optimizer_v6.json"
 )
 
 
@@ -20,7 +32,13 @@ class LegacyOuterSearchOracleTests(unittest.TestCase):
 
         self.assertEqual(oracle["schema_version"], ORACLE_SCHEMA_VERSION)
         self.assertEqual(oracle["source_sha"], ACCEPTED_SOURCE_SHA)
-        self.assertEqual(oracle["optimizer_snapshot"]["format_version"], 6)
+        frozen_v6 = json.loads(FROZEN_V6.read_text(encoding="utf-8"))
+        self.assertEqual(frozen_v6["format_version"], 6)
+        self.assertEqual(
+            frozen_v6["kind"],
+            "UniverseGenomePhase5SteadyStateOptimizer",
+        )
+        self.assertEqual(oracle["optimizer_snapshot"]["format_version"], 7)
         self.assertEqual(oracle["optimizer_snapshot"]["kind"], "UniverseGenomePhase5SteadyStateOptimizer")
         self.assertEqual(len(oracle["slots"]), 128)
         self.assertEqual(
