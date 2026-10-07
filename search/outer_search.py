@@ -672,6 +672,27 @@ class ScalarMutationResult:
 
 
 @dataclass(frozen=True)
+class EvidenceSeedAssignment:
+    candidate_values: CandidateValues
+    seed: int
+
+    def __post_init__(self) -> None:
+        if int(self.seed) < 0:
+            raise ValueError("evidence seed must be non-negative")
+
+
+@dataclass(frozen=True)
+class EvidenceSeedDecision:
+    seed: int
+    next_allocation_cursor: int
+    matched_existing_evidence: bool
+
+    def __post_init__(self) -> None:
+        if self.seed < 0 or self.next_allocation_cursor < 0:
+            raise ValueError("evidence seed/cursor must be non-negative")
+
+
+@dataclass(frozen=True)
 class ResolvedPopulationSlot:
     index: int
     seed: int
@@ -999,6 +1020,106 @@ def legacy_comparison_strata(
     resolved_registry = registry or build_default_search_registry()
     resolved_plan = plan or legacy_search_plan()
     return enumerate_comparison_strata(resolved_plan, resolved_registry)
+
+
+def _matched_evidence_key(
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    candidate: CandidateValues,
+    stratum: ResolvedComparisonStratum,
+) -> str:
+    resolved = resolve_candidate(plan, registry, candidate)
+    grouped = {dimension_id for dimension_id, _ in stratum.values}
+    payload = {
+        "scalars": {
+            key: resolved.universe_spec.scalar_values[key]
+            for key in sorted(resolved.universe_spec.scalar_values)
+            if key not in grouped
+        },
+        "rules": {
+            key: resolved.universe_spec.rule_values[key]
+            for key in sorted(resolved.universe_spec.rule_values)
+            if key not in grouped
+        },
+    }
+    return _digest(payload)
+
+
+def allocate_matched_evidence_seed(
+    *,
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    target_candidate: CandidateValues,
+    assignments: tuple[EvidenceSeedAssignment, ...],
+    allocation_cursor: int,
+) -> EvidenceSeedDecision:
+    """Choose evidence seed using the declared matched-evidence policy."""
+
+    if allocation_cursor < 0:
+        raise ValueError("allocation_cursor must be non-negative")
+    plan.validate(registry)
+    target_stratum = resolve_candidate_stratum(plan, registry, target_candidate)
+    if target_stratum.matched_evidence_policy != "legacy_matched_seed":
+        raise ValueError(
+            "unsupported matched-evidence policy: "
+            f"{target_stratum.matched_evidence_policy}"
+        )
+    target_key = _matched_evidence_key(
+        plan,
+        registry,
+        target_candidate,
+        target_stratum,
+    )
+
+    occupied_target: set[int] = set()
+    matched_other: set[int] = set()
+    for assignment in assignments:
+        assignment_stratum = resolve_candidate_stratum(
+            plan,
+            registry,
+            assignment.candidate_values,
+        )
+        seed = int(assignment.seed)
+        if assignment_stratum.values == target_stratum.values:
+            occupied_target.add(seed)
+            continue
+        if _matched_evidence_key(
+            plan,
+            registry,
+            assignment.candidate_values,
+            assignment_stratum,
+        ) == target_key:
+            matched_other.add(seed)
+
+    reusable = sorted(seed for seed in matched_other if seed not in occupied_target)
+    if reusable:
+        return EvidenceSeedDecision(
+            seed=reusable[0],
+            next_allocation_cursor=allocation_cursor,
+            matched_existing_evidence=True,
+        )
+
+    seed = int(allocation_cursor)
+    while seed in occupied_target:
+        seed += 1
+    return EvidenceSeedDecision(
+        seed=seed,
+        next_allocation_cursor=seed + 1,
+        matched_existing_evidence=False,
+    )
+
+
+def evidence_tier_target(allocation_policy: str, evidence_count: int) -> int:
+    """Return the next real-slot evidence tier for the declared legacy policy."""
+
+    if allocation_policy != LEGACY_PROMISING_POLICY:
+        raise ValueError(f"unsupported allocation policy: {allocation_policy}")
+    count = int(evidence_count)
+    if count < LEGACY_EVIDENCE_SEEDS:
+        raise ValueError(
+            f"evidence_count must start at {LEGACY_EVIDENCE_SEEDS}"
+        )
+    return min(LEGACY_SLOTS_PER_STRATUM, count * 2)
 
 
 def _adjacent_binary_value(

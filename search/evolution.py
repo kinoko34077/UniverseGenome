@@ -20,8 +20,11 @@ from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
 from .outer_search import (
     LEGACY_LATENT_OPERATORS,
+    EvidenceSeedAssignment,
     ResolvedComparisonStratum,
+    allocate_matched_evidence_seed,
     build_default_search_registry,
+    evidence_tier_target,
     legacy_candidate_values,
     legacy_comparison_strata,
     legacy_mutation_directions,
@@ -50,10 +53,7 @@ PROMISING_POLICY_TIERED_CATEGORY_RANK = "tiered_category_rank"
 
 def seed_escalation(seed_count: int) -> int:
     """Retain the historical pure escalation helper for callers and reports."""
-    value = int(seed_count)
-    if value < 4:
-        raise ValueError("seed_count must start at 4")
-    return min(32, value * 2)
+    return evidence_tier_target(PROMISING_POLICY_TIERED_CATEGORY_RANK, seed_count)
 
 
 def _genome_key(genome: UniverseGenome) -> str:
@@ -517,25 +517,31 @@ class SteadyStateOptimizer:
         *,
         genome: UniverseGenome | None = None,
     ) -> int:
-        occupied = {slot.seed for slot in self.slots if slot.category == category}
-        if genome is not None:
-            matched = sorted(
-                {
-                    slot.seed
-                    for slot in self.slots
-                    if slot.category != category
-                    and slot.genome == genome
-                    and slot.seed not in occupied
-                }
-            )
-            if matched:
-                return matched[0]
+        if genome is None:
+            occupied = {slot.seed for slot in self.slots if slot.category == category}
+            candidate = int(self.scheduler["allocation_cursor"])
+            while candidate in occupied:
+                candidate += 1
+            self.scheduler["allocation_cursor"] = candidate + 1
+            return candidate
 
-        candidate = int(self.scheduler["allocation_cursor"])
-        while candidate in occupied:
-            candidate += 1
-        self.scheduler["allocation_cursor"] = candidate + 1
-        return candidate
+        registry = build_default_search_registry()
+        plan = legacy_mutation_plan_for_base_config(self.base_config)
+        decision = allocate_matched_evidence_seed(
+            plan=plan,
+            registry=registry,
+            target_candidate=legacy_candidate_values(genome, category),
+            assignments=tuple(
+                EvidenceSeedAssignment(
+                    candidate_values=legacy_candidate_values(slot.genome, slot.category),
+                    seed=slot.seed,
+                )
+                for slot in self.slots
+            ),
+            allocation_cursor=int(self.scheduler["allocation_cursor"]),
+        )
+        self.scheduler["allocation_cursor"] = decision.next_allocation_cursor
+        return decision.seed
 
     def allocate_seed_slot(
         self,
