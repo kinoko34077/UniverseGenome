@@ -1237,7 +1237,11 @@ def prune_selection_indices(
     *,
     protected: set[int] | None = None,
 ) -> set[int]:
-    values = list(records)
+    values = [
+        record
+        for record in records
+        if record.evidence_mature or record.absolute_failure
+    ]
     result = {
         record.index
         for record in values
