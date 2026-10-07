@@ -21,9 +21,11 @@ from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
 from .outer_search import (
     LEGACY_LATENT_OPERATORS,
     EvidenceSeedAssignment,
+    ObjectiveProfile,
     ResolvedComparisonStratum,
     SelectionRecord,
     allocate_matched_evidence_seed,
+    bind_objective_profile,
     build_default_search_registry,
     build_mutation_replacement,
     build_seed_evidence_replacement,
@@ -34,6 +36,10 @@ from .outer_search import (
     legacy_mutation_plan_for_base_config,
     legacy_search_plan,
     mutate_legacy_candidate,
+    objective_absolute_failure_reason,
+    objective_growth_flags,
+    objective_key,
+    objective_short_health_flags,
     promising_group_keys,
     protected_selection_indices,
     prune_selection_indices,
@@ -46,9 +52,6 @@ from .pruning import (
     RESPONSE_HISTORY_LIMIT,
     SHORT_HEALTH_HISTORY_LIMIT,
     SHORT_WINDOW,
-    absolute_failure_reason,
-    growth_flags,
-    short_health_flags,
 )
 
 IMPLEMENTATION_PHASE = 5
@@ -316,6 +319,18 @@ class SteadyStateOptimizer:
     def promising_policy(self) -> str | None:
         return self.scheduler["promising_policy"]
 
+    def _objective_profile(self) -> ObjectiveProfile:
+        registry = build_default_search_registry()
+        plan = legacy_search_plan()
+        return bind_objective_profile(plan, registry)
+
+    def _objective_growth_flags(self, previous: Fitness, current: Fitness) -> int:
+        return objective_growth_flags(
+            self._objective_profile(),
+            previous.to_dict(),
+            current.to_dict(),
+        )
+
     @classmethod
     def from_defaults(
         cls,
@@ -422,7 +437,8 @@ class SteadyStateOptimizer:
         *,
         activity_cost: int | None = None,
     ) -> None:
-        flags = short_health_flags(
+        flags = objective_short_health_flags(
+            self._objective_profile(),
             active_cells=metrics.active_cells,
             activity_cost=metrics.activity_cost if activity_cost is None else activity_cost,
         )
@@ -430,7 +446,8 @@ class SteadyStateOptimizer:
             *slot.short_health_windows,
             flags,
         )[-SHORT_HEALTH_HISTORY_LIMIT:]
-        reason = absolute_failure_reason(
+        reason = objective_absolute_failure_reason(
+            self._objective_profile(),
             slot.short_health_windows,
             response_history=slot.response_windows,
         )
@@ -473,7 +490,8 @@ class SteadyStateOptimizer:
             *slot.response_windows,
             1 if responded else 0,
         )[-RESPONSE_HISTORY_LIMIT:]
-        reason = absolute_failure_reason(
+        reason = objective_absolute_failure_reason(
+            self._objective_profile(),
             slot.short_health_windows,
             response_history=slot.response_windows,
         )
@@ -484,7 +502,7 @@ class SteadyStateOptimizer:
     def _observe_growth_boundary(self, slot: UniverseSlot) -> None:
         measurement, observed_fitness = self._measure_slot(slot)
         if slot.growth_reference is not None:
-            flags = growth_flags(slot.growth_reference, observed_fitness)
+            flags = self._objective_growth_flags(slot.growth_reference, observed_fitness)
             slot.growth_windows = (*slot.growth_windows, flags)[-4:]
         self._record_response_observation(
             slot,
@@ -748,7 +766,10 @@ class SteadyStateOptimizer:
             SelectionRecord(
                 index=slot.index,
                 group_key=slot.evidence_group,
-                objective_key=aggregates[slot.evidence_group].sort_key(),
+                objective_key=objective_key(
+                    self._objective_profile(),
+                    aggregates[slot.evidence_group].to_dict(),
+                ),
                 evidence_count=counts[slot.evidence_group],
                 candidate_tie_key=slot.genome_key,
                 growth_windows=tuple(slot.growth_windows),
@@ -793,13 +814,13 @@ class SteadyStateOptimizer:
         )
         eligible = selection_eligible_indices(
             policy_records,
-            minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
+            minimum_evidence=self._objective_profile().minimum_evidence,
         )
         return [slot for slot in values if slot.index in eligible]
 
     def _refresh_evidence_maturity(self, group_key: tuple[str, str]) -> None:
         group = [slot for slot in self.slots if slot.evidence_group == group_key]
-        if len(group) < MINIMUM_EVIDENCE_SEEDS:
+        if len(group) < self._objective_profile().minimum_evidence:
             return
         for slot in group:
             slot.evidence_mature = True
@@ -820,7 +841,7 @@ class SteadyStateOptimizer:
             groups.setdefault(slot.evidence_group, []).append(slot)
         for group_key in sorted(groups):
             group = groups[group_key]
-            if len(group) >= MINIMUM_EVIDENCE_SEEDS:
+            if len(group) >= self._objective_profile().minimum_evidence:
                 continue
             if any(slot.evidence_mature for slot in group):
                 continue
@@ -840,7 +861,7 @@ class SteadyStateOptimizer:
         selected_index = select_parent_index(
             self._selection_records(local),
             excluded_index=excluded_index,
-            minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
+            minimum_evidence=self._objective_profile().minimum_evidence,
         )
         return next(slot for slot in local if slot.index == selected_index)
 
@@ -873,7 +894,7 @@ class SteadyStateOptimizer:
             promising_group_keys(
                 self._selection_records(local),
                 policy_id=self.promising_policy,
-                minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
+                minimum_evidence=self._objective_profile().minimum_evidence,
             )
         )
 
@@ -894,7 +915,7 @@ class SteadyStateOptimizer:
         selected_index = select_promising_parent_index(
             self._selection_records(candidates),
             policy_id=self.promising_policy,
-            minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
+            minimum_evidence=self._objective_profile().minimum_evidence,
         )
         if selected_index is None:
             return None
@@ -918,7 +939,7 @@ class SteadyStateOptimizer:
     def _protected_indices(self, local: list[UniverseSlot]) -> set[int]:
         return protected_selection_indices(
             self._selection_records(local),
-            minimum_evidence=MINIMUM_EVIDENCE_SEEDS,
+            minimum_evidence=self._objective_profile().minimum_evidence,
         )
 
     def group_counts(self) -> dict[str, int]:
@@ -1201,7 +1222,9 @@ class SteadyStateOptimizer:
             markers = {slot.evidence_mature for slot in group}
             if len(markers) != 1:
                 raise ValueError("evidence maturity must be consistent within one genome group")
-            if len(group) >= MINIMUM_EVIDENCE_SEEDS and not next(iter(markers)):
+            if len(group) >= legacy_search_plan().bind_objective_profile(
+                build_default_search_registry()
+            ).minimum_evidence and not next(iter(markers)):
                 raise ValueError("minimum-evidence group must be marked mature")
         scheduler = payload.get("scheduler", {})
         promising_policy = (
