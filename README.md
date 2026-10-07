@@ -56,10 +56,15 @@ accepted learning result. Phase F / PR #157 ended in
 `ACCEPT-OUTER-SEARCH-GENERALIZATION-IMPLEMENTATION` on main
 `69cd7e99092bda565eec89daed2bb0873fd3c184`: the Legacy SearchPlan is
 exactly equivalent to the frozen pre-generalization oracle and the matched
-density4/density32 performance gate passes. No successor memory-physics profile
-is accepted and no Phase G search is currently active. Canonical
-`learning_claim=false` remains authoritative and P6.10+ semantic expansion
-remains frozen.
+density4/density32 performance gate passes. Phase G research child #159 is
+now active. G0 / PR #160 is accepted on main
+`311d391c8264f19aae59ec699151a902bbbca2ce`: the decay-only research
+SearchPlan consumer is bounded away from the production optimizer, disjoint
+adaptive-search / held-out cohorts are frozen using h0 qualification only, and
+G1 adaptive decay-axis search is the first unfinished checkpoint. No successor
+memory-physics profile is accepted and no held-out post-h0 validation has been
+run. Canonical `learning_claim=false` remains authoritative and P6.10+
+semantic expansion remains frozen.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
