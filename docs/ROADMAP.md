@@ -47,10 +47,19 @@ Density-4/density-32 inert compatibility against pre-D1 behavior passed and
 TEST-ST-010 overhead is measured. All non-inert values remain research-only and
 are not Phase 5 search-genome defaults.
 
-The active bounded frontier is therefore **#140 TEST-ST-012 L3 persistence /
-turnover research**. Canonical `learning_claim=false` and the P6.10+ freeze
-remain authoritative. L4 recall and active-default promotion remain outside the
-current owner. #93 remains a separate performance/architecture workstream.
+#140 / PR #142 has completed the frozen TEST-ST-012 L3 persistence / turnover
+gate with terminal route **FAIL-L3-PERSISTENCE**. Under research-only profile
+`D1_ACTIVE_32_8_16_256_5`, B/H distinction remained 12/12 through +100 but
+fell to **1/12 at +1000** against the accepted >=8/12 threshold. Seed 22 proved
+turnover-surviving redistribution is possible, but robust cohort-level L3
+persistence is not established.
+
+There is therefore **no active learning-path implementation/research child** at
+this point. The next learning-path action must first select a bounded causal or
+architecture question from the accepted evidence; profile tuning, active-default
+promotion, L4 recall and P6.10+ remain unauthorized. Canonical
+`learning_claim=false` remains authoritative. #93 remains a separate
+performance/architecture workstream.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -218,8 +227,13 @@ success claim.
   under the inert profile, measured storage/throughput/snapshot overhead, and
   terminated at **ROUTE-L3-RESEARCH**. No non-inert active default was promoted.
 
-Next frontier: **#140 TEST-ST-012 L3 persistence / turnover causal research**.
-It owns predeclared research-only profile/protocol selection and the frozen
->=8/12 +1000 causal gate. It does not own active-default promotion, L4 recall or
-P6.10+. `learning_claim=false` remains authoritative. #93 remains a separate
+- #140 / PR #142: completed the frozen TEST-ST-012 L3 persistence / turnover
+  gate with **FAIL-L3-PERSISTENCE**. The profile passed validity controls and
+  demonstrated one turnover witness, but only 1/12 primary cases remained
+  teacher-specific at +1000 versus the required >=8/12.
+
+Next frontier: **unselected learning-path causal/architecture decision**.
+No second profile or implementation owner is implied by the failed gate.
+`learning_claim=false`, inert production defaults, the P6.10+ freeze and L4
+separation remain authoritative. #93 remains a separate
 performance/architecture workstream.
