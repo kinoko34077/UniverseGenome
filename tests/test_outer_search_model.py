@@ -15,6 +15,7 @@ from search.outer_search import (
     SearchRegistry,
     build_default_search_registry,
     build_legacy_initial_population,
+    legacy_initial_scheduler,
     legacy_search_plan,
     resolve_candidate,
 )
@@ -59,6 +60,9 @@ class OuterSearchModelTests(unittest.TestCase):
         self.assertEqual(plan.objective_profile_version, 1)
 
         plan.validate(registry)
+
+        static_oracle = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))["static"]
+        self.assertEqual(legacy_initial_scheduler(plan), static_oracle["initial_scheduler"])
 
     def test_conditional_inactive_dimension_is_canonical_and_not_identity_bearing(self):
         registry = SearchRegistry(
@@ -111,6 +115,41 @@ class OuterSearchModelTests(unittest.TestCase):
         self.assertEqual(second.scalar_values["conditional"], 4)
         self.assertEqual(first.candidate_identity, second.candidate_identity)
         self.assertEqual(first.active_dimensions, ("mode",))
+
+    def test_plan_validation_rejects_conditional_dependency_cycle(self):
+        registry = SearchRegistry(
+            scalar_dimensions={
+                "a": ScalarDimension(
+                    dimension_id="a",
+                    physics_field="hp_decay",
+                    value_type="int",
+                    default=0,
+                    allowed_values=(0, 1),
+                    strategy_ids=("fixed",),
+                    activation=ActivationCondition("b", (1,)),
+                ),
+                "b": ScalarDimension(
+                    dimension_id="b",
+                    physics_field="bond_gain",
+                    value_type="int",
+                    default=0,
+                    allowed_values=(0, 1),
+                    strategy_ids=("fixed",),
+                    activation=ActivationCondition("a", (1,)),
+                ),
+            },
+            rule_dimensions={},
+        )
+        plan = SearchPlan(
+            schema_version=1,
+            plan_id="cycle",
+            plan_version=1,
+            population_size=1,
+            fixed={"a": 0, "b": 0},
+        )
+
+        with self.assertRaisesRegex(ValueError, "cycle"):
+            plan.validate(registry)
 
     def test_plan_validation_rejects_unknown_seed_protocol_and_rule_ids(self):
         registry = build_default_search_registry()
