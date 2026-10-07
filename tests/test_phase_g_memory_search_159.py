@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 
 from core.physics import PhysicsConfig
 from search.evolution import SteadyStateOptimizer
@@ -27,13 +28,19 @@ class PhaseGMemorySearch159Tests(unittest.TestCase):
         legacy = legacy_mutation_plan_for_base_config(base)
         SteadyStateOptimizer(base_config=base, search_plan=legacy, search_registry=registry)
 
-        plan = phase_g_search_plan()
-        phase_g_registry = build_phase_g_registry()
+        nonlegacy_on_production_registry = replace(legacy, plan_id="phase_g_probe")
         with self.assertRaisesRegex(ValueError, "legacy-equivalent SearchPlan"):
             SteadyStateOptimizer(
                 base_config=base,
-                search_plan=plan,
-                search_registry=phase_g_registry,
+                search_plan=nonlegacy_on_production_registry,
+                search_registry=registry,
+            )
+
+        with self.assertRaisesRegex(ValueError, "current registered search surface"):
+            SteadyStateOptimizer(
+                base_config=base,
+                search_plan=phase_g_search_plan(),
+                search_registry=build_phase_g_registry(),
             )
 
     def test_phase_g_plan_is_decay_only_and_research_bounded(self) -> None:
