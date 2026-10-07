@@ -921,7 +921,7 @@ def step(
     state.config = resolved
     started = time.perf_counter()
     generation = state.generation
-    trace_start = list(state.slow_trace)
+    trace_start = state.slow_trace if _slow_trace_inert(resolved) else bytes(state.slow_trace)
     external_stimulated = set(int(slot) for slot in stimulus_slots)
     local_revival = _local_revival_slots(state)
     stimulated = external_stimulated | local_revival
