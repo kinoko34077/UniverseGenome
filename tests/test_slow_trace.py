@@ -14,7 +14,13 @@ from core.physics import (
     step,
     transmission_mask,
 )
-from core.state import Lifecycle, SHAPE_SINGLE, UniverseState
+from core.state import (
+    Lifecycle,
+    SHAPE_HORIZONTAL,
+    SHAPE_SINGLE,
+    SHAPE_VERTICAL,
+    UniverseState,
+)
 from persistence.snapshot import load_snapshot, save_snapshot
 from search.evolution import SteadyStateOptimizer
 from search.genome import UNIVERSE_GENOME_FIELDS
@@ -55,7 +61,7 @@ class SlowTraceContractTests(unittest.TestCase):
         )
         state = create_universe(seed=201, config=config)
         self.assertEqual(len(state.slow_trace), 2)
-        self.assertEqual(state.slow_trace, [0, 0])
+        self.assertEqual(list(state.slow_trace), [0, 0])
 
         slot = state.spawn(x=0, y=0, hp=1)
         self.assertEqual(state.slow_trace[slot], 0)
@@ -158,6 +164,41 @@ class SlowTraceContractTests(unittest.TestCase):
         self.assertTrue(
             all(0 <= state.slow_trace[slot] <= 255 for slot in (first, second, remote))
         )
+
+    def test_st_003_transfer_formula_cases_are_exact(self):
+        cases = (
+            (30, 10, 4, (26, 14)),
+            (10, 30, 4, (14, 26)),
+            (20, 20, 4, (20, 20)),
+            (30, 0, 3, (27, 3)),
+        )
+        for first_trace, second_trace, cap, expected in cases:
+            with self.subTest(
+                first_trace=first_trace,
+                second_trace=second_trace,
+                cap=cap,
+            ):
+                state = create_universe(
+                    seed=220,
+                    config=trace_config(
+                        max_cells=2,
+                        hp_decay=0,
+                        recovery_hp=0,
+                        bond_gain=0,
+                        bond_decay=0,
+                        collision_threshold=100,
+                        trace_transfer_cap=cap,
+                    ),
+                )
+                first = state.spawn(x=0, y=0, hp=50, latent=0xFFFF)
+                second = state.spawn(x=1, y=0, hp=50, latent=0)
+                state.slow_trace[first] = first_trace
+                state.slow_trace[second] = second_trace
+                step(state)
+                self.assertEqual(
+                    (state.slow_trace[first], state.slow_trace[second]),
+                    expected,
+                )
 
     def test_st_004_generation_start_trace_only_widens_latent_mask(self):
         config = trace_config(
@@ -297,6 +338,57 @@ class SlowTraceContractTests(unittest.TestCase):
         self.assertEqual(same_generation.slow_trace[carrier], 3)
         self.assertEqual(same_generation.slow_trace[recipient], 3)
 
+    def test_st_005_discharge_order_zero_multiple_and_competing_carriers(self):
+        config = trace_config(
+            max_cells=5,
+            hp_decay=0,
+            recovery_hp=0,
+            black_hole_grace=2,
+            trace_discharge_cap=4,
+        )
+
+        no_recipient = create_universe(seed=221, config=config)
+        carrier = no_recipient.spawn(x=0, y=0, hp=10)
+        no_recipient.lifecycle[carrier] = int(Lifecycle.BLACK_HOLE)
+        no_recipient.hp[carrier] = 0
+        no_recipient.black_hole_timer[carrier] = 2
+        no_recipient.slow_trace[carrier] = 7
+        step(no_recipient)
+        self.assertEqual(no_recipient.lifecycle[carrier], Lifecycle.BLACK_HOLE)
+        self.assertEqual(no_recipient.slow_trace[carrier], 7)
+
+        multiple = create_universe(seed=222, config=config)
+        carrier = multiple.spawn(x=0, y=0, hp=10)
+        first = multiple.spawn(x=1, y=0, hp=10)
+        second = multiple.spawn(x=2, y=0, hp=10)
+        multiple.lifecycle[carrier] = int(Lifecycle.BLACK_HOLE)
+        multiple.hp[carrier] = 0
+        multiple.black_hole_timer[carrier] = 2
+        multiple.slow_trace[carrier] = 4
+        multiple.slow_trace[first] = 254
+        multiple.slow_trace[second] = 253
+        step(multiple)
+        self.assertEqual(multiple.slow_trace[first], 255)
+        self.assertEqual(multiple.slow_trace[second], 255)
+        self.assertEqual(multiple.slow_trace[carrier], 1)
+
+        competing = create_universe(seed=223, config=config)
+        early = competing.spawn(x=0, y=0, hp=10)
+        late = competing.spawn(x=0, y=0, hp=10)
+        recipient = competing.spawn(x=1, y=0, hp=10)
+        for slot in (early, late):
+            competing.lifecycle[slot] = int(Lifecycle.BLACK_HOLE)
+            competing.hp[slot] = 0
+            competing.black_hole_timer[slot] = 2
+            competing.slow_trace[slot] = 4
+        competing.slow_trace[recipient] = 253
+        before_total = sum(competing.slow_trace)
+        step(competing)
+        self.assertEqual(competing.slow_trace[recipient], 255)
+        self.assertEqual(competing.slow_trace[early], 2)
+        self.assertEqual(competing.slow_trace[late], 4)
+        self.assertEqual(sum(competing.slow_trace), before_total)
+
     def test_st_006_decay_is_deterministic_and_not_slot_addressed(self):
         config = trace_config(
             max_cells=4,
@@ -382,6 +474,95 @@ class SlowTraceContractTests(unittest.TestCase):
                 break
         self.assertTrue(fragmented)
 
+    def test_st_007_fragmentation_edge_values_and_level_zero_paths(self):
+        for trace_value in (0, 1, 254, 255):
+            with self.subTest(trace_value=trace_value):
+                state = create_universe(
+                    seed=224,
+                    config=trace_config(
+                        max_cells=2,
+                        hp_decay=0,
+                        fragmentation_enabled=True,
+                        fragmentation_rate=65535,
+                        aging_enabled=False,
+                    ),
+                )
+                core = state.spawn(
+                    x=64,
+                    y=64,
+                    structure=SHAPE_SINGLE << 2,
+                    hp=20,
+                    speed_code=0,
+                )
+                state.slow_trace[core] = trace_value
+                metrics = step(state)
+                self.assertEqual(metrics.fragmentation_count, 1)
+                traces = sorted(state.slow_trace[slot] for slot in state.active_slots())
+                self.assertEqual(
+                    traces,
+                    sorted((trace_value // 2, trace_value - (trace_value // 2))),
+                )
+                self.assertEqual(sum(traces), trace_value)
+
+        for structure in (SHAPE_HORIZONTAL, SHAPE_VERTICAL):
+            with self.subTest(structure=structure):
+                state = create_universe(
+                    seed=225,
+                    config=trace_config(
+                        max_cells=2,
+                        hp_decay=0,
+                        fragmentation_enabled=True,
+                        fragmentation_rate=65535,
+                        aging_enabled=False,
+                    ),
+                )
+                slot = state.spawn(x=64, y=64, structure=structure, hp=20, speed_code=0)
+                state.slow_trace[slot] = 255
+                metrics = step(state)
+                self.assertEqual(metrics.fragmentation_count, 1)
+                self.assertEqual(state.lifecycle[slot], Lifecycle.ACTIVE)
+                self.assertEqual(state.structure[slot], SHAPE_SINGLE)
+                self.assertEqual(state.slow_trace[slot], 255)
+
+        direct_free = create_universe(
+            seed=226,
+            config=trace_config(
+                max_cells=2,
+                hp_decay=0,
+                fragmentation_enabled=True,
+                fragmentation_rate=65535,
+                aging_enabled=False,
+            ),
+        )
+        slot = direct_free.spawn(x=64, y=64, structure=SHAPE_SINGLE, hp=20, speed_code=0)
+        direct_free.slow_trace[slot] = 255
+        metrics = step(direct_free)
+        self.assertEqual(metrics.fragmentation_count, 1)
+        self.assertEqual(direct_free.lifecycle[slot], Lifecycle.FREE)
+        self.assertEqual(direct_free.slow_trace[slot], 0)
+
+        full = create_universe(
+            seed=227,
+            config=trace_config(
+                max_cells=1,
+                hp_decay=0,
+                fragmentation_enabled=True,
+                fragmentation_rate=65535,
+                aging_enabled=False,
+            ),
+        )
+        core = full.spawn(
+            x=64,
+            y=64,
+            structure=SHAPE_SINGLE << 2,
+            hp=20,
+            speed_code=0,
+        )
+        full.slow_trace[core] = 255
+        metrics = step(full)
+        self.assertEqual(metrics.fragmentation_count, 0)
+        self.assertEqual(full.slow_trace[core], 255)
+
     def test_st_008_snapshot_versions_migration_and_rejection(self):
         config = trace_config(max_cells=4)
         state = create_universe(seed=214, config=config)
@@ -396,11 +577,14 @@ class SlowTraceContractTests(unittest.TestCase):
             self.assertEqual(raw["arrays"]["slow_trace"][slot], 23)
             restored = load_snapshot(path)
         self.assertEqual(restored.to_snapshot(), state.to_snapshot())
+        step(state, stimulus_slots=(slot,))
+        step(restored, stimulus_slots=(slot,))
+        self.assertEqual(restored.to_snapshot(), state.to_snapshot())
 
         legacy = legacy_state_payload(state)
         legacy_config = PhysicsConfig.from_mapping(legacy["config"])
         migrated = UniverseState.from_snapshot(legacy, config=legacy_config)
-        self.assertEqual(migrated.slow_trace, [0] * migrated.max_cells)
+        self.assertEqual(list(migrated.slow_trace), [0] * migrated.max_cells)
         self.assertEqual(
             {key: getattr(migrated.config, key) for key in TRACE_DEFAULTS},
             TRACE_DEFAULTS,
@@ -410,6 +594,67 @@ class SlowTraceContractTests(unittest.TestCase):
         malformed["arrays"].pop("slow_trace")
         with self.assertRaises(ValueError):
             UniverseState.from_snapshot(malformed, config=config)
+
+    def test_st_008_malformed_v2_and_legacy_config_boundaries(self):
+        active = trace_config(
+            max_cells=2,
+            trace_write_cap=7,
+            trace_transfer_cap=6,
+            trace_discharge_cap=5,
+            trace_decay_rate=4,
+            trace_bonus_shift=3,
+        )
+        state = create_universe(seed=228, config=active)
+        occupied = state.spawn(x=0, y=0, hp=20)
+        state.slow_trace[occupied] = 9
+        payload = state.to_snapshot()
+
+        missing = copy.deepcopy(payload)
+        missing["arrays"].pop("slow_trace")
+        with self.assertRaises(ValueError):
+            UniverseState.from_snapshot(missing, config=active)
+
+        wrong_length = copy.deepcopy(payload)
+        wrong_length["arrays"]["slow_trace"].append(0)
+        with self.assertRaises(ValueError):
+            UniverseState.from_snapshot(wrong_length, config=active)
+
+        out_of_range = copy.deepcopy(payload)
+        out_of_range["arrays"]["slow_trace"][occupied] = 256
+        with self.assertRaises(ValueError):
+            UniverseState.from_snapshot(out_of_range, config=active)
+
+        free_nonzero = copy.deepcopy(payload)
+        free_slot = 1
+        self.assertEqual(free_nonzero["arrays"]["lifecycle"][free_slot], Lifecycle.FREE)
+        free_nonzero["arrays"]["slow_trace"][free_slot] = 1
+        with self.assertRaises(ValueError):
+            UniverseState.from_snapshot(free_nonzero, config=active)
+
+        legacy = legacy_state_payload(state)
+        migrated = UniverseState.from_snapshot(legacy, config=active)
+        self.assertEqual(
+            {key: getattr(migrated.config, key) for key in TRACE_DEFAULTS},
+            TRACE_DEFAULTS,
+        )
+        self.assertFalse(any(migrated.slow_trace))
+
+        malformed_v6 = SteadyStateOptimizer.from_defaults(
+            base_seed=229,
+            base_config=trace_config(max_cells=4),
+        ).to_snapshot()
+        malformed_v6["base_config"].pop("trace_write_cap")
+        with self.assertRaises(ValueError):
+            SteadyStateOptimizer.from_snapshot(malformed_v6)
+
+        nested_v1 = SteadyStateOptimizer.from_defaults(
+            base_seed=230,
+            base_config=trace_config(max_cells=4),
+        ).to_snapshot()
+        nested_v1["slots"][0]["state"]["format_version"] = 1
+        nested_v1["slots"][0]["state"]["arrays"].pop("slow_trace")
+        with self.assertRaises(ValueError):
+            SteadyStateOptimizer.from_snapshot(nested_v1)
 
     def test_st_009_optimizer_v6_roundtrip_and_clone_isolation(self):
         base = trace_config(max_cells=8)
@@ -456,6 +701,23 @@ class SlowTraceContractTests(unittest.TestCase):
                 for record in migrated.slots
             )
         )
+
+    def test_st_009_all_128_authoritative_slots_roundtrip_trace(self):
+        optimizer = SteadyStateOptimizer.from_defaults(
+            base_seed=231,
+            base_config=trace_config(max_cells=8),
+        )
+        expected = []
+        for index, record in enumerate(optimizer.slots):
+            carrier = record.state.active_slots()[0]
+            value = (index % 255) + 1
+            record.state.slow_trace[carrier] = value
+            expected.append((carrier, value))
+
+        restored = SteadyStateOptimizer.from_snapshot(optimizer.to_snapshot())
+        self.assertEqual(len(restored.slots), 128)
+        for record, (carrier, value) in zip(restored.slots, expected):
+            self.assertEqual(record.state.slow_trace[carrier], value)
 
     def test_st_011_positive_behavior_is_semantically_anonymous(self):
         config = trace_config(
