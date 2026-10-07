@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 import hashlib
 import json
+from itertools import product
 from typing import Any, Mapping
 
 from core.physics import PhysicsConfig, create_universe
@@ -319,6 +320,46 @@ class ComparisonStratum:
             "selection_scope": self.selection_scope,
             "allocation_policy": self.allocation_policy,
             "matched_evidence_policy": self.matched_evidence_policy,
+        }
+
+
+@dataclass(frozen=True)
+class ResolvedComparisonStratum:
+    """One concrete comparison-stratum membership resolved from a plan."""
+
+    values: tuple[tuple[str, Any], ...]
+    selection_scope: str
+    allocation_policy: str
+    matched_evidence_policy: str
+    definition_index: int = 0
+
+    def __post_init__(self) -> None:
+        if not self.values:
+            raise ValueError("resolved comparison stratum values must be non-empty")
+        ids = tuple(dimension_id for dimension_id, _ in self.values)
+        if len(set(ids)) != len(ids):
+            raise ValueError("resolved comparison stratum dimensions must be unique")
+        if self.selection_scope not in ("within", "across"):
+            raise ValueError("resolved stratum selection_scope must be within or across")
+        if self.definition_index < 0:
+            raise ValueError("resolved stratum definition_index must be non-negative")
+
+    @property
+    def primary_value(self) -> Any:
+        if len(self.values) != 1:
+            raise ValueError("primary_value requires exactly one grouping dimension")
+        return self.values[0][1]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "values": [
+                {"dimension_id": dimension_id, "value": value}
+                for dimension_id, value in self.values
+            ],
+            "selection_scope": self.selection_scope,
+            "allocation_policy": self.allocation_policy,
+            "matched_evidence_policy": self.matched_evidence_policy,
+            "definition_index": self.definition_index,
         }
 
 
@@ -838,6 +879,126 @@ def resolve_candidate(
         active_dimensions=active_dimensions,
         universe_spec=universe_spec,
     )
+
+
+def _comparison_group_domain(
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    dimension_id: str,
+) -> tuple[Any, ...]:
+    if dimension_id in plan.rules:
+        return tuple(plan.rules[dimension_id].variants)
+    if dimension_id in plan.fixed:
+        return (plan.fixed[dimension_id],)
+    if dimension_id in plan.search:
+        declaration = plan.search[dimension_id]
+        if declaration.domain == "registered":
+            definition = registry.scalar_dimensions[dimension_id]
+            if definition.allowed_values is None:
+                raise ValueError(
+                    "cannot enumerate a registered-bounds scalar comparison stratum: "
+                    f"{dimension_id}"
+                )
+            return tuple(definition.allowed_values)
+        return tuple(declaration.domain)
+    raise ValueError(f"stratum dimension is not declared: {dimension_id}")
+
+
+def enumerate_comparison_strata(
+    plan: SearchPlan,
+    registry: SearchRegistry,
+) -> tuple[ResolvedComparisonStratum, ...]:
+    """Enumerate finite concrete strata in declared plan/domain order."""
+
+    plan.validate(registry)
+    resolved: list[ResolvedComparisonStratum] = []
+    for definition_index, definition in enumerate(plan.strata):
+        domains: list[tuple[Any, ...]] = []
+        for dimension_id in definition.group_by:
+            registered = (
+                registry.scalar_dimensions.get(dimension_id)
+                or registry.rule_dimensions.get(dimension_id)
+            )
+            if registered is None:
+                raise ValueError(f"unknown stratum dimension: {dimension_id}")
+            if registered.activation is not None:
+                raise ValueError(
+                    "conditional comparison strata require candidate resolution: "
+                    f"{dimension_id}"
+                )
+            domain = _comparison_group_domain(plan, registry, dimension_id)
+            if not domain:
+                raise ValueError(f"comparison stratum domain is empty: {dimension_id}")
+            domains.append(domain)
+
+        for combination in product(*domains):
+            resolved.append(
+                ResolvedComparisonStratum(
+                    values=tuple(zip(definition.group_by, combination, strict=True)),
+                    selection_scope=definition.selection_scope,
+                    allocation_policy=definition.allocation_policy,
+                    matched_evidence_policy=definition.matched_evidence_policy,
+                    definition_index=definition_index,
+                )
+            )
+    return tuple(resolved)
+
+
+def resolve_candidate_strata(
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    candidate: CandidateValues,
+) -> tuple[ResolvedComparisonStratum, ...]:
+    """Resolve one candidate into its concrete declared comparison strata."""
+
+    resolved_candidate = resolve_candidate(plan, registry, candidate)
+    values = resolved_candidate.universe_spec
+    memberships: list[ResolvedComparisonStratum] = []
+    for definition_index, definition in enumerate(plan.strata):
+        grouped: list[tuple[str, Any]] = []
+        for dimension_id in definition.group_by:
+            if dimension_id in values.scalar_values:
+                value = values.scalar_values[dimension_id]
+            elif dimension_id in values.rule_values:
+                value = values.rule_values[dimension_id]
+            else:
+                raise ValueError(
+                    f"resolved candidate lacks stratum dimension: {dimension_id}"
+                )
+            grouped.append((dimension_id, value))
+        memberships.append(
+            ResolvedComparisonStratum(
+                values=tuple(grouped),
+                selection_scope=definition.selection_scope,
+                allocation_policy=definition.allocation_policy,
+                matched_evidence_policy=definition.matched_evidence_policy,
+                definition_index=definition_index,
+            )
+        )
+    return tuple(memberships)
+
+
+def resolve_candidate_stratum(
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    candidate: CandidateValues,
+) -> ResolvedComparisonStratum:
+    memberships = resolve_candidate_strata(plan, registry, candidate)
+    if len(memberships) != 1:
+        raise ValueError(
+            "singular candidate stratum resolution requires exactly one stratum definition"
+        )
+    return memberships[0]
+
+
+def legacy_comparison_strata(
+    *,
+    plan: SearchPlan | None = None,
+    registry: SearchRegistry | None = None,
+) -> tuple[ResolvedComparisonStratum, ...]:
+    resolved_registry = registry or build_default_search_registry()
+    resolved_plan = plan or legacy_search_plan()
+    return enumerate_comparison_strata(resolved_plan, resolved_registry)
 
 
 def _adjacent_binary_value(
