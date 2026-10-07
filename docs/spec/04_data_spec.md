@@ -496,3 +496,293 @@ Later search mode may save leading universes every 128 generations.
 Do not permanently save every universe every generation.
 
 ---
+
+
+---
+
+# 39. Generalized Outer Search data contract (#144 / #145)
+
+## OSG-DATA-001 — SearchPlan schema
+**Status: accepted**
+
+SearchPlan is a versioned Outer-layer record. Its canonical semantics include at
+minimum:
+
+```yaml
+schema_version: <integer>
+plan_id: <stable id>
+plan_version: <integer>
+population_size: 128
+fixed:
+  <dimension_id>: <value>
+search:
+  <dimension_id>:
+    domain: <registered finite/named domain>
+    strategy: <registered strategy id>
+rules:
+  <rule_dimension_id>:
+    variants: [<registered rule variant ids>]
+    strategy: <registered strategy id>
+constraints:
+  - kind: <registered structured constraint kind>
+    ...
+strata:
+  - group_by: [<dimension ids>]
+    selection_scope: <within|across>
+    allocation_policy: <registered id>
+    matched_evidence_policy: <registered id>
+objective_profile:
+  id: <stable id>
+  version: <integer>
+cohorts:
+  search: <declared seed/evidence policy>
+  validation: <declared held-out policy>
+scheduler:
+  base_seed: <integer>
+  policy: <registered id>
+```
+
+Serialization syntax may be JSON/YAML internally, but canonicalization shall
+produce one deterministic digest for semantically identical plan data.
+
+SearchPlan shall not contain executable source, callable references supplied by
+the plan, runtime `eval` expressions or import paths to be executed.
+
+## OSG-DATA-002 — Scalar Dimension definition
+**Status: accepted**
+
+A registered Scalar Dimension record contains:
+
+- `dimension_id`;
+- physical destination/resolver key;
+- value type;
+- finite values and/or explicit legal bounds;
+- canonical fixed/default value;
+- compatible strategy IDs;
+- optional structured activation condition;
+- cross-value validation constraints;
+- canonical serialization/canonicalization rules.
+
+The registry record is trusted, version-controlled repository code/data.
+SearchPlan may reference it but shall not redefine executable resolver behavior.
+
+## OSG-DATA-003 — Rule Dimension and variant definition
+**Status: accepted**
+
+A Rule Dimension record contains:
+
+- stable `rule_dimension_id`;
+- physical hook/responsibility;
+- finite registered variant IDs;
+- compatible search/mutation strategy IDs;
+- optional activation condition and compatibility constraints.
+
+Each variant record contains:
+
+- stable `variant_id`;
+- implementation/resolver identity owned by repository code;
+- deterministic/snapshot compatibility declaration;
+- applicable physical constraints.
+
+The current latent operator variants
+`masked_copy|masked_xor|rotate_copy|masked_and` are one registered Rule
+Dimension family.
+
+## OSG-DATA-004 — Structured Conditional Dimension
+**Status: accepted**
+
+Conditional activation is represented as data, not executable code.
+
+Supported conditions shall use a bounded registered grammar such as equality,
+membership and conjunction over previously resolvable dimension/rule IDs.
+
+Each condition record declares its dependency IDs. Dependency graphs shall be
+validated acyclic before execution.
+
+Inactive dimensions resolve to their registered canonical inactive/fixed value
+for physical construction and are excluded from candidate identity as an
+independent varying axis.
+
+## OSG-DATA-005 — Candidate identity
+**Status: accepted / blocking**
+
+Candidate identity is the deterministic canonical serialization/digest of the
+candidate's active resolved Universe-level physical scalar values and physical
+rule variant IDs, including fixed active values required to distinguish the
+resolved physical candidate.
+
+Candidate identity excludes:
+
+- evidence seed;
+- slot index;
+- optimizer generation;
+- fitness/growth/evidence result;
+- parent/lineage metadata;
+- allocation reason;
+- cohort role;
+- experiment/protocol parameters.
+
+Conditionally inactive dimensions shall not create multiple candidate
+identities for physically identical resolved candidates.
+
+## OSG-DATA-006 — ResolvedUniverseSpec
+**Status: accepted / blocking**
+
+`ResolvedUniverseSpec` is an immutable, fully resolved Inner-construction
+record. It contains:
+
+- schema/version;
+- all complete effective physical scalar values required to construct the
+  Universe;
+- all selected physical rule variant IDs/bindings;
+- canonical inactive/fixed physical values where applicable;
+- registry/spec identity sufficient to validate deterministic reconstruction.
+
+It contains no search domain, mutation strategy, objective, fitness, rank,
+cohort, seed, slot, lineage or acceptance metadata.
+
+The resolver may project ResolvedUniverseSpec to the existing PhysicsConfig and
+bound rule implementations, but there shall be one authoritative mapping.
+
+## OSG-DATA-007 — Candidate record and lineage
+**Status: accepted**
+
+Outer candidate state stores separately from Inner state:
+
+- candidate identity;
+- canonical resolved candidate values/rule IDs;
+- parent candidate identity, if any;
+- mutation dimension/strategy/direction/result when applicable;
+- evidence maturity/state;
+- allocation reason;
+- slot assignments;
+- search provenance reference.
+
+Reusable slot index is not durable candidate identity.
+
+## OSG-DATA-008 — Search provenance
+**Status: accepted**
+
+Every persisted/reportable generalized run shall record:
+
+- repository/code revision;
+- SearchPlan ID/version/digest;
+- registry version/digest;
+- base physical config digest;
+- experiment protocol digest;
+- ObjectiveProfile ID/version;
+- deterministic scheduler/base-seed inputs;
+- candidate identity;
+- evidence seed set and each seed's cohort role;
+- candidate lineage;
+- fixed/searchable/inactive status and resolved value for each declared
+  dimension;
+- relevant artifact/oracle version when running legacy compatibility.
+
+Search provenance is Outer state. It shall never be inserted into ordinary-cell
+state as learned memory.
+
+## OSG-DATA-009 — Legacy SearchPlan data
+**Status: accepted / blocking**
+
+The canonical Legacy SearchPlan shall encode the accepted Phase 5 search without
+broadening it:
+
+- population `128`;
+- one `latent_operator` Rule Dimension with the existing four variants;
+- four 32-slot within-selection strata;
+- eight initial genomes × four evidence seeds/category;
+- existing eleven UniverseGenome scalar fields;
+- existing seven initial-variation fields in current order;
+- current mutation strategy/scheduler;
+- current `tiered_category_rank` evidence policy;
+- current fitness/growth/pruning ObjectiveProfile;
+- slow-trace tuple fixed at `(0,0,0,0,8)`;
+- no protocol field and no seed dimension.
+
+Its canonical definition shall be versioned/digestible and testable against the
+Phase A oracle.
+
+## OSG-DATA-010 — Dimension registry legacy mapping
+**Status: accepted**
+
+The generalized registry shall provide one authoritative mapping from the
+existing UniverseGenome/latent-category surface to generalized dimensions.
+
+Compatibility adapters may expose the old API during migration, but they shall
+delegate to this mapping rather than duplicate field lists, bounds, mutation
+domains or rule-family knowledge.
+
+## OSG-DATA-011 — Optimizer envelope v7
+**Status: accepted / blocking**
+
+Persisting generalized Outer state changes the optimizer envelope from accepted
+version 6 to version 7.
+
+A version-7 optimizer snapshot shall retain all v6 authoritative slot and
+optimizer state and additionally persist or unambiguously identify:
+
+- SearchPlan canonical payload or stable versioned reference plus digest;
+- registry version/digest;
+- ObjectiveProfile ID/version;
+- generalized candidate identity/value records;
+- generalized comparison-stratum/scheduler state;
+- search provenance required for deterministic continuation.
+
+The nested UniverseState schema does **not** change solely because Outer Search
+is generalized.
+
+## OSG-DATA-012 — Optimizer v6 → v7 migration
+**Status: accepted / blocking**
+
+Accepted optimizer envelope v6 remains readable.
+
+A v6 restore shall deterministically migrate to v7 by binding exactly the
+canonical Legacy SearchPlan and legacy ObjectiveProfile, reconstructing
+generalized candidate identities from the v6 candidate/genome/category records,
+and preserving:
+
+- all 128 authoritative UniverseState snapshots;
+- seeds;
+- fitness/growth/health/response state;
+- evidence maturity;
+- scheduler cursors/counts;
+- lineage/parent references;
+- prune history;
+- allocation/mutation metadata.
+
+Migration shall not infer any newly searchable dimension and shall keep all
+slow-trace fields fixed at the accepted inert tuple.
+
+The next save after successful migration emits v7.
+
+## OSG-DATA-013 — New-format fail-closed loading
+**Status: accepted**
+
+A v7 snapshot is malformed and shall be rejected if:
+
+- SearchPlan/registry/ObjectiveProfile identity is missing or inconsistent;
+- candidate identity does not match canonical resolved values/rule IDs;
+- an unknown dimension/rule/strategy/objective ID is referenced;
+- a seed/protocol value appears as a candidate dimension;
+- stratum/scheduler state is incompatible with the bound plan;
+- required provenance for deterministic continuation is absent;
+- nested UniverseState payload is invalid under its own accepted schema.
+
+The loader shall not guess replacements for unknown new IDs.
+
+## OSG-DATA-014 — Legacy oracle artifact identity
+**Status: accepted**
+
+The blocking pre-generalization oracle is identified by:
+
+- source SHA
+  `211d84b18fe68e70f89c8921d156e1b7c0592895`;
+- schema v1;
+- manifest
+  `research/artifacts/legacy_outer_search_oracle_v1/manifest.json`;
+- bundle digest
+  `9cb98606546725e3d4790d82f0e3a01f6cd8235215607c209e6952fdc283e5e3`.
+
+Generalized code shall consume/compare against this frozen artifact; it shall
+not regenerate it after production search/physics paths diverge.
