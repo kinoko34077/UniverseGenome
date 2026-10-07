@@ -978,10 +978,8 @@ class SteadyStateOptimizer:
             if any(slot.category != category for slot in local):
                 raise ValueError("comparison stratum mixed legacy categories")
             protected = self._protected_indices(local)
-            eligible = self._selection_eligible_slots(local)
-            pruning_eligible = self._pruning_eligible_slots(local)
             pruned = prune_selection_indices(
-                self._selection_records(pruning_eligible),
+                self._selection_records(local),
                 protected=protected,
             )
             pruned_count += len(pruned)
