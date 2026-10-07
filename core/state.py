@@ -74,7 +74,7 @@ class UniverseState:
     speed_code: list[int] = field(init=False)
     age: list[int] = field(init=False)
     black_hole_timer: list[int] = field(init=False)
-    slow_trace: list[int] = field(init=False)
+    slow_trace: bytearray = field(init=False)
 
     def __post_init__(self) -> None:
         if self.max_cells < 1:
@@ -90,7 +90,7 @@ class UniverseState:
         self.speed_code = [0] * self.max_cells
         self.age = [0] * self.max_cells
         self.black_hole_timer = [0] * self.max_cells
-        self.slow_trace = [0] * self.max_cells
+        self.slow_trace = bytearray(self.max_cells)
 
     def active_slots(self) -> list[int]:
         return [index for index, state in enumerate(self.lifecycle) if state == Lifecycle.ACTIVE]
@@ -197,6 +197,16 @@ class UniverseState:
             required.add("slow_trace")
         if set(arrays) != required:
             raise ValueError("snapshot arrays do not match UniverseState format")
+        if format_version == 1 and config is not None and hasattr(config, "to_dict"):
+            values = config.to_dict()
+            values.update({
+                "trace_write_cap": 0,
+                "trace_transfer_cap": 0,
+                "trace_discharge_cap": 0,
+                "trace_decay_rate": 0,
+                "trace_bonus_shift": 8,
+            })
+            config = type(config)(**values)
         state = cls(
             seed=int(payload["seed"]),
             max_cells=max_cells,
@@ -209,7 +219,7 @@ class UniverseState:
                 raise ValueError(f"snapshot array {name!r} is invalid")
             setattr(state, name, [int(value) for value in values])
         if format_version == 1:
-            state.slow_trace = [0] * max_cells
+            state.slow_trace = bytearray(max_cells)
         else:
             values = arrays["slow_trace"]
             if not isinstance(values, list) or len(values) != max_cells:
@@ -217,7 +227,7 @@ class UniverseState:
             converted = [int(value) for value in values]
             if any(value < 0 or value > 0xFF for value in converted):
                 raise ValueError("slow_trace values must fit uint8")
-            state.slow_trace = converted
+            state.slow_trace = bytearray(converted)
             if any(
                 state.lifecycle[slot] == Lifecycle.FREE and state.slow_trace[slot] != 0
                 for slot in range(max_cells)
