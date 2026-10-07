@@ -1,0 +1,40 @@
+name: Phase G G0 Qualification
+
+on:
+  pull_request:
+    paths:
+      - "research/phase_g_memory_search_159.py"
+      - "tests/test_phase_g_memory_search_159.py"
+      - ".github/workflows/phase-g-g0-qualification.yml"
+      - "research/artifacts/phase_g_g0_qualification_159.json"
+
+permissions:
+  contents: read
+
+jobs:
+  g0_qualification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Phase G G0 focused tests
+        run: python -m unittest discover -s tests -p "test_phase_g_memory_search_159.py" -v
+      - name: Phase G G0 h0-only qualification
+        run: >-
+          python -m research.phase_g_memory_search_159
+          --qualify
+          --output phase_g_g0_qualification_159.generated.json
+      - name: Verify frozen qualification artifact
+        run: >-
+          cmp
+          research/artifacts/phase_g_g0_qualification_159.json
+          phase_g_g0_qualification_159.generated.json
+      - name: Upload G0 qualification evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-g-g0-qualification
+          path: phase_g_g0_qualification_159.generated.json
