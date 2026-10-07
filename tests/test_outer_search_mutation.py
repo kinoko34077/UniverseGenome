@@ -6,12 +6,14 @@ import unittest
 from unittest.mock import patch
 
 from core.physics import PhysicsConfig
+from research.legacy_outer_search_oracle import load_legacy_base_config
 from search.evolution import SteadyStateOptimizer
 from search.genome import UniverseGenome
 from search.outer_search import (
     build_default_search_registry,
     legacy_candidate_values,
     legacy_mutation_directions,
+    legacy_mutation_plan_for_base_config,
     legacy_search_plan,
     mutate_legacy_candidate,
     mutate_scalar_candidate,
@@ -26,6 +28,7 @@ class OuterSearchMutationTests(unittest.TestCase):
         probes = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))["decisions"]["mutation_probes"]
         registry = build_default_search_registry()
         plan = legacy_search_plan(base_seed=0)
+        base = load_legacy_base_config()
 
         self.assertEqual(len(probes), 4)
         for probe in probes:
@@ -37,7 +40,7 @@ class OuterSearchMutationTests(unittest.TestCase):
                 candidate=candidate,
                 dimension_id=probe["mutation_field"],
                 direction=int(probe["mutation_direction"]),
-                base_config=PhysicsConfig(max_cells=8),
+                base_config=base,
             )
             self.assertEqual(result.dimension_id, probe["mutation_field"])
             self.assertEqual(result.direction, probe["mutation_direction"])
@@ -45,9 +48,7 @@ class OuterSearchMutationTests(unittest.TestCase):
             self.assertEqual(result.after, probe["mutation_after"])
             self.assertEqual(result.candidate_values.scalars, probe["child"]["genome"])
             self.assertEqual(
-                result.resolved_candidate.universe_spec.to_physics_config(
-                    PhysicsConfig(max_cells=8)
-                ).to_dict(),
+                result.resolved_candidate.universe_spec.to_physics_config(base).to_dict(),
                 probe["child"]["state"]["config"],
             )
 
@@ -79,6 +80,44 @@ class OuterSearchMutationTests(unittest.TestCase):
             ),
             (1,),
         )
+
+    def test_legacy_mutation_keeps_explicit_fixed_research_physics_fixed(self):
+        base = PhysicsConfig(
+            max_cells=8,
+            trace_write_cap=32,
+            trace_transfer_cap=8,
+            trace_discharge_cap=16,
+            trace_decay_rate=256,
+            trace_bonus_shift=5,
+        )
+        plan = legacy_mutation_plan_for_base_config(base)
+        self.assertNotIn("trace_write_cap", plan.search)
+        self.assertEqual(
+            tuple(
+                plan.fixed[key]
+                for key in (
+                    "trace_write_cap",
+                    "trace_transfer_cap",
+                    "trace_discharge_cap",
+                    "trace_decay_rate",
+                    "trace_bonus_shift",
+                )
+            ),
+            (32, 8, 16, 256, 5),
+        )
+
+        optimizer = SteadyStateOptimizer.from_defaults(base_seed=0, base_config=base)
+        child = optimizer.replace_free_slot(
+            free_index=31,
+            parent=optimizer.slots[0],
+            field="hp_decay",
+            direction=1,
+        )
+        self.assertEqual(child.state.config.trace_write_cap, 32)
+        self.assertEqual(child.state.config.trace_transfer_cap, 8)
+        self.assertEqual(child.state.config.trace_discharge_cap, 16)
+        self.assertEqual(child.state.config.trace_decay_rate, 256)
+        self.assertEqual(child.state.config.trace_bonus_shift, 5)
 
     def test_phase5_replace_free_slot_routes_through_generic_mutation(self):
         optimizer = SteadyStateOptimizer.from_defaults(
