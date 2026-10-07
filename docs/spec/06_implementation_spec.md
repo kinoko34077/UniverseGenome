@@ -343,3 +343,229 @@ Keep these visible as parameters/defaults/candidates.
 If this specification and #3 conflict on *what must be achieved*, #3 governs and this Issue must be reconciled.
 
 If later repository files become accepted canonical specs, this Issue should link to them and remain a durable review/history surface rather than silently diverging.
+
+
+---
+
+# 48. Generalized Outer Search implementation boundary (#144 / #145)
+
+## OSG-IMPL-001 — Dependency direction
+**Status: accepted / blocking**
+
+The generalized implementation shall preserve this dependency direction:
+
+```text
+SearchPlan + registries + ObjectiveProfile
+                |
+                v
+        Outer Search model
+                |
+                v
+        candidate resolver
+                |
+                v
+        ResolvedUniverseSpec
+                |
+                v
+        Inner Universe construction/step
+                |
+                v
+        evaluation adapter
+                |
+                v
+        Outer evidence/selection
+```
+
+Inner modules shall not import or depend on SearchPlan, candidate rank,
+comparison-stratum state, lineage, cohort role or ObjectiveProfile.
+
+Outer modules may depend on stable Inner construction/snapshot interfaces but
+shall not mutate authoritative Inner cell arrays directly to implement search.
+
+## OSG-IMPL-002 — Registry / resolver boundary
+**Status: accepted**
+
+Dimension and rule registries belong to the generalized Outer/resolution
+boundary.
+
+Registry responsibilities:
+
+- declare stable dimension/rule IDs;
+- declare domains, defaults/inert values and compatible strategies;
+- map generalized values to one authoritative physical destination;
+- validate physical combination constraints;
+- bind registered rule implementations.
+
+Resolver responsibilities:
+
+- validate one candidate under one SearchPlan;
+- evaluate structured conditional activation;
+- produce canonical candidate identity;
+- produce immutable ResolvedUniverseSpec;
+- bind physical rule implementations before Inner execution.
+
+The generic scheduler/selector shall not contain per-dimension field-name
+branches merely to recognize registered dimensions.
+
+## OSG-IMPL-003 — No SearchPlan dependency in Inner hot loops
+**Status: accepted / blocking**
+
+SearchPlan lookup, registry iteration, strategy lookup, objective lookup and
+candidate metadata lookup shall not occur per cell/per local event merely to
+execute a fixed resolved candidate.
+
+Where a rule choice can be resolved once at Universe construction, the Inner
+step shall receive the bound implementation/value directly.
+
+This requirement supports OSG-REQ-020 and prevents Outer policy from leaking
+into physical behavior.
+
+## OSG-IMPL-004 — Trusted finite rule registration
+**Status: accepted / blocking**
+
+A new Rule Dimension variant is added through reviewed repository code/data and
+a stable registry entry.
+
+SearchPlan may only choose registered IDs. It may not supply:
+
+- Python source;
+- bytecode;
+- import strings to execute;
+- lambdas/callables;
+- runtime `eval` expressions;
+- arbitrary AST/program fragments.
+
+This is a finite trusted rule-family registry, not arbitrary code evolution.
+
+## OSG-IMPL-005 — Authoritative legacy mapping
+**Status: accepted / blocking**
+
+There shall be one authoritative generalized mapping for the existing
+UniverseGenome scalar surface and latent rule category.
+
+Legacy compatibility APIs may remain temporarily, but their field/domain/rule
+knowledge shall delegate to the generalized registry/resolver rather than be
+maintained as a second independent source of truth.
+
+The legacy mapping includes exactly the current eleven UniverseGenome physical
+fields and current four latent operator rule variants. Slow-trace parameters
+are registered physical dimensions but fixed/inert in Legacy SearchPlan.
+
+## OSG-IMPL-006 — Incremental migration sequence
+**Status: accepted**
+
+Production generalization shall be introduced in bounded checkpoints:
+
+1. generic SearchPlan/dimension/rule/candidate/ResolvedUniverseSpec model;
+2. canonical Legacy SearchPlan static population reconstruction;
+3. generic candidate resolution and scalar/rule mutation;
+4. generic strata/evidence allocation/replacement;
+5. generic selection/pruning and ObjectiveProfile binding;
+6. optimizer v7 persistence/migration;
+7. full frozen-oracle dynamic parity and performance gate.
+
+A later checkpoint shall not begin while the immediately prior checkpoint's
+acceptance is unresolved.
+
+## OSG-IMPL-007 — Legacy adapter lifetime
+**Status: accepted**
+
+An adapter from existing UniverseGenome/category callers to the generalized
+model may exist during migration.
+
+The adapter shall:
+
+- preserve exact existing public/config behavior;
+- contain no independent mutation/selection policy;
+- resolve through the same registry used by generalized SearchPlan;
+- be removable without changing generalized candidate semantics.
+
+No approximate parallel "legacy optimizer" may be kept as the compatibility
+proof. Compatibility is established by Legacy SearchPlan running through the
+generalized engine.
+
+## OSG-IMPL-008 — ObjectiveProfile adapter boundary
+**Status: accepted**
+
+Current Phase 5 fitness/growth/pruning calculations may initially be wrapped as
+the legacy ObjectiveProfile.
+
+The wrapper shall preserve all existing semantics and expose evidence to the
+generic Outer engine without changing Inner state.
+
+New research ObjectiveProfiles are separate registered Outer definitions. Their
+existence shall not alter the legacy objective or canonical learning claim.
+
+## OSG-IMPL-009 — Optimizer persistence boundary
+**Status: accepted / blocking**
+
+When generalized Outer state becomes authoritative for continuation, optimizer
+persistence advances from envelope v6 to v7 as specified by OSG-DATA-011/012.
+
+UniverseState remains on its independently accepted schema unless an actual
+Inner-state change separately requires migration.
+
+Migration code shall have one deterministic v6→v7 legacy path. It shall not
+select/search new dimensions or infer research settings.
+
+## OSG-IMPL-010 — Frozen oracle is read-only compatibility authority
+**Status: accepted / blocking**
+
+The Phase A artifact generated from
+`211d84b18fe68e70f89c8921d156e1b7c0592895` is immutable compatibility
+evidence.
+
+Production generalized code may read/compare against it in tests, but shall not
+rewrite/regenerate it after generalized production paths change.
+
+Any oracle mismatch is investigated as a generalized implementation/spec
+defect; the expected artifact is not updated merely to make a new
+implementation pass.
+
+## OSG-IMPL-011 — Performance implementation boundary
+**Status: accepted**
+
+Generic dispatch shall remain outside per-cell work where possible.
+
+The implementation shall not add:
+
+- a persistent N² all-Universe comparison matrix;
+- per-cell dynamic SearchPlan lookup;
+- per-cell rule registry search;
+- global memory search/broadcast through the generalized framework.
+
+Matched density4/density32 legacy measurements shall enforce the 5% median
+regression gate from OSG-REQ-020.
+
+## OSG-IMPL-012 — Slow-trace registration boundary
+**Status: accepted**
+
+The generalized registry may represent:
+
+- `trace_write_cap`;
+- `trace_transfer_cap`;
+- `trace_discharge_cap`;
+- `trace_decay_rate`;
+- `trace_bonus_shift`.
+
+Legacy SearchPlan fixes them at `(0,0,0,0,8)`.
+
+Phase B does not authorize production search over non-inert slow-trace values,
+a second manually selected D1 profile, or reuse of the #140 cohort for adaptive
+tuning.
+
+A later memory-physics research owner must define a new predeclared SearchPlan,
+search cohort, ObjectiveProfile and held-out validation cohort after generalized
+legacy compatibility is fully accepted.
+
+## OSG-IMPL-013 — Rollback boundary
+**Status: accepted**
+
+Generalization changes shall remain recoverable through ordinary version-control
+revert/forward-fix.
+
+No shared-history rewrite, snapshot-history rewrite or release/deploy action is
+required by this implementation sequence.
+
+Before the generalized implementation is accepted, current production defaults
+and `learning_claim=false` remain unchanged.
