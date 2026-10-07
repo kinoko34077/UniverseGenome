@@ -129,8 +129,14 @@ class OuterSearchStrataTests(unittest.TestCase):
                 base_config=base,
             )
             counts = optimizer._category_counts()
+            groups = optimizer._comparison_strata()
 
         self.assertGreaterEqual(routed.call_count, 1)
+        self.assertEqual(
+            [local[0].category for _, local in groups],
+            ["masked_copy", "masked_xor", "rotate_copy", "masked_and"],
+        )
+        self.assertEqual([len(local) for _, local in groups], [32, 32, 32, 32])
         self.assertEqual(
             counts,
             {
