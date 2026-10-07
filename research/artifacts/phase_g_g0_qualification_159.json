@@ -1,5 +1,5 @@
 {
-  "artifact_digest": "b8038d0f5430260b05cdb8ad7988bff4e92f573fec5f863672d66b729ff0906d",
+  "artifact_digest": "ac8f9ab96c19d38e0553e13532a145207c8e00cba8014504aee2f08fbe598ca3",
   "baseline_sha": "b5803adf87f24375d9aa33abc99d85fa91d4eed5",
   "baseline_tag": "v0.2.0-alpha.1",
   "held_out_max_horizon": 0,
@@ -148,7 +148,26 @@
     29
   ],
   "phase": "G0",
-  "protocol_digest": "b6fa0396d6acfea1869a9a315f5ace9d27827e2caef0260deb09f916d170f5fe",
+  "protocol": {
+    "adaptive_horizons": [
+      100,
+      1000
+    ],
+    "experiment": {
+      "byte_gap_generations": 4,
+      "byte_hold_generations": 4,
+      "evaluation_timeout_generations": 1024,
+      "teacher_delay_generations": 4,
+      "teacher_repetitions": 1
+    },
+    "no_further_external_stimulation_after_h0": true,
+    "qualification_horizon": 0,
+    "teacher_pair": [
+      66,
+      8
+    ]
+  },
+  "protocol_digest": "5a7d813b2ae55028a2a27ffd26bd0b42ffd06007f01b35abd7e16b367fe92a33",
   "qualification_case_digests": {
     "heldout": "76fbe61767c38391d7af65f3921761655b88f05c64fe2efccca8fdc607639834",
     "search": "6f66cfa2b9dc14e944e11c6f5980b04b032bae7f1ab6cb5da4359c2b10ddde95"
