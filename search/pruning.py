@@ -6,6 +6,12 @@ from dataclasses import dataclass
 from statistics import median
 
 from .fitness import Fitness
+from .outer_search import (
+    legacy_objective_profile,
+    objective_absolute_failure_reason,
+    objective_growth_flags,
+    objective_short_health_flags,
+)
 
 SHORT_WINDOW = 16
 GROWTH_WINDOW = 128
@@ -23,15 +29,12 @@ SHORT_HEALTH_MEANINGFUL_ACTIVITY = 1 << 1
 
 
 def short_health_flags(*, active_cells: int, activity_cost: int) -> int:
-    """Encode measurable health at one authoritative short-window boundary."""
-    if active_cells < 0 or activity_cost < 0:
-        raise ValueError("short-health metrics must be non-negative")
-    flags = 0
-    if active_cells > 0:
-        flags |= SHORT_HEALTH_ACTIVE_CELLS
-    if activity_cost > 0:
-        flags |= SHORT_HEALTH_MEANINGFUL_ACTIVITY
-    return flags
+    """Compatibility adapter for the canonical legacy ObjectiveProfile."""
+    return objective_short_health_flags(
+        legacy_objective_profile(),
+        active_cells=active_cells,
+        activity_cost=activity_cost,
+    )
 
 
 def absolute_failure_reason(
@@ -39,57 +42,20 @@ def absolute_failure_reason(
     *,
     response_history: tuple[int, ...] = (),
 ) -> str | None:
-    """Return an accepted measurable absolute-failure reason.
-
-    Short health owns immediate all-active-cell loss. Persistent non-response
-    is task-level: four consecutive 128-generation boundary observations with
-    no autonomous output event, while active cells still remain.
-    """
-    windows = tuple(int(value) for value in history)
-    responses = tuple(int(value) for value in response_history)
-    if any(not 0 <= value <= 0b11 for value in windows):
-        raise ValueError("short-health flags must fit two bits")
-    if any(value not in (0, 1) for value in responses):
-        raise ValueError("response-history flags must be binary")
-    if len(responses) > RESPONSE_HISTORY_LIMIT:
-        raise ValueError("response history exceeds the 512-generation horizon")
-    if windows and not (windows[-1] & SHORT_HEALTH_ACTIVE_CELLS):
-        return "all_active_cells_gone"
-    if (
-        windows
-        and (windows[-1] & SHORT_HEALTH_ACTIVE_CELLS)
-        and len(responses) == RESPONSE_HISTORY_LIMIT
-        and not any(responses)
-    ):
-        return "persistent_non_response"
-    return None
-
+    """Compatibility adapter for the canonical legacy ObjectiveProfile."""
+    return objective_absolute_failure_reason(
+        legacy_objective_profile(),
+        history,
+        response_history=response_history,
+    )
 
 def growth_flags(previous: Fitness, current: Fitness) -> int:
-    flags = 0
-    if current.success > previous.success:
-        flags |= 1 << 0
-    if current.wrong_outputs < previous.wrong_outputs:
-        flags |= 1 << 1
-    if current.timeouts < previous.timeouts:
-        flags |= 1 << 2
-    if current.response_latency < previous.response_latency:
-        flags |= 1 << 3
-    if current.activity_cost < previous.activity_cost:
-        flags |= 1 << 4
-    if (
-        previous.retention_evidence_count > 0
-        and current.retention_evidence_count > 0
-        and current.retention > previous.retention
-    ):
-        flags |= 1 << GROWTH_BIT_RETENTION
-    if (
-        previous.noise_robustness_evidence_count > 0
-        and current.noise_robustness_evidence_count > 0
-        and current.noise_robustness > previous.noise_robustness
-    ):
-        flags |= 1 << GROWTH_BIT_NOISE_ROBUSTNESS
-    return flags
+    """Compatibility adapter for the canonical legacy ObjectiveProfile."""
+    return objective_growth_flags(
+        legacy_objective_profile(),
+        previous.to_dict(),
+        current.to_dict(),
+    )
 
 
 @dataclass

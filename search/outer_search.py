@@ -225,9 +225,246 @@ class RuleDimension:
 
 
 @dataclass(frozen=True)
+class ObjectiveMetric:
+    metric_id: str
+    direction: str
+    comparison: bool = False
+    growth_bit: int | None = None
+    evidence_count_field: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.metric_id:
+            raise ValueError("objective metric id must be non-empty")
+        if self.direction not in ("maximize", "minimize"):
+            raise ValueError("objective metric direction must be maximize or minimize")
+        if self.growth_bit is not None and not 0 <= int(self.growth_bit) <= 7:
+            raise ValueError("objective growth bit must fit uint8")
+        if self.evidence_count_field is not None and not self.evidence_count_field:
+            raise ValueError("objective evidence-count field must be non-empty")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "metric_id": self.metric_id,
+            "direction": self.direction,
+            "comparison": self.comparison,
+            "growth_bit": self.growth_bit,
+            "evidence_count_field": self.evidence_count_field,
+        }
+
+
+@dataclass(frozen=True)
+class ObjectiveProfile:
+    profile_id: str
+    version: int
+    metrics: tuple[ObjectiveMetric, ...]
+    minimum_evidence: int
+    tie_breakers: tuple[str, ...]
+    invalid_evidence_policy: str
+    negative_control_fields: tuple[str, ...]
+    negative_control_policy: str
+    short_health_policy: str
+    failure_policy: str
+    response_window_limit: int
+
+    def __post_init__(self) -> None:
+        if not self.profile_id or self.version < 1:
+            raise ValueError("ObjectiveProfile id/version must be valid")
+        if self.minimum_evidence < 1:
+            raise ValueError("ObjectiveProfile minimum_evidence must be positive")
+        ids = tuple(metric.metric_id for metric in self.metrics)
+        if len(ids) != len(set(ids)):
+            raise ValueError("ObjectiveProfile metric ids must be unique")
+        growth_bits = tuple(
+            int(metric.growth_bit)
+            for metric in self.metrics
+            if metric.growth_bit is not None
+        )
+        if len(growth_bits) != len(set(growth_bits)):
+            raise ValueError("ObjectiveProfile growth bits must be unique")
+        if not self.tie_breakers:
+            raise ValueError("ObjectiveProfile tie breakers must be non-empty")
+        if self.invalid_evidence_policy not in ("ineligible", "reject"):
+            raise ValueError("unsupported ObjectiveProfile invalid evidence policy")
+        if self.negative_control_policy not in ("observe_only", "gate"):
+            raise ValueError("unsupported ObjectiveProfile negative-control policy")
+        if not self.short_health_policy or not self.failure_policy:
+            raise ValueError("ObjectiveProfile health/failure policy ids must be non-empty")
+        if self.response_window_limit < 1:
+            raise ValueError("ObjectiveProfile response window limit must be positive")
+
+    @property
+    def comparison_metrics(self) -> tuple[ObjectiveMetric, ...]:
+        return tuple(metric for metric in self.metrics if metric.comparison)
+
+    @property
+    def growth_metrics(self) -> tuple[ObjectiveMetric, ...]:
+        return tuple(metric for metric in self.metrics if metric.growth_bit is not None)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "profile_id": self.profile_id,
+            "version": self.version,
+            "metrics": [metric.to_dict() for metric in self.metrics],
+            "minimum_evidence": self.minimum_evidence,
+            "tie_breakers": list(self.tie_breakers),
+            "invalid_evidence_policy": self.invalid_evidence_policy,
+            "negative_control_fields": list(self.negative_control_fields),
+            "negative_control_policy": self.negative_control_policy,
+            "short_health_policy": self.short_health_policy,
+            "failure_policy": self.failure_policy,
+            "response_window_limit": self.response_window_limit,
+        }
+
+
+def legacy_objective_profile() -> ObjectiveProfile:
+    """Canonical versioned representation of accepted Phase 5 objective semantics."""
+
+    return ObjectiveProfile(
+        profile_id=LEGACY_OBJECTIVE_PROFILE_ID,
+        version=LEGACY_OBJECTIVE_PROFILE_VERSION,
+        metrics=(
+            ObjectiveMetric("success", "maximize", comparison=True, growth_bit=0),
+            ObjectiveMetric("wrong_outputs", "minimize", comparison=True, growth_bit=1),
+            ObjectiveMetric("timeouts", "minimize", comparison=True, growth_bit=2),
+            ObjectiveMetric("response_latency", "minimize", comparison=True, growth_bit=3),
+            ObjectiveMetric("activity_cost", "minimize", comparison=True, growth_bit=4),
+            ObjectiveMetric(
+                "retention",
+                "maximize",
+                growth_bit=5,
+                evidence_count_field="retention_evidence_count",
+            ),
+            ObjectiveMetric(
+                "noise_robustness",
+                "maximize",
+                growth_bit=6,
+                evidence_count_field="noise_robustness_evidence_count",
+            ),
+        ),
+        minimum_evidence=LEGACY_EVIDENCE_SEEDS,
+        tie_breakers=("candidate_tie_key", "slot_index"),
+        invalid_evidence_policy="ineligible",
+        negative_control_fields=(
+            "counterfactual_no_input_clean",
+            "counterfactual_alternate_input_clean",
+        ),
+        negative_control_policy="observe_only",
+        short_health_policy="phase5_short_health_v1",
+        failure_policy="phase5_failure_v1",
+        response_window_limit=4,
+    )
+
+
+def objective_key(
+    profile: ObjectiveProfile,
+    evidence: Mapping[str, Any],
+) -> tuple[float, ...]:
+    """Build the lexicographic comparison key declared by an ObjectiveProfile."""
+
+    values: list[float] = []
+    for metric in profile.comparison_metrics:
+        if metric.metric_id not in evidence:
+            raise ValueError(f"objective evidence is missing metric: {metric.metric_id}")
+        value = float(evidence[metric.metric_id])
+        if value < 0:
+            raise ValueError(f"objective metric must be non-negative: {metric.metric_id}")
+        values.append(-value if metric.direction == "maximize" else value)
+    return tuple(values)
+
+
+def objective_growth_flags(
+    profile: ObjectiveProfile,
+    previous: Mapping[str, Any],
+    current: Mapping[str, Any],
+) -> int:
+    """Encode objective-declared growth comparisons into a bounded uint8 bitfield."""
+
+    flags = 0
+    for metric in profile.growth_metrics:
+        if metric.metric_id not in previous or metric.metric_id not in current:
+            raise ValueError(f"growth evidence is missing metric: {metric.metric_id}")
+        if metric.evidence_count_field is not None:
+            evidence_field = metric.evidence_count_field
+            if evidence_field not in previous or evidence_field not in current:
+                raise ValueError(
+                    f"growth evidence is missing evidence count: {evidence_field}"
+                )
+            if float(previous[evidence_field]) <= 0 or float(current[evidence_field]) <= 0:
+                continue
+        before = float(previous[metric.metric_id])
+        after = float(current[metric.metric_id])
+        improved = (
+            after > before
+            if metric.direction == "maximize"
+            else after < before
+        )
+        if improved:
+            flags |= 1 << int(metric.growth_bit)
+    return flags
+
+
+def objective_short_health_flags(
+    profile: ObjectiveProfile,
+    *,
+    active_cells: int,
+    activity_cost: int,
+) -> int:
+    """Encode the accepted short-window health signals for the bound profile."""
+
+    if profile.short_health_policy != "phase5_short_health_v1":
+        raise ValueError(
+            f"unsupported short-health policy: {profile.short_health_policy}"
+        )
+    if active_cells < 0 or activity_cost < 0:
+        raise ValueError("short-health metrics must be non-negative")
+    flags = 0
+    if active_cells > 0:
+        flags |= 1 << 0
+    if activity_cost > 0:
+        flags |= 1 << 1
+    return flags
+
+
+def objective_absolute_failure_reason(
+    profile: ObjectiveProfile,
+    short_health_history: tuple[int, ...],
+    *,
+    response_history: tuple[int, ...] = (),
+) -> str | None:
+    """Return the accepted absolute-failure reason under the bound profile."""
+
+    if profile.failure_policy != "phase5_failure_v1":
+        raise ValueError(f"unsupported failure policy: {profile.failure_policy}")
+    windows = tuple(int(value) for value in short_health_history)
+    responses = tuple(int(value) for value in response_history)
+    if any(not 0 <= value <= 0b11 for value in windows):
+        raise ValueError("short-health flags must fit two bits")
+    if any(value not in (0, 1) for value in responses):
+        raise ValueError("response-history flags must be binary")
+    if len(responses) > profile.response_window_limit:
+        raise ValueError("response history exceeds the ObjectiveProfile horizon")
+    if windows and not (windows[-1] & (1 << 0)):
+        return "all_active_cells_gone"
+    if (
+        windows
+        and (windows[-1] & (1 << 0))
+        and len(responses) == profile.response_window_limit
+        and not any(responses)
+    ):
+        return "persistent_non_response"
+    return None
+
+
+@dataclass(frozen=True)
 class SearchRegistry:
     scalar_dimensions: Mapping[str, ScalarDimension]
     rule_dimensions: Mapping[str, RuleDimension]
+    objective_profiles: Mapping[tuple[str, int], ObjectiveProfile] = field(
+        default_factory=lambda: {
+            (LEGACY_OBJECTIVE_PROFILE_ID, LEGACY_OBJECTIVE_PROFILE_VERSION):
+                legacy_objective_profile()
+        }
+    )
     schema_version: int = 1
 
     def __post_init__(self) -> None:
@@ -242,6 +479,9 @@ class SearchRegistry:
         overlap = set(self.scalar_dimensions) & set(self.rule_dimensions)
         if overlap:
             raise ValueError(f"dimension ids must be globally unique: {sorted(overlap)}")
+        for key, profile in self.objective_profiles.items():
+            if key != (profile.profile_id, profile.version):
+                raise ValueError("ObjectiveProfile registry key/id/version mismatch")
         for definition in (
             *self.scalar_dimensions.values(),
             *self.rule_dimensions.values(),
@@ -267,6 +507,10 @@ class SearchRegistry:
             "rules": {
                 key: self.rule_dimensions[key].to_dict()
                 for key in sorted(self.rule_dimensions)
+            },
+            "objective_profiles": {
+                f"{profile_id}@{version}": self.objective_profiles[(profile_id, version)].to_dict()
+                for profile_id, version in sorted(self.objective_profiles)
             },
         }
 
@@ -449,6 +693,15 @@ class SearchPlan:
             raise ValueError("SearchPlan population_size must be positive")
         if self.objective_profile_version < 1 or not self.objective_profile_id:
             raise ValueError("ObjectiveProfile id/version must be valid")
+        objective_key = (
+            self.objective_profile_id,
+            int(self.objective_profile_version),
+        )
+        if objective_key not in registry.objective_profiles:
+            raise ValueError(
+                "unknown ObjectiveProfile: "
+                f"{self.objective_profile_id}@{self.objective_profile_version}"
+            )
         if self.scheduler_base_seed < 0:
             raise ValueError("scheduler base seed must be non-negative")
 
@@ -535,6 +788,12 @@ class SearchPlan:
                         f"stratum dimension is not declared: {dimension_id}"
                     )
 
+    def bind_objective_profile(self, registry: SearchRegistry) -> ObjectiveProfile:
+        self.validate(registry)
+        return registry.objective_profiles[
+            (self.objective_profile_id, int(self.objective_profile_version))
+        ]
+
     def with_rule_variants(
         self,
         dimension_id: str,
@@ -590,6 +849,15 @@ class SearchPlan:
     @property
     def digest(self) -> str:
         return _digest(self.to_dict())
+
+
+def bind_objective_profile(
+    plan: SearchPlan,
+    registry: SearchRegistry,
+) -> ObjectiveProfile:
+    """Resolve the versioned ObjectiveProfile bound by one validated SearchPlan."""
+
+    return plan.bind_objective_profile(registry)
 
 
 @dataclass(frozen=True)
