@@ -795,13 +795,12 @@ class SteadyStateOptimizer:
             counts[slot.evidence_group] = counts.get(slot.evidence_group, 0) + 1
         return counts
 
-    @classmethod
     def _selection_eligible_slots(
-        cls,
+        self,
         records: Iterable[UniverseSlot],
     ) -> list[UniverseSlot]:
         values = list(records)
-        counts = cls._evidence_group_counts(values)
+        counts = self._evidence_group_counts(values)
         policy_records = tuple(
             SelectionRecord(
                 index=slot.index,
