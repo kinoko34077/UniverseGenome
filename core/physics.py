@@ -508,11 +508,15 @@ def _transmit_latent(
     pairs: set[tuple[int, int]],
     pair_addresses: dict[tuple[int, int], int],
     generation: int,
-) -> tuple[int, set[int]]:
+    trace_start: list[int],
+) -> tuple[int, set[int], tuple[tuple[int, int], ...]]:
     """Resolve one deterministic, non-overlapping transmission per active slot."""
     selected_pairs: list[tuple[int, int]] = []
     selected_slots: set[int] = set()
-    for pair in sorted(pairs, key=lambda item: (_cell_order_key(state, item[0]), _cell_order_key(state, item[1]))):
+    for pair in sorted(
+        pairs,
+        key=lambda item: (_cell_order_key(state, item[0]), _cell_order_key(state, item[1])),
+    ):
         if pair[0] in selected_slots or pair[1] in selected_slots:
             continue
         selected_pairs.append(pair)
@@ -530,6 +534,7 @@ def _transmit_latent(
             (first, second),
             state.bond_strength[first],
             participant=state,
+            source_trace=trace_start[first],
         )
         second_mask = transmission_mask(
             state.seed,
@@ -538,6 +543,7 @@ def _transmit_latent(
             (second, first),
             state.bond_strength[second],
             participant=state,
+            source_trace=trace_start[second],
         )
         updates[second] = apply_latent_operator(
             config.latent_operator,
@@ -557,7 +563,7 @@ def _transmit_latent(
 
     for slot, value in updates.items():
         state.latent[slot] = value
-    return len(selected_pairs), activity_slots
+    return len(selected_pairs), activity_slots, tuple(selected_pairs)
 
 
 def _fusion_candidates(
@@ -634,6 +640,7 @@ def _fuse_groups(
         best_slot = max(group, key=lambda slot: (hp_values[slot], _cell_order_key(state, slot)))
         best_direction = state.direction[best_slot]
         total_hp = min(0xFF, sum(hp_values.values()))
+        total_trace = min(0xFF, sum(state.slow_trace[slot] for slot in group))
         latent = mix_fusion_latent(state.latent[slot] for slot in ordered)
         speed_code = min(state.speed_code[slot] for slot in group)
         result_structure = SHAPE_SINGLE << ((level + 1) * 2)
@@ -652,6 +659,7 @@ def _fuse_groups(
         state.speed_code[result_slot] = speed_code
         state.age[result_slot] = 0
         state.black_hole_timer[result_slot] = 0
+        state.slow_trace[result_slot] = total_trace
         fused_slots.update(group)
         fusion_count += 1
     return fusion_count, fused_slots
@@ -710,6 +718,7 @@ def _fragment_active_cells(
         old_age = state.age[slot]
         old_direction = state.direction[slot]
         old_speed = state.speed_code[slot]
+        old_trace = state.slow_trace[slot]
         split_mask = fragmentation_split_mask(
             state.seed,
             generation,
@@ -731,13 +740,132 @@ def _fragment_active_cells(
             continue
         state.age[fragment] = 0
         state.bond_strength[fragment] = 0
+        state.slow_trace[fragment] = old_trace // 2
         state.latent[slot] = old_latent & (~split_mask & 0xFFFF)
         state.hp[slot] = old_hp - (old_hp >> 1)
         state.age[slot] = old_age >> 1
         state.bond_strength[slot] = 0
+        state.slow_trace[slot] = old_trace - state.slow_trace[fragment]
         fragmented_core_slots.add(slot)
         fragmentation_count += 1
     return fragmentation_count, fragmented_core_slots
+
+
+def _apply_slow_trace_writes(
+    state: UniverseState,
+    config: PhysicsConfig,
+    activity_amounts: Mapping[int, int],
+) -> None:
+    if config.trace_write_cap <= 0:
+        return
+    for slot, amount in activity_amounts.items():
+        if state.lifecycle[slot] == Lifecycle.FREE or amount <= 0:
+            continue
+        write = min(int(amount), config.trace_write_cap)
+        state.slow_trace[slot] = min(0xFF, state.slow_trace[slot] + write)
+
+
+def _transfer_slow_trace(
+    state: UniverseState,
+    config: PhysicsConfig,
+    selected_pairs: Iterable[tuple[int, int]],
+) -> None:
+    if config.trace_transfer_cap <= 0:
+        return
+    before = list(state.slow_trace)
+    updates: dict[int, int] = {}
+    for first, second in selected_pairs:
+        if state.lifecycle[first] == Lifecycle.FREE or state.lifecycle[second] == Lifecycle.FREE:
+            continue
+        first_trace = before[first]
+        second_trace = before[second]
+        if first_trace > second_trace:
+            quantity = min(config.trace_transfer_cap, (first_trace - second_trace) // 2)
+            updates[first] = first_trace - quantity
+            updates[second] = second_trace + quantity
+        elif second_trace > first_trace:
+            quantity = min(config.trace_transfer_cap, (second_trace - first_trace) // 2)
+            updates[second] = second_trace - quantity
+            updates[first] = first_trace + quantity
+    for slot, value in updates.items():
+        state.slow_trace[slot] = value
+
+
+def _trace_physical_order_key(state: UniverseState, slot: int) -> tuple[Any, ...]:
+    return (_cell_order_key(state, slot), slot)
+
+
+def _discharge_slow_trace(
+    state: UniverseState,
+    config: PhysicsConfig,
+) -> None:
+    if config.trace_discharge_cap <= 0:
+        return
+    carriers = sorted(
+        (
+            slot
+            for slot in range(state.max_cells)
+            if state.lifecycle[slot] == Lifecycle.BLACK_HOLE and state.slow_trace[slot] > 0
+        ),
+        key=lambda slot: _trace_physical_order_key(state, slot),
+    )
+    for carrier in carriers:
+        budget = min(config.trace_discharge_cap, state.slow_trace[carrier])
+        if budget <= 0:
+            continue
+        footprint = destination_footprint(
+            state.structure[carrier], state.x[carrier], state.y[carrier]
+        )
+        recipients = sorted(
+            (
+                slot
+                for slot in state.active_slots()
+                if destination_footprint(
+                    state.structure[slot], state.x[slot], state.y[slot]
+                ).intersection(footprint)
+            ),
+            key=lambda slot: _trace_physical_order_key(state, slot),
+        )
+        for recipient in recipients:
+            if budget <= 0:
+                break
+            headroom = 0xFF - state.slow_trace[recipient]
+            if headroom <= 0:
+                continue
+            quantity = min(budget, headroom)
+            state.slow_trace[carrier] -= quantity
+            state.slow_trace[recipient] += quantity
+            budget -= quantity
+
+
+def _decay_slow_trace(
+    state: UniverseState,
+    config: PhysicsConfig,
+    generation: int,
+    pending_free: set[int],
+) -> None:
+    if config.trace_decay_rate <= 0:
+        return
+    for slot in range(state.max_cells):
+        if (
+            slot in pending_free
+            or state.lifecycle[slot] == Lifecycle.FREE
+            or state.slow_trace[slot] <= 0
+        ):
+            continue
+        x = state.x[slot] & 0xFF
+        y = state.y[slot] & 0xFF
+        spatial_address = (tile_coordinate(y) << 5) | tile_coordinate(x)
+        local_index = (x << 8) | y
+        key = event_key(
+            state.seed,
+            generation,
+            spatial_address,
+            EVENT_SLOW_TRACE_DECAY,
+            local_index,
+        )
+        if event_u16(key) < config.trace_decay_rate:
+            state.slow_trace[slot] -= 1
 
 
 def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) -> None:
@@ -783,21 +911,32 @@ def step(
     state.config = resolved
     started = time.perf_counter()
     generation = state.generation
-    stimulated = set(int(slot) for slot in stimulus_slots)
-    stimulated.update(_local_revival_slots(state))
+    trace_start = list(state.slow_trace)
+    external_stimulated = set(int(slot) for slot in stimulus_slots)
+    local_revival = _local_revival_slots(state)
+    stimulated = external_stimulated | local_revival
     recovered_slots: set[int] = set()
+    pending_free: set[int] = set()
+    activity_amounts: dict[int, int] = {}
 
     for slot in range(state.max_cells):
-        if state.lifecycle[slot] == Lifecycle.BLACK_HOLE:
-            if slot in stimulated:
-                state.lifecycle[slot] = int(Lifecycle.ACTIVE)
-                state.hp[slot] = resolved.recovery_hp
-                state.black_hole_timer[slot] = 0
-                recovered_slots.add(slot)
-            else:
-                state.black_hole_timer[slot] -= 1
-                if state.black_hole_timer[slot] <= 0:
-                    state.free(slot)
+        if state.lifecycle[slot] != Lifecycle.BLACK_HOLE:
+            continue
+        if slot in stimulated:
+            state.lifecycle[slot] = int(Lifecycle.ACTIVE)
+            state.hp[slot] = resolved.recovery_hp
+            state.black_hole_timer[slot] = 0
+            recovered_slots.add(slot)
+            if slot in external_stimulated:
+                activity_amounts[slot] = activity_amounts.get(slot, 0) + resolved.recovery_hp
+        else:
+            state.black_hole_timer[slot] -= 1
+            if state.black_hole_timer[slot] <= 0:
+                pending_free.add(slot)
+
+    for slot in external_stimulated:
+        if state.lifecycle[slot] == Lifecycle.ACTIVE and slot not in recovered_slots:
+            activity_amounts[slot] = activity_amounts.get(slot, 0) + resolved.recovery_hp
 
     noise_spawn_count = _spawn_noise(state, resolved, generation)
     active = state.active_slots()
@@ -853,11 +992,7 @@ def step(
                     else:
                         state.structure[slot] = degraded
 
-    bond_contact_slots = {
-        slot
-        for pair in compatible_pairs
-        for slot in pair
-    }
+    bond_contact_slots = {slot for pair in compatible_pairs for slot in pair}
     for slot in active:
         if state.lifecycle[slot] != Lifecycle.ACTIVE:
             continue
@@ -866,13 +1001,22 @@ def step(
         else:
             state.bond_strength[slot] = max(0, state.bond_strength[slot] - resolved.bond_decay)
 
-    latent_transmission_count, latent_activity_slots = _transmit_latent(
+    latent_transmission_count, latent_activity_slots, selected_pairs = _transmit_latent(
         state,
         resolved,
         compatible_pairs,
         {pair: pair_addresses[pair] for pair in compatible_pairs},
         generation,
+        trace_start,
     )
+    for slot in latent_activity_slots:
+        if slot in external_stimulated and slot not in recovered_slots:
+            continue
+        activity_amounts[slot] = activity_amounts.get(slot, 0) + resolved.recovery_hp
+
+    _apply_slow_trace_writes(state, resolved, activity_amounts)
+    _transfer_slow_trace(state, resolved, selected_pairs)
+
     if resolved.fusion_enabled:
         fusion_count, fused_slots = _fuse_groups(state, resolved, occupancy)
     else:
@@ -887,6 +1031,7 @@ def step(
         )
     else:
         fragmentation_count, fragmented_core_slots = 0, set()
+
     for slot in active:
         if state.lifecycle[slot] != Lifecycle.ACTIVE or slot in fused_slots:
             continue
@@ -899,6 +1044,12 @@ def step(
             state.age[slot] = min(0xFFFFFFFF, state.age[slot] + 1)
         if state.hp[slot] == 0:
             _enter_black_hole(state, slot, resolved)
+
+    _discharge_slow_trace(state, resolved)
+    _decay_slow_trace(state, resolved, generation, pending_free)
+    for slot in sorted(pending_free):
+        if state.lifecycle[slot] == Lifecycle.BLACK_HOLE:
+            state.free(slot)
 
     state.generation += 1
     elapsed = max(time.perf_counter() - started, 1e-12)
