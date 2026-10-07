@@ -38,15 +38,19 @@ and terminated at **ROUTE-SPEC-PROPOSAL**. #132 / PR #134 subsequently
 completed formal specification review and terminated at
 **ACCEPT-SPEC-PROPOSAL**.
 
-The active bounded frontier is therefore **#135 RED-first implementation**.
-The accepted D1 specification adds an implementation-pending anonymous
-`slow_trace:uint8[MAX_CELLS]` contract, UniverseState v2 / optimizer v6
-migration, and inert compatibility/default tuple `(0,0,0,0,8)`. All non-inert
-values remain research-only and are not Phase 5 search-genome defaults. #135 may
-implement only the accepted contract through TEST-ST-010; TEST-ST-012 remains a
-separate later L3 causal research gate. Canonical `learning_claim=false` and
-the P6.10+ freeze remain authoritative. #93 remains a separate
-performance/architecture workstream.
+#135 / PR #139 has completed the RED-first implementation contract with terminal
+route **ROUTE-L3-RESEARCH**. D1 is now production-implemented through
+TEST-ST-010: authoritative `slow_trace:uint8[MAX_CELLS]`, local physical
+write/transfer/discharge/decay/read semantics, UniverseState v2 / optimizer v6
+migration, and the inert compatibility/default tuple `(0,0,0,0,8)`.
+Density-4/density-32 inert compatibility against pre-D1 behavior passed and
+TEST-ST-010 overhead is measured. All non-inert values remain research-only and
+are not Phase 5 search-genome defaults.
+
+The active bounded frontier is therefore **#140 TEST-ST-012 L3 persistence /
+turnover research**. Canonical `learning_claim=false` and the P6.10+ freeze
+remain authoritative. L4 recall and active-default promotion remain outside the
+current owner. #93 remains a separate performance/architecture workstream.
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -207,15 +211,15 @@ success claim.
   or with morphology/contact dynamics. D1 **Anonymous Slow Trace with
   Conservative Local Transfer** was selected and routed to formal specification
   review.
-- #132 / PR #134: accepted D1 as an implementation-pending specification.
-  Accepted surfaces include REQ-ST-001..008, SPEC-ST behavior/data/migration
-  contracts, ADR-009, TEST-ST-001..012, the inert compatibility/default tuple
-  `(0,0,0,0,8)`, and RED-first implementation boundaries. No production
-  slow-trace implementation or non-inert active default was accepted.
+- #132 / PR #134: accepted the D1 specification, including REQ-ST-001..008,
+  SPEC-ST behavior/data/migration contracts, ADR-009, TEST-ST-001..012 and the
+  inert compatibility/default tuple `(0,0,0,0,8)`.
+- #135 / PR #139: implemented D1 through TEST-ST-010, preserved pre-D1 behavior
+  under the inert profile, measured storage/throughput/snapshot overhead, and
+  terminated at **ROUTE-L3-RESEARCH**. No non-inert active default was promoted.
 
-Next frontier: **#135 slow-trace RED-first implementation**. It owns executable
-RED evidence, production implementation of the accepted D1 contract, inert
-migration/compatibility validation, GREEN verification and TEST-ST-010. It does
-not own TEST-ST-012 causal acceptance, active default promotion, L4 recall or
+Next frontier: **#140 TEST-ST-012 L3 persistence / turnover causal research**.
+It owns predeclared research-only profile/protocol selection and the frozen
+>=8/12 +1000 causal gate. It does not own active-default promotion, L4 recall or
 P6.10+. `learning_claim=false` remains authoritative. #93 remains a separate
 performance/architecture workstream.
