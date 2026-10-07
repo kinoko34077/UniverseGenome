@@ -1,0 +1,48 @@
+{
+  "base_main": "cdbb04eaaedb3068d216e82bf257b475a20a31cb",
+  "controls": {
+    "duplicate_control_clean": true,
+    "negative_sentinels_clean": true
+  },
+  "issue": 140,
+  "learning_claim": false,
+  "p6_10_plus": "frozen",
+  "primary": {
+    "h0_distinct_count": 12,
+    "h0_distinct_seeds": [0, 5, 8, 9, 12, 14, 18, 19, 20, 22, 24, 29],
+    "h1000_distinct_count": 1,
+    "h1000_distinct_seeds": [22],
+    "raw_instrumented_clean": true,
+    "replay_clean": true,
+    "turnover_witness_count": 1,
+    "turnover_witness_seeds": [22]
+  },
+  "profile": {
+    "trace_bonus_shift": 5,
+    "trace_decay_rate": 256,
+    "trace_discharge_cap": 16,
+    "trace_transfer_cap": 8,
+    "trace_write_cap": 32
+  },
+  "profile_name": "D1_ACTIVE_32_8_16_256_5",
+  "protocol": {
+    "density": 32,
+    "horizons": [0, 1, 10, 100, 1000],
+    "negative_sentinels": [1, 2, 3, 4],
+    "no_further_external_stimulation_after_h0": true,
+    "primary_seeds": [0, 5, 8, 9, 12, 14, 18, 19, 20, 22, 24, 29],
+    "required_primary_h1000": 8,
+    "required_turnover_witnesses": 1,
+    "teacher_pair": [66, 8]
+  },
+  "semantic_shortcut_boundary": {
+    "harness_direct_trace_mutation": false,
+    "production_test_st_011_basis": "#135 PASS",
+    "teacher_semantics_enter_production_trace_rule": false
+  },
+  "status": "complete",
+  "terminal_gate": {
+    "passed": false,
+    "route": "FAIL-L3-PERSISTENCE"
+  }
+}
