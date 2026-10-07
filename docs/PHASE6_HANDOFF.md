@@ -19,7 +19,8 @@ slow-trace defaults remain `(0,0,0,0,8)`, all non-inert values remain
 research-only, and `learning_claim=false` remains authoritative. A future
 Phase G memory-physics search must be opened as a separate research child with
 predeclared search and held-out validation cohorts; it is not active in this
-handoff. P6.10 and L4+ remain separately gated.
+handoff. **No automatic P6.10 is authorized.** P6.10 and L4+ remain separately
+gated.
 
 ## Current v0.1 boundary
 
