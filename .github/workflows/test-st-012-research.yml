@@ -1,0 +1,32 @@
+name: TEST-ST-012 Research
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test_st_012:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Execute frozen TEST-ST-012 matrix
+        run: python research/slow_trace_persistence_140.py
+      - name: Print TEST-ST-012 summary
+        run: |
+          echo 'TEST_ST_012_SUMMARY_BEGIN'
+          cat research/artifacts/slow_trace_persistence_140_summary.json
+          echo 'TEST_ST_012_SUMMARY_END'
+      - name: Upload TEST-ST-012 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-st-012-evidence
+          path: |
+            research/artifacts/slow_trace_persistence_140.jsonl
+            research/artifacts/slow_trace_persistence_140_summary.json
+          if-no-files-found: error
