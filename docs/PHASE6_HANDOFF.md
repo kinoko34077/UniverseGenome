@@ -241,10 +241,14 @@ The frozen density-4/density-32 inert compatibility matrix passed and measured
 TEST-ST-010 evidence is recorded in #135. All non-inert values remain
 research-only.
 
-#140 is the active bounded owner for TEST-ST-012 / L3 persistence-turnover
-research. Active-default promotion, L4 recall and P6.10+ remain outside that
-gate. `learning_claim=false` remains unchanged. #93 remains a separate
-performance/architecture workstream.
+#140 / PR #142 completed TEST-ST-012 with **FAIL-L3-PERSISTENCE**. The frozen
+research-only profile retained B/H distinction 12/12 through +100 but only
+1/12 at +1000 against the >=8/12 gate. Seed 22 demonstrated
+turnover-surviving redistribution, so the turnover path is physically possible,
+but robust L3 persistence remains unproven. No second profile or successor
+learning mechanism has been accepted. Active-default promotion, L4 recall and
+P6.10+ remain outside the current boundary. `learning_claim=false` remains
+unchanged. #93 remains a separate performance/architecture workstream.
 
 Any further work must remain bounded rather than becoming a silent change to the
 historical v0.1 physics/search contract.
@@ -287,7 +291,9 @@ snapshot lineage/prune history, and implementation-default performance debt.
 These items no longer form an active remediation queue. Readiness #60 has
 passed. P6.1–P6.9 remain terminal capability layers. Learning-path research is
 accepted through #127 / PR #129; #130 selected D1, #132 / PR #134 accepted its
-specification, and #135 / PR #139 implemented D1 through TEST-ST-010 under inert
-defaults with pre-D1 compatibility preserved. The active next gate is #140's
-TEST-ST-012 L3 persistence / turnover research. L4 recall, active-default
-promotion and P6.10+ remain outside #140.
+specification, #135 / PR #139 implemented D1 through TEST-ST-010 under inert
+defaults, and #140 / PR #142 completed TEST-ST-012 with
+`FAIL-L3-PERSISTENCE`. The failed gate preserves a valid turnover witness but
+does not establish robust +1000 persistence. No successor learning-path gate is
+currently accepted. L4 recall, active-default promotion and P6.10+ remain
+frozen.
