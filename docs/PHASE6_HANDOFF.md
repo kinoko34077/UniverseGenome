@@ -2,16 +2,24 @@
 
 Status: **P6.1 through P6.9 accepted; no later capability is currently selected**.
 
-Post-P6.9 learning-emergence / learning-path research is accepted through
-#122 / PR #126. #120 first established a usable high-contrast immediate-write
-condition and routed to memory persistence. #122 then found that the frozen
-density-32 primary B/H cohort falls from 12/12 distinct through +10 to 9/12 at
-+100 and **1/12 at +1000**. Non-HP differences occur only after
-lifecycle/survival divergence, so #122 terminates at
-`ROUTE-MEMORY-ARENA`. #127 now owns a research-only design arena for generic
-local persistence coupling. This does not authorize P6.10, L4 recall or a
-production physics change. No automatic P6.10 is authorized. Canonical
-`learning_claim=false` remains authoritative.
+Post-P6.9 learning-path work is accepted through the generalized Outer Search
+implementation gate owned by #144/#145. #140 remains the latest canonical L3
+result: the frozen D1 research profile retained B/H distinction 12/12 through
++100 but only **1/12 at +1000**, so robust L3 persistence is not established.
+#144/#145 subsequently generalized the existing Inner/Outer architecture
+without changing that result. Phase F / PR #157 ended in
+`ACCEPT-OUTER-SEARCH-GENERALIZATION-IMPLEMENTATION` on main
+`69cd7e99092bda565eec89daed2bb0873fd3c184`: the canonical Legacy
+SearchPlan reproduces the pre-generalization Phase 5 oracle exactly, optimizer
+persistence is v7 with deterministic legacy migration, and matched density4 /
+density32 performance remains within the accepted 5% gate.
+
+No new search dimension is active merely because it is registered. Production
+slow-trace defaults remain `(0,0,0,0,8)`, all non-inert values remain
+research-only, and `learning_claim=false` remains authoritative. A future
+Phase G memory-physics search must be opened as a separate research child with
+predeclared search and held-out validation cohorts; it is not active in this
+handoff. P6.10 and L4+ remain separately gated.
 
 ## Current v0.1 boundary
 
