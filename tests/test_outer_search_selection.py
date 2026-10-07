@@ -135,6 +135,13 @@ class OuterSearchSelectionTests(unittest.TestCase):
             record(6, group="g", success=0.2, growth_windows=(8, 8, 8, 8)),
             record(7, group="h", success=0.2, growth_windows=(8, 8, 8, 8)),
             record(8, group="i", success=0.0, absolute_failure=True),
+            record(
+                9,
+                group="immature",
+                success=0.0,
+                evidence_count=1,
+                growth_windows=(0, 0, 0, 0),
+            ),
         )
         protected = {0}
         pruned = prune_selection_indices(records, protected=protected)
@@ -142,6 +149,7 @@ class OuterSearchSelectionTests(unittest.TestCase):
         self.assertIn(1, pruned)
         self.assertIn(8, pruned)
         self.assertNotIn(0, pruned)
+        self.assertNotIn(9, pruned)
         self.assertEqual(select_prune_target_index(records, pruned), 8)
 
     def test_frozen_generation_1024_selection_matches_phase_a_replacement_evidence(self):
