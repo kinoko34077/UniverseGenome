@@ -18,6 +18,14 @@ from core.physics import PhysicsConfig, StepMetrics, create_universe
 from core.state import UniverseState
 from .fitness import Fitness
 from .genome import UNIVERSE_GENOME_FIELDS, UniverseGenome
+from .outer_search import (
+    build_default_search_registry,
+    legacy_candidate_values,
+    legacy_mutation_directions,
+    legacy_mutation_plan_for_base_config,
+    legacy_search_plan,
+    mutate_legacy_candidate,
+)
 from .pruning import (
     RESPONSE_HISTORY_LIMIT,
     SHORT_HEALTH_HISTORY_LIMIT,
@@ -491,8 +499,9 @@ class SteadyStateOptimizer:
     def _mutation_field(self, parent: UniverseSlot) -> str:
         cursor = int(self.scheduler["mutation_cursor"])
         category_offset = parent.index // SLOTS_PER_CATEGORY
-        field = UNIVERSE_GENOME_FIELDS[
-            (category_offset + cursor) % len(UNIVERSE_GENOME_FIELDS)
+        mutation_dimensions = tuple(legacy_search_plan().search)
+        field = mutation_dimensions[
+            (category_offset + cursor) % len(mutation_dimensions)
         ]
         self.scheduler["mutation_cursor"] = cursor + 1
         return field
@@ -563,16 +572,23 @@ class SteadyStateOptimizer:
         mutation_field = field or self._mutation_field(parent)
         if direction is not None and direction not in (-1, 1):
             raise ValueError("direction must be -1 or 1")
-        valid_directions = parent.genome.mutation_directions(
-            mutation_field,
-            base=self.base_config,
+        registry = build_default_search_registry()
+        plan = legacy_mutation_plan_for_base_config(self.base_config)
+        candidate_values = legacy_candidate_values(parent.genome, parent.category)
+        valid_directions = legacy_mutation_directions(
+            plan=plan,
+            registry=registry,
+            candidate=candidate_values,
+            dimension_id=mutation_field,
+            base_config=self.base_config,
         )
         if not valid_directions:
             raise ValueError(f"no valid adjacent mutation exists for {mutation_field}")
         preferred_direction = direction
         if preferred_direction is None:
             cursor = int(self.scheduler["mutation_cursor"])
-            field_offset = UNIVERSE_GENOME_FIELDS.index(mutation_field)
+            mutation_dimensions = tuple(plan.search)
+            field_offset = mutation_dimensions.index(mutation_field)
             preferred_direction = -1 if (cursor + parent.index + field_offset) % 2 else 1
         if preferred_direction not in valid_directions:
             preferred_direction = next(
@@ -580,13 +596,20 @@ class SteadyStateOptimizer:
                 for candidate in valid_directions
                 if candidate != preferred_direction
             )
-        child_genome = parent.genome.mutate(
-            mutation_field,
+        mutation = mutate_legacy_candidate(
+            genome=parent.genome,
+            category=parent.category,
+            dimension_id=mutation_field,
             direction=preferred_direction,
-            base=self.base_config,
+            base_config=self.base_config,
+            registry=registry,
+            plan=plan,
         )
+        child_genome = UniverseGenome.from_dict(dict(mutation.candidate_values.scalars))
         seed = self._next_seed(parent.category, genome=child_genome)
-        config = self._effective_config(child_genome, parent.category, self.base_config)
+        config = mutation.resolved_candidate.universe_spec.to_physics_config(
+            self.base_config
+        )
         state = create_universe(seed=seed, config=config)
         return UniverseSlot(
             index=free_index,

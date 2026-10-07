@@ -621,6 +621,16 @@ class ResolvedCandidate:
 
 
 @dataclass(frozen=True)
+class ScalarMutationResult:
+    dimension_id: str
+    direction: int
+    before: Any
+    after: Any
+    candidate_values: CandidateValues
+    resolved_candidate: ResolvedCandidate
+
+
+@dataclass(frozen=True)
 class ResolvedPopulationSlot:
     index: int
     seed: int
@@ -827,6 +837,203 @@ def resolve_candidate(
         candidate_identity=candidate_identity,
         active_dimensions=active_dimensions,
         universe_spec=universe_spec,
+    )
+
+
+def _adjacent_binary_value(
+    definition: ScalarDimension,
+    current: int,
+    *,
+    direction: int,
+) -> int:
+    if direction not in (-1, 1):
+        raise ValueError("direction must be -1 or 1")
+    if not isinstance(current, int) or isinstance(current, bool):
+        raise ValueError("adjacent_binary requires an integer scalar")
+    if direction > 0:
+        next_value = 1 if current == 0 else current * 2
+    else:
+        next_value = 0 if current <= 1 else current // 2
+    if definition.lower is not None:
+        next_value = max(int(definition.lower), next_value)
+    if definition.upper is not None:
+        next_value = min(int(definition.upper), next_value)
+    return next_value
+
+
+def scalar_mutation_directions(
+    *,
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    candidate: CandidateValues,
+    dimension_id: str,
+    base_config: PhysicsConfig | None = None,
+) -> tuple[int, ...]:
+    """Return legal adjacent-binary directions for one active searchable scalar."""
+
+    plan.validate(registry)
+    declaration = plan.search.get(dimension_id)
+    if declaration is None:
+        raise ValueError(f"dimension is not searchable in SearchPlan: {dimension_id}")
+    if declaration.strategy != "adjacent_binary":
+        raise ValueError(
+            f"unsupported scalar mutation strategy for Phase D1: {declaration.strategy}"
+        )
+    definition = registry.scalar_dimensions.get(dimension_id)
+    if definition is None:
+        raise ValueError(f"unknown scalar dimension: {dimension_id}")
+
+    resolved_current = resolve_candidate(plan, registry, candidate)
+    if dimension_id not in resolved_current.active_dimensions:
+        return ()
+    current = int(resolved_current.universe_spec.scalar_values[dimension_id])
+
+    valid: list[int] = []
+    for direction in (-1, 1):
+        next_value = _adjacent_binary_value(
+            definition,
+            current,
+            direction=direction,
+        )
+        if next_value == current:
+            continue
+        try:
+            definition.validate_value(next_value)
+        except ValueError:
+            continue
+        if declaration.domain != "registered" and next_value not in declaration.domain:
+            continue
+
+        scalar_values = dict(candidate.scalars)
+        scalar_values[dimension_id] = next_value
+        mutated_values = CandidateValues(
+            scalars=scalar_values,
+            rules=candidate.rules,
+        )
+        try:
+            resolved_next = resolve_candidate(plan, registry, mutated_values)
+            resolved_next.universe_spec.to_physics_config(base_config)
+        except ValueError:
+            continue
+        if resolved_next.candidate_identity == resolved_current.candidate_identity:
+            continue
+        valid.append(direction)
+    return tuple(valid)
+
+
+def mutate_scalar_candidate(
+    *,
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    candidate: CandidateValues,
+    dimension_id: str,
+    direction: int,
+    base_config: PhysicsConfig | None = None,
+) -> ScalarMutationResult:
+    """Mutate one active scalar through its registered adjacent-binary strategy."""
+
+    if direction not in (-1, 1):
+        raise ValueError("direction must be -1 or 1")
+    valid = scalar_mutation_directions(
+        plan=plan,
+        registry=registry,
+        candidate=candidate,
+        dimension_id=dimension_id,
+        base_config=base_config,
+    )
+    if direction not in valid:
+        raise ValueError(
+            f"mutation direction {direction} does not produce a valid adjacent value"
+        )
+
+    definition = registry.scalar_dimensions[dimension_id]
+    resolved_current = resolve_candidate(plan, registry, candidate)
+    before = int(resolved_current.universe_spec.scalar_values[dimension_id])
+    after = _adjacent_binary_value(
+        definition,
+        before,
+        direction=direction,
+    )
+    scalar_values = dict(candidate.scalars)
+    scalar_values[dimension_id] = after
+    mutated_values = CandidateValues(
+        scalars=scalar_values,
+        rules=candidate.rules,
+    )
+    resolved_next = resolve_candidate(plan, registry, mutated_values)
+    resolved_next.universe_spec.to_physics_config(base_config)
+    return ScalarMutationResult(
+        dimension_id=dimension_id,
+        direction=direction,
+        before=before,
+        after=after,
+        candidate_values=mutated_values,
+        resolved_candidate=resolved_next,
+    )
+
+
+def legacy_candidate_values(
+    genome: UniverseGenome,
+    category: str,
+) -> CandidateValues:
+    if category not in LEGACY_LATENT_OPERATORS:
+        raise ValueError(f"unsupported legacy latent operator: {category}")
+    return CandidateValues(
+        scalars=genome.to_dict(),
+        rules={"latent_operator": category},
+    )
+
+
+def legacy_mutation_plan_for_base_config(
+    base_config: PhysicsConfig,
+    *,
+    base_seed: int = 0,
+) -> SearchPlan:
+    """Preserve explicit fixed research physics without making it searchable."""
+
+    plan = legacy_search_plan(base_seed=base_seed)
+    fixed = dict(plan.fixed)
+    for dimension_id in LEGACY_TRACE_FIXED:
+        fixed[dimension_id] = int(getattr(base_config, dimension_id))
+    return replace(plan, fixed=fixed)
+
+
+def legacy_mutation_directions(
+    *,
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    candidate: CandidateValues,
+    dimension_id: str,
+    base_config: PhysicsConfig | None = None,
+) -> tuple[int, ...]:
+    return scalar_mutation_directions(
+        plan=plan,
+        registry=registry,
+        candidate=candidate,
+        dimension_id=dimension_id,
+        base_config=base_config,
+    )
+
+
+def mutate_legacy_candidate(
+    *,
+    genome: UniverseGenome,
+    category: str,
+    dimension_id: str,
+    direction: int,
+    base_config: PhysicsConfig,
+    registry: SearchRegistry | None = None,
+    plan: SearchPlan | None = None,
+) -> ScalarMutationResult:
+    resolved_registry = registry or build_default_search_registry()
+    resolved_plan = plan or legacy_mutation_plan_for_base_config(base_config)
+    return mutate_scalar_candidate(
+        plan=resolved_plan,
+        registry=resolved_registry,
+        candidate=legacy_candidate_values(genome, category),
+        dimension_id=dimension_id,
+        direction=direction,
+        base_config=base_config,
     )
 
 
