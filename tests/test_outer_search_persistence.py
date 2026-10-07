@@ -222,7 +222,17 @@ class OuterSearchPersistenceTests(unittest.TestCase):
         first = migrated.step()
         second = restored.step()
 
-        self.assertEqual(first, second)
+        deterministic_first = {
+            key: value
+            for key, value in first.items()
+            if key != "generations_per_second"
+        }
+        deterministic_second = {
+            key: value
+            for key, value in second.items()
+            if key != "generations_per_second"
+        }
+        self.assertEqual(deterministic_first, deterministic_second)
         self.assertEqual(migrated.to_snapshot(), restored.to_snapshot())
 
 
