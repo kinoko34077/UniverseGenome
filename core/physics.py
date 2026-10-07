@@ -1069,7 +1069,8 @@ def step(
         if state.hp[slot] == 0:
             _enter_black_hole(state, slot, resolved)
 
-    _discharge_slow_trace(state, resolved, _active_occupancy(state))
+    if resolved.trace_discharge_cap > 0:
+        _discharge_slow_trace(state, resolved, _active_occupancy(state))
     _decay_slow_trace(state, resolved, generation, pending_free)
     for slot in sorted(pending_free):
         if state.lifecycle[slot] == Lifecycle.BLACK_HOLE:
