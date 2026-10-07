@@ -66,12 +66,12 @@ physics/default/P6.10+ semantic change was accepted and
 
 #130 completed the design-only architecture rethink and selected
 **D1 Anonymous Slow Trace with Conservative Local Transfer** for formal
-specification review. #132 / PR #134 then completed that review with
-`ACCEPT-SPEC-PROPOSAL`. D1 is now an **accepted implementation-pending
-specification**: the authoritative slow-trace state, local physical semantics,
-v2/v6 migration, inert compatibility/default tuple `(0,0,0,0,8)`, ADR-009 and
-TEST-ST gates are canonical. Production implementation remains separate and is
-owned by #135; all non-inert operating values remain research-only.
+specification review. #132 / PR #134 accepted that specification with
+`ACCEPT-SPEC-PROPOSAL`, and #135 / PR #139 has now implemented the canonical
+D1 contract through TEST-ST-010. The authoritative slow-trace state, local
+physical semantics, v2/v6 migration and inert compatibility/default tuple
+`(0,0,0,0,8)` are production-implemented. All non-inert operating values
+remain research-only; #140 owns the separate TEST-ST-012 L3 causal gate.
 
 ## Status vocabulary
 
@@ -105,10 +105,10 @@ predeclared high-contrast immediate write condition; #122 shows that the
 baseline trace is not robust at +1000; #127 shows that direct generic latent or
 structure consolidation creates pre-lifecycle non-HP state but still reaches
 only 5/12 +1000 persistence. #130 subsequently selected D1 Anonymous Slow Trace,
-and #132 / PR #134 accepted its specification with production implementation
-still pending. #135 is the active RED-first implementation owner through
-TEST-ST-010. TEST-ST-012/L3 causal acceptance remains a separate later research
-gate; no active non-inert default has been accepted.
+#132 / PR #134 accepted its specification, and #135 / PR #139 implemented it
+through TEST-ST-010 with inert compatibility preserved. #140 is now the active
+TEST-ST-012/L3 persistence-turnover research owner; no active non-inert default
+has been accepted.
 `learning_claim=false` remains authoritative. See
 `docs/PHASE6_HANDOFF.md`.
 
