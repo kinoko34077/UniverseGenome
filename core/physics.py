@@ -751,6 +751,16 @@ def _fragment_active_cells(
     return fragmentation_count, fragmented_core_slots
 
 
+def _slow_trace_inert(config: PhysicsConfig) -> bool:
+    return (
+        config.trace_write_cap == 0
+        and config.trace_transfer_cap == 0
+        and config.trace_discharge_cap == 0
+        and config.trace_decay_rate == 0
+        and config.trace_bonus_shift == 8
+    )
+
+
 def _apply_slow_trace_writes(
     state: UniverseState,
     config: PhysicsConfig,
@@ -932,7 +942,10 @@ def step(
         else:
             state.black_hole_timer[slot] -= 1
             if state.black_hole_timer[slot] <= 0:
-                pending_free.add(slot)
+                if _slow_trace_inert(resolved):
+                    state.free(slot)
+                else:
+                    pending_free.add(slot)
 
     for slot in external_stimulated:
         if state.lifecycle[slot] == Lifecycle.ACTIVE and slot not in recovered_slots:
