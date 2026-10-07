@@ -24,6 +24,8 @@ from .outer_search import (
     ResolvedComparisonStratum,
     allocate_matched_evidence_seed,
     build_default_search_registry,
+    build_mutation_replacement,
+    build_seed_evidence_replacement,
     evidence_tier_target,
     legacy_candidate_values,
     legacy_comparison_strata,
@@ -554,18 +556,35 @@ class SteadyStateOptimizer:
         if parent.index == free_index:
             raise ValueError("seed evidence must use a free slot distinct from parent")
         seed = self._next_seed(parent.category, genome=parent.genome)
-        config = self._effective_config(parent.genome, parent.category, self.base_config)
-        state = create_universe(seed=seed, config=config)
-        return UniverseSlot(
-            index=free_index,
-            category=parent.category,
-            genome=parent.genome,
-            seed=seed,
-            state=state,
+        registry = build_default_search_registry()
+        plan = legacy_mutation_plan_for_base_config(self.base_config)
+        replacement = build_seed_evidence_replacement(
+            plan=plan,
+            registry=registry,
+            parent_candidate=legacy_candidate_values(parent.genome, parent.category),
+            target_index=free_index,
             parent_index=parent.index,
+            seed=seed,
+            parent_evidence_mature=parent.evidence_mature,
+        )
+        child_genome = UniverseGenome.from_dict(dict(replacement.candidate_values.scalars))
+        category = str(
+            replacement.resolved_candidate.universe_spec.rule_values["latent_operator"]
+        )
+        config = replacement.resolved_candidate.universe_spec.to_physics_config(
+            self.base_config
+        )
+        state = create_universe(seed=replacement.seed, config=config)
+        return UniverseSlot(
+            index=replacement.target_index,
+            category=category,
+            genome=child_genome,
+            seed=replacement.seed,
+            state=state,
+            parent_index=replacement.parent_index,
             parent_genome_key=parent.genome_key,
-            allocation_reason="seed_evidence",
-            evidence_mature=parent.evidence_mature,
+            allocation_reason=replacement.allocation_reason,
+            evidence_mature=replacement.evidence_mature,
         )
 
     def replace_free_slot(
@@ -618,21 +637,34 @@ class SteadyStateOptimizer:
         )
         child_genome = UniverseGenome.from_dict(dict(mutation.candidate_values.scalars))
         seed = self._next_seed(parent.category, genome=child_genome)
-        config = mutation.resolved_candidate.universe_spec.to_physics_config(
+        replacement = build_mutation_replacement(
+            plan=plan,
+            registry=registry,
+            parent_candidate=candidate_values,
+            mutation=mutation,
+            target_index=free_index,
+            parent_index=parent.index,
+            seed=seed,
+        )
+        child_genome = UniverseGenome.from_dict(dict(replacement.candidate_values.scalars))
+        category = str(
+            replacement.resolved_candidate.universe_spec.rule_values["latent_operator"]
+        )
+        config = replacement.resolved_candidate.universe_spec.to_physics_config(
             self.base_config
         )
-        state = create_universe(seed=seed, config=config)
+        state = create_universe(seed=replacement.seed, config=config)
         return UniverseSlot(
-            index=free_index,
-            category=parent.category,
+            index=replacement.target_index,
+            category=category,
             genome=child_genome,
-            seed=seed,
+            seed=replacement.seed,
             state=state,
-            parent_index=parent.index,
+            parent_index=replacement.parent_index,
             parent_genome_key=parent.genome_key,
-            last_mutation_field=mutation_field,
-            allocation_reason="mutation_child",
-            evidence_mature=False,
+            last_mutation_field=replacement.mutation_dimension,
+            allocation_reason=replacement.allocation_reason,
+            evidence_mature=replacement.evidence_mature,
         )
 
     @staticmethod

@@ -693,6 +693,32 @@ class EvidenceSeedDecision:
 
 
 @dataclass(frozen=True)
+class CandidateReplacement:
+    target_index: int
+    seed: int
+    candidate_values: CandidateValues
+    resolved_candidate: ResolvedCandidate
+    parent_candidate_identity: str
+    parent_index: int
+    allocation_reason: str
+    evidence_mature: bool
+    mutation_dimension: str | None = None
+    mutation_direction: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.target_index < 0 or self.seed < 0 or self.parent_index < 0:
+            raise ValueError("replacement indices/seed must be non-negative")
+        if self.allocation_reason not in ("seed_evidence", "mutation_child"):
+            raise ValueError("unsupported replacement allocation reason")
+        if self.allocation_reason == "seed_evidence":
+            if self.mutation_dimension is not None or self.mutation_direction is not None:
+                raise ValueError("seed evidence replacement cannot carry mutation metadata")
+        else:
+            if not self.mutation_dimension or self.mutation_direction not in (-1, 1):
+                raise ValueError("mutation replacement requires dimension and direction")
+
+
+@dataclass(frozen=True)
 class ResolvedPopulationSlot:
     index: int
     seed: int
@@ -1020,6 +1046,54 @@ def legacy_comparison_strata(
     resolved_registry = registry or build_default_search_registry()
     resolved_plan = plan or legacy_search_plan()
     return enumerate_comparison_strata(resolved_plan, resolved_registry)
+
+
+def build_seed_evidence_replacement(
+    *,
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    parent_candidate: CandidateValues,
+    target_index: int,
+    parent_index: int,
+    seed: int,
+    parent_evidence_mature: bool,
+) -> CandidateReplacement:
+    resolved_parent = resolve_candidate(plan, registry, parent_candidate)
+    return CandidateReplacement(
+        target_index=int(target_index),
+        seed=int(seed),
+        candidate_values=parent_candidate,
+        resolved_candidate=resolved_parent,
+        parent_candidate_identity=resolved_parent.candidate_identity,
+        parent_index=int(parent_index),
+        allocation_reason="seed_evidence",
+        evidence_mature=bool(parent_evidence_mature),
+    )
+
+
+def build_mutation_replacement(
+    *,
+    plan: SearchPlan,
+    registry: SearchRegistry,
+    parent_candidate: CandidateValues,
+    mutation: ScalarMutationResult,
+    target_index: int,
+    parent_index: int,
+    seed: int,
+) -> CandidateReplacement:
+    resolved_parent = resolve_candidate(plan, registry, parent_candidate)
+    return CandidateReplacement(
+        target_index=int(target_index),
+        seed=int(seed),
+        candidate_values=mutation.candidate_values,
+        resolved_candidate=mutation.resolved_candidate,
+        parent_candidate_identity=resolved_parent.candidate_identity,
+        parent_index=int(parent_index),
+        allocation_reason="mutation_child",
+        evidence_mature=False,
+        mutation_dimension=mutation.dimension_id,
+        mutation_direction=mutation.direction,
+    )
 
 
 def _matched_evidence_key(
