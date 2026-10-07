@@ -570,12 +570,12 @@ class CandidateValues:
 
 @dataclass(frozen=True)
 class ResolvedUniverseSpec:
+    """Fully resolved physical input for Inner construction only."""
+
     scalar_values: Mapping[str, Any]
     rule_values: Mapping[str, str]
-    active_dimensions: tuple[str, ...]
     physics_values: Mapping[str, Any]
     rule_physics_values: Mapping[str, Any]
-    candidate_identity: str
     schema_version: int = 1
 
     def to_physics_config(self, base: PhysicsConfig | None = None) -> PhysicsConfig:
@@ -594,7 +594,6 @@ class ResolvedUniverseSpec:
             "rule_values": {
                 key: self.rule_values[key] for key in sorted(self.rule_values)
             },
-            "active_dimensions": list(self.active_dimensions),
             "physics_values": {
                 key: self.physics_values[key] for key in sorted(self.physics_values)
             },
@@ -602,7 +601,22 @@ class ResolvedUniverseSpec:
                 key: self.rule_physics_values[key]
                 for key in sorted(self.rule_physics_values)
             },
+        }
+
+
+@dataclass(frozen=True)
+class ResolvedCandidate:
+    """Outer metadata paired with an Inner-safe resolved physical specification."""
+
+    candidate_identity: str
+    active_dimensions: tuple[str, ...]
+    universe_spec: ResolvedUniverseSpec
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
             "candidate_identity": self.candidate_identity,
+            "active_dimensions": list(self.active_dimensions),
+            "universe_spec": self.universe_spec.to_dict(),
         }
 
 
@@ -611,7 +625,7 @@ class ResolvedPopulationSlot:
     index: int
     seed: int
     candidate_values: CandidateValues
-    resolved_spec: ResolvedUniverseSpec
+    resolved_candidate: ResolvedCandidate
     state: UniverseState
     legacy_genome_values: Mapping[str, int]
     rule_values: Mapping[str, str]
@@ -654,7 +668,7 @@ def resolve_candidate(
     plan: SearchPlan,
     registry: SearchRegistry,
     candidate: CandidateValues,
-) -> ResolvedUniverseSpec:
+) -> ResolvedCandidate:
     """Resolve one candidate without exposing search metadata to Inner physics."""
 
     plan.validate(registry)
@@ -803,13 +817,16 @@ def resolve_candidate(
         for key in rule_values
     }
 
-    return ResolvedUniverseSpec(
+    universe_spec = ResolvedUniverseSpec(
         scalar_values=scalar_values,
         rule_values=rule_values,
-        active_dimensions=active_dimensions,
         physics_values=physics_values,
         rule_physics_values=rule_physics_values,
+    )
+    return ResolvedCandidate(
         candidate_identity=candidate_identity,
+        active_dimensions=active_dimensions,
+        universe_spec=universe_spec,
     )
 
 
@@ -944,19 +961,21 @@ def build_legacy_initial_population(
                     scalars=genome.to_dict(),
                     rules={"latent_operator": category},
                 )
-                resolved_spec = resolve_candidate(
+                resolved_candidate = resolve_candidate(
                     resolved_plan,
                     resolved_registry,
                     candidate,
                 )
-                effective = resolved_spec.to_physics_config(base_config)
+                effective = resolved_candidate.universe_spec.to_physics_config(
+                    base_config
+                )
                 state = create_universe(seed=seed, config=effective)
                 result.append(
                     ResolvedPopulationSlot(
                         index=index,
                         seed=seed,
                         candidate_values=candidate,
-                        resolved_spec=resolved_spec,
+                        resolved_candidate=resolved_candidate,
                         state=state,
                         legacy_genome_values=genome.to_dict(),
                         rule_values={"latent_operator": category},
