@@ -9,6 +9,7 @@ from core.experiment import ExperimentConfig
 from core.physics import PhysicsConfig
 from search.evolution import SteadyStateOptimizer
 from search.genome import UniverseGenome
+from research.legacy_outer_search_oracle import canonical_digest, load_legacy_base_config
 from search.outer_search import (
     build_default_search_registry,
     legacy_candidate_values,
@@ -19,6 +20,13 @@ from search.outer_search import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+FROZEN_ORACLE = (
+    ROOT
+    / "research"
+    / "artifacts"
+    / "legacy_outer_search_oracle_v1"
+    / "oracle.json"
+)
 FROZEN_V6 = (
     ROOT
     / "research"
@@ -48,6 +56,13 @@ def legacy_fields(payload: dict) -> dict:
             "slots",
         )
     }
+
+
+def project_v7_to_legacy_v6(payload: dict) -> dict:
+    legacy = copy.deepcopy(payload)
+    legacy["format_version"] = 6
+    legacy.pop("outer_search", None)
+    return legacy
 
 
 class OuterSearchPersistenceTests(unittest.TestCase):
@@ -194,6 +209,51 @@ class OuterSearchPersistenceTests(unittest.TestCase):
             with self.subTest(label=label):
                 with self.assertRaises(ValueError):
                     SteadyStateOptimizer.from_snapshot(malformed)
+
+    def test_v6_migration_continuation_matches_frozen_phase_a_digests(self):
+        frozen = json.loads(FROZEN_ORACLE.read_text(encoding="utf-8"))["continuation"]
+        self.assertEqual(frozen["snapshot_format_version"], 6)
+        self.assertTrue(frozen["exact_match"])
+
+        protocol = ExperimentConfig(
+            byte_hold_generations=0,
+            byte_gap_generations=0,
+            teacher_delay_generations=0,
+            teacher_repetitions=1,
+            evaluation_timeout_generations=0,
+        )
+        uninterrupted = SteadyStateOptimizer.from_defaults(
+            base_seed=0,
+            base_config=load_legacy_base_config(),
+            experiment=protocol,
+        )
+        uninterrupted.step()
+        legacy_snapshot = project_v7_to_legacy_v6(uninterrupted.to_snapshot())
+
+        self.assertEqual(
+            canonical_digest(legacy_snapshot),
+            frozen["snapshot_digest"],
+        )
+
+        restored = SteadyStateOptimizer.from_snapshot(copy.deepcopy(legacy_snapshot))
+        uninterrupted.step()
+        restored.step()
+
+        uninterrupted_legacy = project_v7_to_legacy_v6(uninterrupted.to_snapshot())
+        restored_legacy = project_v7_to_legacy_v6(restored.to_snapshot())
+        self.assertEqual(
+            canonical_digest(uninterrupted_legacy),
+            frozen["uninterrupted_continuation_digest"],
+        )
+        self.assertEqual(
+            canonical_digest(restored_legacy),
+            frozen["restored_continuation_digest"],
+        )
+        self.assertEqual(
+            uninterrupted.scheduler,
+            frozen["scheduler_after_continuation"],
+        )
+        self.assertEqual(restored_legacy, uninterrupted_legacy)
 
     def test_migrated_v6_snapshot_restore_continuation_matches(self):
         protocol = ExperimentConfig(
