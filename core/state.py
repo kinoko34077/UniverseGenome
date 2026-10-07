@@ -13,6 +13,7 @@ from typing import Any
 STRUCTURE_BITS = 16
 LATENT_BITS = 16
 HP_BITS = 8
+SLOW_TRACE_BITS = 8
 DEFAULT_MAX_CELLS = 1024
 
 
@@ -73,6 +74,7 @@ class UniverseState:
     speed_code: list[int] = field(init=False)
     age: list[int] = field(init=False)
     black_hole_timer: list[int] = field(init=False)
+    slow_trace: list[int] = field(init=False)
 
     def __post_init__(self) -> None:
         if self.max_cells < 1:
@@ -88,6 +90,7 @@ class UniverseState:
         self.speed_code = [0] * self.max_cells
         self.age = [0] * self.max_cells
         self.black_hole_timer = [0] * self.max_cells
+        self.slow_trace = [0] * self.max_cells
 
     def active_slots(self) -> list[int]:
         return [index for index, state in enumerate(self.lifecycle) if state == Lifecycle.ACTIVE]
@@ -126,6 +129,7 @@ class UniverseState:
                 self.speed_code[slot] = int(speed_code)
                 self.age[slot] = 0
                 self.black_hole_timer[slot] = 0
+                self.slow_trace[slot] = 0
                 return slot
         raise RuntimeError("universe cell capacity is full")
 
@@ -142,6 +146,7 @@ class UniverseState:
         self.speed_code[slot] = 0
         self.age[slot] = 0
         self.black_hole_timer[slot] = 0
+        self.slow_trace[slot] = 0
 
     def _validate_slot(self, slot: int) -> None:
         if not isinstance(slot, int) or not 0 <= slot < self.max_cells:
@@ -150,7 +155,7 @@ class UniverseState:
     def to_snapshot(self) -> dict[str, Any]:
         config = self.config.to_dict() if self.config is not None else None
         return {
-            "format_version": 1,
+            "format_version": 2,
             "kind": "UniverseGenomePhase1",
             "generation": int(self.generation),
             "seed": int(self.seed),
@@ -167,13 +172,15 @@ class UniverseState:
                 "speed_code": list(self.speed_code),
                 "age": list(self.age),
                 "black_hole_timer": list(self.black_hole_timer),
+                "slow_trace": list(self.slow_trace),
             },
         }
 
     @classmethod
     def from_snapshot(cls, payload: dict[str, Any], *, config: Any | None = None) -> "UniverseState":
-        if payload.get("format_version") != 1 or payload.get("kind") != "UniverseGenomePhase1":
-            raise ValueError("unsupported Phase 2E snapshot")
+        format_version = int(payload.get("format_version", -1))
+        if format_version not in (1, 2) or payload.get("kind") != "UniverseGenomePhase1":
+            raise ValueError("unsupported UniverseState snapshot")
         arrays = payload.get("arrays")
         if not isinstance(arrays, dict):
             raise ValueError("snapshot arrays are required")
@@ -181,21 +188,39 @@ class UniverseState:
         if len(lengths) != 1 or not lengths:
             raise ValueError("snapshot arrays must have equal lengths")
         max_cells = lengths.pop()
-        required = {
+        legacy_required = {
             "lifecycle", "x", "y", "structure", "latent", "hp", "bond_strength",
             "direction", "speed_code", "age", "black_hole_timer",
         }
+        required = set(legacy_required)
+        if format_version == 2:
+            required.add("slow_trace")
         if set(arrays) != required:
-            raise ValueError("snapshot arrays do not match Phase 2E state")
+            raise ValueError("snapshot arrays do not match UniverseState format")
         state = cls(
             seed=int(payload["seed"]),
             max_cells=max_cells,
             generation=int(payload["generation"]),
             config=config,
         )
-        for name in required:
+        for name in legacy_required:
             values = arrays[name]
             if not isinstance(values, list):
                 raise ValueError(f"snapshot array {name!r} is invalid")
             setattr(state, name, [int(value) for value in values])
+        if format_version == 1:
+            state.slow_trace = [0] * max_cells
+        else:
+            values = arrays["slow_trace"]
+            if not isinstance(values, list) or len(values) != max_cells:
+                raise ValueError("snapshot slow_trace array is invalid")
+            converted = [int(value) for value in values]
+            if any(value < 0 or value > 0xFF for value in converted):
+                raise ValueError("slow_trace values must fit uint8")
+            state.slow_trace = converted
+            if any(
+                state.lifecycle[slot] == Lifecycle.FREE and state.slow_trace[slot] != 0
+                for slot in range(max_cells)
+            ):
+                raise ValueError("FREE snapshot slots must have zero slow_trace")
         return state
