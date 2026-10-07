@@ -25,7 +25,7 @@ jobs:
           python-version: "3.12"
       - name: Install shared acceptance harness into baseline tree
         run: cp current/benchmarks/slow_trace_acceptance.py baseline/benchmarks/slow_trace_acceptance.py
-      - name: Compare 64 inert trajectories over 1024 generations
+      - name: Compare 64 inert final states after 1024 generations
         shell: bash
         run: |
           set -euo pipefail
