@@ -43,10 +43,15 @@ anonymous `slow_trace:uint8[MAX_CELLS]` state, deterministic local
 write/transfer/discharge/forgetting/read semantics, UniverseState v2 / optimizer
 v6 migration, and the inert compatibility/default tuple `(0,0,0,0,8)`.
 The density-4/density-32 inert compatibility matrix is pre-D1-identical and
-TEST-ST-010 overhead evidence is recorded in #135. All non-inert values remain
-research-only. Successor #140 owns TEST-ST-012 / L3 persistence-turnover
-research. Canonical `learning_claim=false` remains authoritative and P6.10+
-semantic expansion remains frozen.
+TEST-ST-010 overhead evidence is recorded in #135. #140 / PR #142 then ran the
+frozen TEST-ST-012 research-only profile `D1_ACTIVE_32_8_16_256_5`.
+Teacher-specific distinction remained 12/12 through +100 but only **1/12** at
++1000, below the accepted >=8/12 gate. Seed 22 demonstrated that trace can
+survive original-carrier turnover and remain elsewhere, but robust L3
+persistence was not established. All non-inert values remain research-only.
+No successor learning-path mechanism/profile is currently accepted.
+Canonical `learning_claim=false` remains authoritative and P6.10+ semantic
+expansion remains frozen.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
@@ -137,12 +142,14 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   D1 production state/physics and v2/v6 migration are implemented under the
   inert compatibility/default tuple `(0,0,0,0,8)`; TEST-ST-010 and the
   density-4/density-32 inert compatibility matrix passed.
-- #140 is the active bounded research owner for TEST-ST-012. It may exercise a
-  predeclared non-inert research-only profile, but cannot promote defaults,
-  claim L4 recall, or unfreeze P6.10+.
-- No later semantic capability is automatically authorized. `learning_claim=false`
-  and the P6.10+ freeze remain unchanged. #93 remains a separate
-  performance/architecture workstream.
+- #140 / PR #142 is complete with terminal route `FAIL-L3-PERSISTENCE`.
+  The frozen profile retained B/H distinction 12/12 through +100 but only 1/12
+  at +1000; seed 22 supplied one turnover-surviving redistribution witness.
+  The result is a valid research failure, not a harness-validity failure.
+- No second profile, active default, L4 recall, or later semantic capability is
+  automatically authorized. The next learning-path action requires a separate
+  causal/mechanism decision. `learning_claim=false` and the P6.10+ freeze
+  remain unchanged. #93 remains a separate performance/architecture workstream.
 
 ## Headless verification commands
 
