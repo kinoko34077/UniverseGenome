@@ -231,17 +231,20 @@ unreachable for content-specific writes and the HP-no-decay reference retained
 formal specification review. B1 latent echo and C1 morphology cluster remain
 rejected primary candidates.
 
-#132 / PR #134 has now completed that review with
-**ACCEPT-SPEC-PROPOSAL**. D1 is accepted at the specification level only:
-`slow_trace:uint8[MAX_CELLS]`, local generic write/transfer/discharge/decay/read
-semantics, UniverseState v2 / optimizer v6 migration, and inert
-compatibility/default tuple `(0,0,0,0,8)` are specified; production
-implementation is still absent. All non-inert values remain research-only.
+#132 / PR #134 completed specification review with **ACCEPT-SPEC-PROPOSAL**.
+#135 / PR #139 has now implemented that accepted D1 contract through
+TEST-ST-010 on main `9091bbbc0fdbf261859d7f1b68772601b963548e`.
+Production includes `slow_trace:uint8[MAX_CELLS]`, local generic
+write/transfer/discharge/decay/read semantics, UniverseState v2 / optimizer v6
+migration, and the inert compatibility/default tuple `(0,0,0,0,8)`.
+The frozen density-4/density-32 inert compatibility matrix passed and measured
+TEST-ST-010 evidence is recorded in #135. All non-inert values remain
+research-only.
 
-#135 owns the RED-first implementation contract through TEST-ST-010.
-TEST-ST-012, L3 causal acceptance and any active default promotion remain a
-separate later research gate. `learning_claim=false` and the P6.10+ freeze
-remain unchanged. #93 remains a separate performance/architecture workstream.
+#140 is the active bounded owner for TEST-ST-012 / L3 persistence-turnover
+research. Active-default promotion, L4 recall and P6.10+ remain outside that
+gate. `learning_claim=false` remains unchanged. #93 remains a separate
+performance/architecture workstream.
 
 Any further work must remain bounded rather than becoming a silent change to the
 historical v0.1 physics/search contract.
@@ -282,9 +285,9 @@ browser E2E depth, fragmentation RNG addressing, optimizer CLI protocol,
 snapshot lineage/prune history, and implementation-default performance debt.
 
 These items no longer form an active remediation queue. Readiness #60 has
-passed. P6.1–P6.9 remain terminal capability layers. Learning-path research is accepted through #127 / PR #129. #130's bounded
-design-only architecture rethink is complete, and #132 / PR #134 has accepted
-D1 Anonymous Slow Trace as an implementation-pending specification. The active
-next gate is #135's RED-first implementation of that accepted contract under
-inert defaults. TEST-ST-012/L3 causal research, L4 recall, active-default
-promotion and P6.10+ remain outside #135.
+passed. P6.1–P6.9 remain terminal capability layers. Learning-path research is
+accepted through #127 / PR #129; #130 selected D1, #132 / PR #134 accepted its
+specification, and #135 / PR #139 implemented D1 through TEST-ST-010 under inert
+defaults with pre-D1 compatibility preserved. The active next gate is #140's
+TEST-ST-012 L3 persistence / turnover research. L4 recall, active-default
+promotion and P6.10+ remain outside #140.
