@@ -54,10 +54,22 @@ fell to **1/12 at +1000** against the accepted >=8/12 threshold. Seed 22 proved
 turnover-surviving redistribution is possible, but robust cohort-level L3
 persistence is not established.
 
-There is therefore **no active learning-path implementation/research child** at
-this point. The next learning-path action must first select a bounded causal or
-architecture question from the accepted evidence; profile tuning, active-default
-promotion, L4 recall and P6.10+ remain unauthorized. Canonical
+#144/#145 have now completed the selected bounded architecture response to that
+failure: the existing Inner/Outer split is generalized so registered
+Universe-level scalar variables and finite rule families can be searched by a
+declarative SearchPlan without changing legacy Phase 5 behavior. Phase F /
+PR #157 ended in
+**ACCEPT-OUTER-SEARCH-GENERALIZATION-IMPLEMENTATION** on main
+`69cd7e99092bda565eec89daed2bb0873fd3c184`. The generalized Legacy
+SearchPlan matches the immutable pre-generalization oracle across static state,
+generations 16/128/512/1024, optimizer decisions and continuation; matched
+density4/density32 throughput regression is within the accepted 5% gate.
+
+There is still **no accepted successor memory-physics profile and no active
+Phase G research child**. If opened, the next learning-path action is a new,
+predeclared memory-physics SearchPlan using distinct adaptive-search and
+held-out validation cohorts. Production D1 defaults remain `(0,0,0,0,8)`;
+active-default promotion, L4 recall and P6.10+ remain unauthorized. Canonical
 `learning_claim=false` remains authoritative. #93 remains a separate
 performance/architecture workstream.
 
