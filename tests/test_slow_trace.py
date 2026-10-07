@@ -128,31 +128,36 @@ class SlowTraceContractTests(unittest.TestCase):
             trace_transfer_cap=4,
         )
         state = create_universe(seed=206, config=config)
-        slots = [
-            state.spawn(x=offset, y=0, hp=50, latent=0xFFFF)
-            for offset in (0, 1, 2)
-        ]
-        for slot, value in zip(slots, (30, 20, 10)):
-            state.slow_trace[slot] = value
+        first = state.spawn(x=0, y=0, hp=50, latent=0xFFFF)
+        second = state.spawn(x=1, y=0, hp=50, latent=0x0000)
+        remote = state.spawn(x=80, y=80, hp=50, latent=0xAAAA)
+        state.slow_trace[first] = 30
+        state.slow_trace[second] = 10
+        state.slow_trace[remote] = 20
         latent_before = list(state.latent)
         trace_before = list(state.slow_trace)
 
         metrics = step(state)
 
         changed_latent = {
-            slot for slot in slots if state.latent[slot] != latent_before[slot]
+            slot for slot in (first, second, remote)
+            if state.latent[slot] != latent_before[slot]
         }
         changed_trace = {
-            slot for slot in slots if state.slow_trace[slot] != trace_before[slot]
+            slot for slot in (first, second, remote)
+            if state.slow_trace[slot] != trace_before[slot]
         }
         self.assertEqual(metrics.latent_transmission_count, 1)
-        self.assertEqual(changed_trace, changed_latent)
-        self.assertEqual(len(changed_trace), 2)
+        self.assertEqual(changed_latent, {first, second})
+        self.assertEqual(changed_trace, {first, second})
+        self.assertEqual(state.slow_trace[remote], trace_before[remote])
         self.assertEqual(
-            sum(state.slow_trace[slot] for slot in slots),
-            sum(trace_before[slot] for slot in slots),
+            sum(state.slow_trace[slot] for slot in (first, second, remote)),
+            sum(trace_before[slot] for slot in (first, second, remote)),
         )
-        self.assertTrue(all(0 <= state.slow_trace[slot] <= 255 for slot in slots))
+        self.assertTrue(
+            all(0 <= state.slow_trace[slot] <= 255 for slot in (first, second, remote))
+        )
 
     def test_st_004_generation_start_trace_only_widens_latent_mask(self):
         config = trace_config(
