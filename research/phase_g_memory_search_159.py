@@ -58,6 +58,7 @@ HELDOUT_NEGATIVE_COUNT = 4
 
 DECAY_DOMAIN = (0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024)
 REFERENCE_DECAY_RATE = 256
+SEARCH_HORIZONS = (100, 1000)
 REFERENCE_TRACE_FIXED = {
     "trace_write_cap": 32,
     "trace_transfer_cap": 8,
@@ -281,10 +282,23 @@ def select_qualification_cohort(
     }
 
 
+def phase_g_protocol_payload(
+    experiment_path: Path = Path("config/experiment_v0_1.json"),
+) -> dict[str, Any]:
+    """Freeze the complete Phase G protocol, not only ExperimentConfig."""
+    return {
+        "adaptive_horizons": list(SEARCH_HORIZONS),
+        "experiment": _load_protocol(experiment_path).to_dict(),
+        "no_further_external_stimulation_after_h0": True,
+        "qualification_horizon": 0,
+        "teacher_pair": [TEACHER_B, TEACHER_H],
+    }
+
+
 def _protocol_digest(
     experiment_path: Path = Path("config/experiment_v0_1.json"),
 ) -> str:
-    return _digest(_load_protocol(experiment_path).to_dict())
+    return _digest(phase_g_protocol_payload(experiment_path))
 
 
 def qualify_pools_h0(
@@ -360,6 +374,7 @@ def qualify_pools_h0(
         "registry_digest": registry.digest,
         "objective_profile": objective.to_dict(),
         "objective_profile_digest": _digest(objective.to_dict()),
+        "protocol": phase_g_protocol_payload(experiment_path),
         "protocol_digest": _protocol_digest(experiment_path),
         "reference_candidate": resolve_decay_candidate(
             REFERENCE_DECAY_RATE,
