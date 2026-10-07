@@ -656,7 +656,7 @@ class SlowTraceContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             SteadyStateOptimizer.from_snapshot(nested_v1)
 
-    def test_st_009_optimizer_v6_roundtrip_and_clone_isolation(self):
+    def test_st_009_optimizer_v7_roundtrip_and_clone_isolation(self):
         base = trace_config(max_cells=8)
         optimizer = SteadyStateOptimizer.from_defaults(
             base_seed=215,
@@ -667,7 +667,7 @@ class SlowTraceContractTests(unittest.TestCase):
         slot.state.slow_trace[carrier] = 31
 
         payload = optimizer.to_snapshot()
-        self.assertEqual(payload["format_version"], 6)
+        self.assertEqual(payload["format_version"], 7)
         self.assertTrue(
             all(record["state"]["format_version"] == 2 for record in payload["slots"])
         )
@@ -685,6 +685,7 @@ class SlowTraceContractTests(unittest.TestCase):
 
         legacy = copy.deepcopy(payload)
         legacy["format_version"] = 5
+        legacy.pop("outer_search", None)
         for key in TRACE_DEFAULTS:
             legacy["base_config"].pop(key, None)
         for record in legacy["slots"]:
@@ -694,7 +695,7 @@ class SlowTraceContractTests(unittest.TestCase):
                 for key in TRACE_DEFAULTS:
                     record["state"]["config"].pop(key, None)
         migrated = SteadyStateOptimizer.from_snapshot(legacy)
-        self.assertEqual(migrated.to_snapshot()["format_version"], 6)
+        self.assertEqual(migrated.to_snapshot()["format_version"], 7)
         self.assertTrue(
             all(
                 not any(record.state.slow_trace)
