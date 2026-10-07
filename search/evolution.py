@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 import time
 from typing import Any, Iterable, Mapping
@@ -23,6 +24,8 @@ from .outer_search import (
     EvidenceSeedAssignment,
     ObjectiveProfile,
     ResolvedComparisonStratum,
+    SearchPlan,
+    SearchRegistry,
     SelectionRecord,
     allocate_matched_evidence_seed,
     bind_objective_profile,
@@ -36,6 +39,8 @@ from .outer_search import (
     legacy_mutation_plan_for_base_config,
     legacy_search_plan,
     mutate_legacy_candidate,
+    resolve_candidate,
+    resolve_candidate_strata,
     objective_absolute_failure_reason,
     objective_growth_flags,
     objective_key,
@@ -61,6 +66,12 @@ OPTIMIZER_POPULATION_SIZE = 128
 GROWTH_WINDOW_GENERATIONS = 128
 MINIMUM_EVIDENCE_SEEDS = 4
 PROMISING_POLICY_TIERED_CATEGORY_RANK = "tiered_category_rank"
+OPTIMIZER_SNAPSHOT_FORMAT_VERSION = 7
+OUTER_SEARCH_SNAPSHOT_SCHEMA_VERSION = 1
+OUTER_SEARCH_IMPLEMENTATION_REVISION = "optimizer_v7"
+LEGACY_ORACLE_SOURCE_SHA = "211d84b18fe68e70f89c8921d156e1b7c0592895"
+LEGACY_ORACLE_SCHEMA_VERSION = 1
+LEGACY_ORACLE_BUNDLE_DIGEST = "9cb98606546725e3d4790d82f0e3a01f6cd8235215607c209e6952fdc283e5e3"
 
 
 def seed_escalation(seed_count: int) -> int:
@@ -70,6 +81,16 @@ def seed_escalation(seed_count: int) -> int:
 
 def _genome_key(genome: UniverseGenome) -> str:
     return json.dumps(genome.to_dict(), sort_keys=True, separators=(",", ":"))
+
+
+def _snapshot_digest(payload: Mapping[str, Any]) -> str:
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 @dataclass
@@ -259,6 +280,10 @@ class SteadyStateOptimizer:
         scheduler: Mapping[str, Any] | None = None,
         promising_policy: str | None = PROMISING_POLICY_TIERED_CATEGORY_RANK,
         prune_history: Iterable[Mapping[str, Any]] = (),
+        search_plan: SearchPlan | None = None,
+        search_registry: SearchRegistry | None = None,
+        migration_source_format: int = OPTIMIZER_SNAPSHOT_FORMAT_VERSION,
+        scheduler_base_seed_source: str = "search_plan",
     ) -> None:
         if generation < 0:
             raise ValueError("optimizer generation must be non-negative")
@@ -268,10 +293,39 @@ class SteadyStateOptimizer:
         self.base_config = base_config or PhysicsConfig()
         self.experiment = experiment or ExperimentConfig()
         self.generation = int(generation)
-        self._bound_objective_profile = bind_objective_profile(
-            legacy_search_plan(),
-            build_default_search_registry(),
+        self.search_registry = search_registry or build_default_search_registry()
+        expected_registry = build_default_search_registry()
+        if (
+            self.search_registry.schema_version != expected_registry.schema_version
+            or self.search_registry.digest != expected_registry.digest
+        ):
+            raise ValueError("optimizer v7 requires the current registered search surface")
+        self.search_plan = search_plan or legacy_mutation_plan_for_base_config(
+            self.base_config,
+            base_seed=0,
         )
+        expected_plan = legacy_mutation_plan_for_base_config(
+            self.base_config,
+            base_seed=int(self.search_plan.scheduler_base_seed),
+        )
+        if self.search_plan.to_dict() != expected_plan.to_dict():
+            raise ValueError("optimizer currently supports the legacy-equivalent SearchPlan only")
+        self.search_plan.validate(self.search_registry)
+        self._bound_objective_profile = bind_objective_profile(
+            self.search_plan,
+            self.search_registry,
+        )
+        if int(migration_source_format) not in (4, 5, 6, 7):
+            raise ValueError("unsupported optimizer migration source format")
+        self._migration_source_format = int(migration_source_format)
+        expected_seed_source = (
+            "search_plan"
+            if self._migration_source_format == 7
+            else f"legacy_v{self._migration_source_format}_unavailable"
+        )
+        if scheduler_base_seed_source != expected_seed_source:
+            raise ValueError("optimizer scheduler base-seed provenance is inconsistent")
+        self._scheduler_base_seed_source = scheduler_base_seed_source
         self.prune_history: list[dict[str, Any]] = []
         for raw_event in prune_history:
             if not isinstance(raw_event, Mapping):
@@ -344,6 +398,11 @@ class SteadyStateOptimizer:
     ) -> "SteadyStateOptimizer":
         base = base_config or PhysicsConfig()
         protocol = experiment or ExperimentConfig()
+        registry = build_default_search_registry()
+        plan = legacy_mutation_plan_for_base_config(
+            base,
+            base_seed=int(base_seed),
+        )
         slots: list[UniverseSlot] = []
         index = 0
         for stratum in legacy_comparison_strata():
@@ -370,6 +429,10 @@ class SteadyStateOptimizer:
             experiment=protocol,
             promising_policy=promising_policy,
             scheduler={"allocation_cursor": int(base_seed) + 32},
+            search_plan=plan,
+            search_registry=registry,
+            migration_source_format=7,
+            scheduler_base_seed_source="search_plan",
         )
 
     @staticmethod
@@ -1128,13 +1191,116 @@ class SteadyStateOptimizer:
             )
         return summary
 
+    def _candidate_persistence_record(self, slot: UniverseSlot) -> dict[str, Any]:
+        candidate_values = legacy_candidate_values(slot.genome, slot.category)
+        resolved = resolve_candidate(
+            self.search_plan,
+            self.search_registry,
+            candidate_values,
+        )
+        parent_candidate_identity: str | None = None
+        if slot.parent_genome_key is not None:
+            try:
+                parent_genome = UniverseGenome.from_dict(
+                    dict(json.loads(slot.parent_genome_key))
+                )
+            except (TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise ValueError("invalid durable parent_genome_key") from exc
+            parent_candidate = legacy_candidate_values(parent_genome, slot.category)
+            parent_candidate_identity = resolve_candidate(
+                self.search_plan,
+                self.search_registry,
+                parent_candidate,
+            ).candidate_identity
+
+        return {
+            "slot_index": slot.index,
+            "candidate_identity": resolved.candidate_identity,
+            "candidate_values": {
+                "scalars": dict(candidate_values.scalars),
+                "rules": dict(candidate_values.rules),
+            },
+            "comparison_strata": [
+                stratum.to_dict()
+                for stratum in resolve_candidate_strata(
+                    self.search_plan,
+                    self.search_registry,
+                    candidate_values,
+                )
+            ],
+            "evidence_seed": slot.seed,
+            "cohort_role": "search",
+            "parent_candidate_identity": parent_candidate_identity,
+            "parent_index": slot.parent_index,
+            "allocation_reason": slot.allocation_reason,
+            "evidence_mature": slot.evidence_mature,
+            "mutation_dimension": slot.last_mutation_field,
+        }
+
+    def _outer_search_snapshot(self) -> dict[str, Any]:
+        profile = self._bound_objective_profile
+        strata = legacy_comparison_strata(
+            plan=self.search_plan,
+            registry=self.search_registry,
+        )
+        provenance = {
+            "schema_version": 1,
+            "implementation_revision": OUTER_SEARCH_IMPLEMENTATION_REVISION,
+            "migration_source_format": self._migration_source_format,
+            "search_plan_id": self.search_plan.plan_id,
+            "search_plan_version": self.search_plan.plan_version,
+            "search_plan_digest": self.search_plan.digest,
+            "registry_schema_version": self.search_registry.schema_version,
+            "registry_digest": self.search_registry.digest,
+            "objective_profile_id": profile.profile_id,
+            "objective_profile_version": profile.version,
+            "search_cohort_policy": self.search_plan.search_cohort_policy,
+            "validation_cohort_policy": self.search_plan.validation_cohort_policy,
+            "scheduler_policy": self.search_plan.scheduler_policy,
+            "scheduler_base_seed": self.search_plan.scheduler_base_seed,
+            "scheduler_base_seed_source": self._scheduler_base_seed_source,
+            "initialization_policy": self.search_plan.initialization_policy,
+            "base_config_digest": _snapshot_digest(self.base_config.to_dict()),
+            "experiment_protocol_digest": _snapshot_digest(self.experiment.to_dict()),
+            "legacy_oracle": {
+                "source_sha": LEGACY_ORACLE_SOURCE_SHA,
+                "schema_version": LEGACY_ORACLE_SCHEMA_VERSION,
+                "bundle_digest": LEGACY_ORACLE_BUNDLE_DIGEST,
+            },
+        }
+        return {
+            "schema_version": OUTER_SEARCH_SNAPSHOT_SCHEMA_VERSION,
+            "search_plan": {
+                "payload": self.search_plan.to_dict(),
+                "digest": self.search_plan.digest,
+            },
+            "registry": {
+                "schema_version": self.search_registry.schema_version,
+                "digest": self.search_registry.digest,
+            },
+            "objective_profile": {
+                "id": profile.profile_id,
+                "version": profile.version,
+            },
+            "comparison_strata": [stratum.to_dict() for stratum in strata],
+            "scheduler": {
+                "policy": self.search_plan.scheduler_policy,
+                "state": dict(self.scheduler),
+            },
+            "candidates": [
+                self._candidate_persistence_record(slot)
+                for slot in self.slots
+            ],
+            "provenance": provenance,
+        }
+
     def to_snapshot(self) -> dict[str, Any]:
         if len(self.slots) != OPTIMIZER_POPULATION_SIZE:
             raise ValueError(
                 f"integrated optimizer requires {OPTIMIZER_POPULATION_SIZE} authoritative slots"
             )
         return {
-            "format_version": 6,
+            "format_version": OPTIMIZER_SNAPSHOT_FORMAT_VERSION,
             "kind": "UniverseGenomePhase5SteadyStateOptimizer",
             "generation": self.generation,
             "base_config": self.base_config.to_dict(),
@@ -1142,13 +1308,14 @@ class SteadyStateOptimizer:
             "scheduler": dict(self.scheduler),
             "prune_history": [dict(event) for event in self.prune_history],
             "slots": [slot.to_dict() for slot in self.slots],
+            "outer_search": self._outer_search_snapshot(),
         }
 
     @classmethod
     def from_snapshot(cls, payload: Mapping[str, Any]) -> "SteadyStateOptimizer":
         format_version = int(payload.get("format_version", -1))
         if (
-            format_version not in (4, 5, 6)
+            format_version not in (4, 5, 6, 7)
             or payload.get("kind") != "UniverseGenomePhase5SteadyStateOptimizer"
         ):
             raise ValueError("unsupported authoritative Phase 5 optimizer snapshot")
@@ -1159,13 +1326,13 @@ class SteadyStateOptimizer:
             "trace_decay_rate",
             "trace_bonus_shift",
         }
-        if format_version == 6:
+        if format_version >= 6:
             raw_base_config = payload.get("base_config")
             if (
                 not isinstance(raw_base_config, Mapping)
                 or not trace_config_fields.issubset(raw_base_config)
             ):
-                raise ValueError("v6 optimizer requires slow-trace base configuration")
+                raise ValueError("v6+ optimizer requires slow-trace base configuration")
         raw_slots = payload.get("slots")
         if not isinstance(raw_slots, list) or len(raw_slots) != OPTIMIZER_POPULATION_SIZE:
             raise ValueError("authoritative optimizer snapshot must contain 128 slots")
@@ -1173,19 +1340,19 @@ class SteadyStateOptimizer:
             for record in raw_slots:
                 if not isinstance(record, Mapping):
                     raise ValueError("authoritative slot records must be objects")
-                if format_version == 6:
+                if format_version >= 6:
                     raw_state = record.get("state")
                     if (
                         not isinstance(raw_state, Mapping)
                         or int(raw_state.get("format_version", -1)) != 2
                     ):
-                        raise ValueError("v6 optimizer requires nested UniverseState v2")
+                        raise ValueError("v6+ optimizer requires nested UniverseState v2")
                     raw_state_config = raw_state.get("config")
                     if (
                         not isinstance(raw_state_config, Mapping)
                         or not trace_config_fields.issubset(raw_state_config)
                     ):
-                        raise ValueError("v6 optimizer requires nested slow-trace configuration")
+                        raise ValueError("v6+ optimizer requires nested slow-trace configuration")
                 allocation_reason = str(record.get("allocation_reason", "initial"))
                 if (
                     allocation_reason in ("seed_evidence", "mutation_child")
@@ -1236,15 +1403,87 @@ class SteadyStateOptimizer:
             raise ValueError("optimizer prune_history must be an array")
         if format_version == 4:
             raw_prune_history = ()
-        return cls(
+        experiment = ExperimentConfig.from_mapping(payload["experiment"])
+        registry = build_default_search_registry()
+
+        if format_version == 7:
+            raw_outer = payload.get("outer_search")
+            if not isinstance(raw_outer, Mapping):
+                raise ValueError("v7 optimizer requires outer_search metadata")
+            if int(raw_outer.get("schema_version", -1)) != OUTER_SEARCH_SNAPSHOT_SCHEMA_VERSION:
+                raise ValueError("unsupported v7 outer_search schema")
+
+            raw_plan_record = raw_outer.get("search_plan")
+            if not isinstance(raw_plan_record, Mapping):
+                raise ValueError("v7 optimizer requires SearchPlan metadata")
+            raw_plan = raw_plan_record.get("payload")
+            if not isinstance(raw_plan, Mapping):
+                raise ValueError("v7 optimizer requires SearchPlan payload")
+            raw_scheduler_plan = raw_plan.get("scheduler")
+            if not isinstance(raw_scheduler_plan, Mapping):
+                raise ValueError("v7 SearchPlan requires scheduler metadata")
+            try:
+                plan_base_seed = int(raw_scheduler_plan["base_seed"])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError("v7 SearchPlan scheduler base_seed is invalid") from exc
+            plan = legacy_mutation_plan_for_base_config(
+                base_config,
+                base_seed=plan_base_seed,
+            )
+            if dict(raw_plan) != plan.to_dict():
+                raise ValueError("v7 SearchPlan is unknown or inconsistent")
+            if raw_plan_record.get("digest") != plan.digest:
+                raise ValueError("v7 SearchPlan digest mismatch")
+
+            raw_registry = raw_outer.get("registry")
+            if (
+                not isinstance(raw_registry, Mapping)
+                or int(raw_registry.get("schema_version", -1)) != registry.schema_version
+                or raw_registry.get("digest") != registry.digest
+            ):
+                raise ValueError("v7 search registry is unknown or inconsistent")
+
+            profile = bind_objective_profile(plan, registry)
+            raw_profile = raw_outer.get("objective_profile")
+            if raw_profile != {"id": profile.profile_id, "version": profile.version}:
+                raise ValueError("v7 ObjectiveProfile is unknown or inconsistent")
+
+            raw_provenance = raw_outer.get("provenance")
+            if not isinstance(raw_provenance, Mapping):
+                raise ValueError("v7 optimizer requires search provenance")
+            try:
+                migration_source_format = int(raw_provenance["migration_source_format"])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError("v7 migration source provenance is invalid") from exc
+            scheduler_base_seed_source = str(
+                raw_provenance.get("scheduler_base_seed_source", "")
+            )
+        else:
+            plan = legacy_mutation_plan_for_base_config(
+                base_config,
+                base_seed=0,
+            )
+            migration_source_format = format_version
+            scheduler_base_seed_source = f"legacy_v{format_version}_unavailable"
+
+        restored = cls(
             slots,
             base_config=base_config,
-            experiment=ExperimentConfig.from_mapping(payload["experiment"]),
+            experiment=experiment,
             generation=int(payload["generation"]),
             scheduler=scheduler if isinstance(scheduler, Mapping) else {},
             promising_policy=promising_policy,
             prune_history=raw_prune_history,
+            search_plan=plan,
+            search_registry=registry,
+            migration_source_format=migration_source_format,
+            scheduler_base_seed_source=scheduler_base_seed_source,
         )
+
+        if format_version == 7:
+            if dict(raw_outer) != restored._outer_search_snapshot():
+                raise ValueError("v7 generalized optimizer metadata is inconsistent")
+        return restored
 
 
 def evaluate_candidate(
