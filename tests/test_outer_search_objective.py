@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from core.physics import PhysicsConfig, StepMetrics
+from core.physics import PhysicsConfig
 from search.evolution import SteadyStateOptimizer
 from search.fitness import Fitness
 from search.outer_search import (
@@ -208,7 +209,7 @@ class OuterSearchObjectiveProfileTests(unittest.TestCase):
         ) as health_route:
             optimizer._observe_short_health(
                 parent,
-                StepMetrics(active_cells=1, activity_cost=1),
+                SimpleNamespace(active_cells=1, activity_cost=1),
             )
         health_route.assert_called_once()
 
