@@ -805,9 +805,20 @@ def _trace_physical_order_key(state: UniverseState, slot: int) -> tuple[Any, ...
     return (_cell_order_key(state, slot), slot)
 
 
+def _active_occupancy(state: UniverseState) -> dict[tuple[int, int], list[int]]:
+    occupancy: dict[tuple[int, int], list[int]] = {}
+    for slot in state.active_slots():
+        for tile in destination_footprint(
+            state.structure[slot], state.x[slot], state.y[slot]
+        ):
+            occupancy.setdefault(tile, []).append(slot)
+    return occupancy
+
+
 def _discharge_slow_trace(
     state: UniverseState,
     config: PhysicsConfig,
+    active_occupancy: Mapping[tuple[int, int], list[int]],
 ) -> None:
     if config.trace_discharge_cap <= 0:
         return
@@ -826,14 +837,14 @@ def _discharge_slow_trace(
         footprint = destination_footprint(
             state.structure[carrier], state.x[carrier], state.y[carrier]
         )
+        recipient_slots = {
+            slot
+            for tile in footprint
+            for slot in active_occupancy.get(tile, ())
+            if state.lifecycle[slot] == Lifecycle.ACTIVE
+        }
         recipients = sorted(
-            (
-                slot
-                for slot in state.active_slots()
-                if destination_footprint(
-                    state.structure[slot], state.x[slot], state.y[slot]
-                ).intersection(footprint)
-            ),
+            recipient_slots,
             key=lambda slot: _trace_physical_order_key(state, slot),
         )
         for recipient in recipients:
@@ -1058,7 +1069,7 @@ def step(
         if state.hp[slot] == 0:
             _enter_black_hole(state, slot, resolved)
 
-    _discharge_slow_trace(state, resolved)
+    _discharge_slow_trace(state, resolved, _active_occupancy(state))
     _decay_slow_trace(state, resolved, generation, pending_free)
     for slot in sorted(pending_free):
         if state.lifecycle[slot] == Lifecycle.BLACK_HOLE:
