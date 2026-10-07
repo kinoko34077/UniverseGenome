@@ -52,6 +52,37 @@ class OuterSearchMutationTests(unittest.TestCase):
                 probe["child"]["state"]["config"],
             )
 
+    def test_integrated_legacy_mutation_matches_frozen_scheduler_probes(self):
+        probes = json.loads(ORACLE_PATH.read_text(encoding="utf-8"))["decisions"]["mutation_probes"]
+        base = load_legacy_base_config()
+
+        for probe in probes:
+            optimizer = SteadyStateOptimizer.from_defaults(
+                base_seed=0,
+                base_config=base,
+            )
+            self.assertEqual(optimizer.scheduler, probe["scheduler_before"])
+            parent = optimizer.slots[int(probe["parent"]["index"])]
+            child = optimizer.replace_free_slot(
+                free_index=int(probe["child"]["index"]),
+                parent=parent,
+            )
+
+            self.assertEqual(child.last_mutation_field, probe["mutation_field"])
+            self.assertEqual(child.genome.to_dict(), probe["child"]["genome"])
+            self.assertEqual(child.seed, probe["child"]["seed"])
+            self.assertEqual(child.state.config.to_dict(), probe["child"]["state"]["config"])
+            self.assertEqual(child.parent_index, probe["child"]["parent_index"])
+            self.assertEqual(child.parent_genome_key, probe["child"]["parent_genome_key"])
+            self.assertEqual(child.allocation_reason, probe["child"]["allocation_reason"])
+            self.assertEqual(optimizer.scheduler, probe["scheduler_after"])
+
+            before = int(probe["mutation_before"])
+            after = int(getattr(child.genome, probe["mutation_field"]))
+            actual_direction = 1 if after > before else -1
+            self.assertEqual(actual_direction, probe["mutation_direction"])
+            self.assertEqual(after, probe["mutation_after"])
+
     def test_generic_mutation_directions_respect_effective_max_cells(self):
         registry = build_default_search_registry()
         plan = legacy_search_plan(base_seed=0)
