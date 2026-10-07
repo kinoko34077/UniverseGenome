@@ -190,6 +190,19 @@ class OuterSearchSelectionTests(unittest.TestCase):
 
         self.assertEqual(pruned_total, oracle["dynamic"]["integrated_step"]["pruned_count"])
 
+    def test_legacy_promising_policy_boundary_order_is_preserved(self):
+        disabled = SteadyStateOptimizer.from_defaults(
+            base_seed=0,
+            promising_policy=None,
+        )
+        mixed = [disabled.slots[0], disabled.slots[32]]
+        self.assertEqual(disabled._promising_group_keys(mixed), set())
+
+        invalid = SteadyStateOptimizer.from_defaults(base_seed=0)
+        invalid.scheduler["promising_policy"] = "unsupported-policy"
+        with self.assertRaises(ValueError):
+            invalid._promising_group_keys([])
+
     def test_integrated_step_routes_protection_pruning_and_target_through_generic_policy(self):
         protocol = ExperimentConfig(
             byte_hold_generations=0,
