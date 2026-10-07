@@ -1,0 +1,92 @@
+name: Phase G G1 Decay Search
+
+on:
+  pull_request:
+    paths:
+      - "research/phase_g_decay_search_159.py"
+      - "research/phase_g_memory_search_159.py"
+      - "research/artifacts/phase_g_g0_qualification_159.json"
+      - "research/artifacts/phase_g_g1_decay_search_159.json"
+      - "tests/test_phase_g_decay_search_159.py"
+      - ".github/workflows/phase-g-g1-search.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: G1 focused tests
+        run: python -m unittest discover -s tests -p "test_phase_g_decay_search_159.py" -v
+      - name: G1 bounded smoke
+        run: >-
+          python -m research.phase_g_decay_search_159
+          --candidate 256
+          --smoke
+          --output phase_g_g1_smoke.json
+
+  candidate_search:
+    needs: focused_tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        decay: [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Evaluate frozen decay candidate
+        run: >-
+          python -m research.phase_g_decay_search_159
+          --candidate ${{ matrix.decay }}
+          --output candidate-${{ matrix.decay }}.json
+      - name: Upload candidate evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-g-g1-candidate-${{ matrix.decay }}
+          path: candidate-${{ matrix.decay }}.json
+
+  aggregate:
+    needs: candidate_search
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: phase-g-g1-candidate-*
+          path: candidate-results
+          merge-multiple: true
+      - name: Aggregate frozen objective
+        run: >-
+          python -m research.phase_g_decay_search_159
+          --aggregate-dir candidate-results
+          --output phase_g_g1_decay_search_159.generated.json
+      - name: Verify frozen G1 artifact when checked in
+        shell: bash
+        run: |
+          if [ -f research/artifacts/phase_g_g1_decay_search_159.json ]; then
+            cmp research/artifacts/phase_g_g1_decay_search_159.json phase_g_g1_decay_search_159.generated.json
+          else
+            echo "G1 result not frozen yet; aggregate artifact is evidence for the freeze commit."
+          fi
+      - name: Upload aggregate evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-g-g1-decay-search
+          path: phase_g_g1_decay_search_159.generated.json
