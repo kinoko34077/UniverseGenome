@@ -16,11 +16,14 @@ density32 performance remains within the accepted 5% gate.
 
 No new search dimension is active merely because it is registered. Production
 slow-trace defaults remain `(0,0,0,0,8)`, all non-inert values remain
-research-only, and `learning_claim=false` remains authoritative. A future
-Phase G memory-physics search must be opened as a separate research child with
-predeclared search and held-out validation cohorts; it is not active in this
-handoff. **No automatic P6.10 is authorized.** P6.10 and L4+ remain separately
-gated.
+research-only, and `learning_claim=false` remains authoritative. Phase G
+research child #159 is now active: G0 / PR #160 is accepted on main
+`311d391c8264f19aae59ec699151a902bbbca2ce`, with a decay-only
+research SearchPlan and disjoint h0-qualified adaptive-search / held-out
+cohorts frozen before long-horizon search. G1 adaptive decay-axis search is the
+first unfinished checkpoint; held-out post-h0 validation remains separately
+gated as Phase H. **No automatic P6.10 is authorized.** P6.10 and L4+ remain
+separately gated.
 
 ## Current v0.1 boundary
 
