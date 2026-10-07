@@ -330,7 +330,10 @@ def aggregate_candidates(files: list[Path]) -> dict[str, Any]:
         selected = ranking[0]
         route = (
             "ROUTE-PHASE-H"
-            if selected["scores"]["h1000_distinct_count"] > reference["scores"]["h1000_distinct_count"]
+            if (
+                selected["scores"]["h1000_distinct_count"] >= 11
+                and selected["scores"]["h1000_distinct_count"] > reference["scores"]["h1000_distinct_count"]
+            )
             else "CHANGE_PATH"
         )
     summary = {
@@ -357,6 +360,7 @@ def aggregate_candidates(files: list[Path]) -> dict[str, Any]:
         "selected_rate": selected["decay_rate"] if selected else None,
         "selected_identity": selected["candidate_identity"] if selected else None,
         "terminal_route": route,
+        "route_threshold_h1000": 11,
         "heldout_max_horizon": 0,
         "learning_claim": False,
     }
