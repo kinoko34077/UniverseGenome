@@ -27,6 +27,7 @@ EVENT_COLLISION_PAIR = 2
 EVENT_LATENT_MASK = 3
 EVENT_FRAGMENTATION = 4
 EVENT_INITIAL_DENSITY = 5
+EVENT_SLOW_TRACE_DECAY = 6
 LATENT_OPERATORS = {"masked_copy", "masked_xor", "rotate_copy", "masked_and"}
 
 
@@ -62,6 +63,11 @@ class PhysicsConfig:
     fragmentation_enabled: bool = False
     fragmentation_rate: int = 0
     aging_enabled: bool = False
+    trace_write_cap: int = 0
+    trace_transfer_cap: int = 0
+    trace_discharge_cap: int = 0
+    trace_decay_rate: int = 0
+    trace_bonus_shift: int = 8
 
     def __post_init__(self) -> None:
         if self.logical_size != 32 or self.fixed_point_size != 256:
@@ -102,6 +108,13 @@ class PhysicsConfig:
                 raise ValueError(f"{name} must be a supported speed code")
         if not 0 <= self.latent_damage_mask <= 0xFFFF:
             raise ValueError("latent_damage_mask must fit uint16")
+        for name in ("trace_write_cap", "trace_transfer_cap", "trace_discharge_cap"):
+            if not 0 <= getattr(self, name) <= 0xFF:
+                raise ValueError(f"{name} must fit uint8")
+        if not 0 <= self.trace_decay_rate <= 0xFFFF:
+            raise ValueError("trace_decay_rate must fit uint16")
+        if not 0 <= self.trace_bonus_shift <= 8:
+            raise ValueError("trace_bonus_shift must be in 0..8")
 
     @classmethod
     def from_mapping(cls, mapping: Mapping[str, Any]) -> "PhysicsConfig":
@@ -139,6 +152,11 @@ class PhysicsConfig:
             fusion_bond_threshold=int(values.get("fusion_bond_threshold", 32)),
             fragmentation_enabled=bool(values.get("fragmentation_enabled", False)),
             fragmentation_rate=int(values.get("fragmentation_rate", 0)),
+            trace_write_cap=int(values.get("trace_write_cap", 0)),
+            trace_transfer_cap=int(values.get("trace_transfer_cap", 0)),
+            trace_discharge_cap=int(values.get("trace_discharge_cap", 0)),
+            trace_decay_rate=int(values.get("trace_decay_rate", 0)),
+            trace_bonus_shift=int(values.get("trace_bonus_shift", 8)),
             aging_enabled=bool(
                 mapping.get("features", {}).get("aging", values.get("aging_enabled", False))
                 if isinstance(mapping.get("features", {}), Mapping)
@@ -178,6 +196,11 @@ class PhysicsConfig:
             "fragmentation_enabled": self.fragmentation_enabled,
             "fragmentation_rate": self.fragmentation_rate,
             "aging_enabled": self.aging_enabled,
+            "trace_write_cap": self.trace_write_cap,
+            "trace_transfer_cap": self.trace_transfer_cap,
+            "trace_discharge_cap": self.trace_discharge_cap,
+            "trace_decay_rate": self.trace_decay_rate,
+            "trace_bonus_shift": self.trace_bonus_shift,
         }
 
 
@@ -318,13 +341,17 @@ def transmission_mask(
     pair: tuple[int, int],
     bond_strength: int,
     participant: UniverseState | None = None,
+    *,
+    source_trace: int | None = None,
 ) -> int:
     """Select a deterministic anonymous subset without using slot identity."""
     if not 0 <= bond_strength <= 0xFF:
         raise ValueError("bond_strength must fit uint8")
     if len(pair) != 2:
         raise ValueError("pair must contain two slots")
-    width = 1 + (bond_strength >> 4)
+    base_width = 1 + (bond_strength >> 4)
+    trace_value = 0 if source_trace is None else int(source_trace)
+    trace_shift = 8
     available = list(range(16))
     mask = 0
     if participant is None:
@@ -333,6 +360,15 @@ def transmission_mask(
         slot = int(pair[0])
         participant._validate_slot(slot)
         local_index = ((participant.x[slot] & 0xFF) << 8) | (participant.y[slot] & 0xFF)
+        if source_trace is None:
+            trace_value = int(participant.slow_trace[slot])
+        if participant.config is not None:
+            trace_shift = int(participant.config.trace_bonus_shift)
+    if not 0 <= trace_value <= 0xFF:
+        raise ValueError("source_trace must fit uint8")
+    if not 0 <= trace_shift <= 8:
+        raise ValueError("trace_bonus_shift must be in 0..8")
+    width = min(16, base_width + (trace_value >> trace_shift))
     for choice in range(width):
         key = event_key(seed, generation, address, EVENT_LATENT_MASK, local_index + choice)
         selected = available.pop(event_index(key, len(available)))
