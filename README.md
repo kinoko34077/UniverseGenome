@@ -36,16 +36,17 @@ candidate was statically unreachable for content-specific writes, and the
 HP-no-decay reference retained 0/12. The terminal route is therefore **ROUTE-ARCHITECTURE-RETHINK**. #130 completed
 the design-only learning-state architecture rethink and selected
 **D1 — ANONYMOUS SLOW TRACE WITH CONSERVATIVE LOCAL TRANSFER**. #132 / PR #134
-then accepted D1 at the **specification level** on main
-`00f23bd64adc140aeda3a2aebe52ccb2c7dc5abe`. The accepted contract defines the
+accepted the D1 specification, and #135 / PR #139 then implemented that contract
+through TEST-ST-010 on main
+`9091bbbc0fdbf261859d7f1b68772601b963548e`. Production now includes the
 anonymous `slow_trace:uint8[MAX_CELLS]` state, deterministic local
 write/transfer/discharge/forgetting/read semantics, UniverseState v2 / optimizer
 v6 migration, and the inert compatibility/default tuple `(0,0,0,0,8)`.
-Production implementation remains pending; all non-inert values remain
-research-only. Successor #135 owns the RED-first implementation contract through
-TEST-ST-010, while TEST-ST-012 / L3 causal acceptance remains a later separate
-research gate. Canonical `learning_claim=false` remains authoritative and
-P6.10+ semantic expansion remains frozen.
+The density-4/density-32 inert compatibility matrix is pre-D1-identical and
+TEST-ST-010 overhead evidence is recorded in #135. All non-inert values remain
+research-only. Successor #140 owns TEST-ST-012 / L3 persistence-turnover
+research. Canonical `learning_claim=false` remains authoritative and P6.10+
+semantic expansion remains frozen.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
@@ -131,12 +132,14 @@ measurement remains baseline 0 / trained 0 with no learning claim. See the
   rethink and selected D1 Anonymous Slow Trace with terminal route
   `ROUTE-SPEC-PROPOSAL`.
 - #132 / PR #134 is complete with terminal route `ACCEPT-SPEC-PROPOSAL`.
-  D1 is now accepted as an **implementation-pending specification** with
-  ADR-009, inert compatibility/default tuple `(0,0,0,0,8)`, and explicit
-  RED-first TEST-ST gates. No non-inert active default was accepted.
-- #135 is the active RED-first implementation owner. It may implement the
-  accepted D1 contract and inert migration/compatibility path, but cannot promote
-  non-inert defaults, claim L3 persistence, run L4 recall, or unfreeze P6.10+.
+  It remains the accepted specification basis for D1.
+- #135 / PR #139 is complete with terminal route `ROUTE-L3-RESEARCH`.
+  D1 production state/physics and v2/v6 migration are implemented under the
+  inert compatibility/default tuple `(0,0,0,0,8)`; TEST-ST-010 and the
+  density-4/density-32 inert compatibility matrix passed.
+- #140 is the active bounded research owner for TEST-ST-012. It may exercise a
+  predeclared non-inert research-only profile, but cannot promote defaults,
+  claim L4 recall, or unfreeze P6.10+.
 - No later semantic capability is automatically authorized. `learning_claim=false`
   and the P6.10+ freeze remain unchanged. #93 remains a separate
   performance/architecture workstream.
