@@ -1090,6 +1090,16 @@ class SteadyStateOptimizer:
                         "v5 allocated child requires durable parent_genome_key"
                     )
         base_config = PhysicsConfig.from_mapping(payload["base_config"])
+        if format_version in (4, 5):
+            values = base_config.to_dict()
+            values.update({
+                "trace_write_cap": 0,
+                "trace_transfer_cap": 0,
+                "trace_discharge_cap": 0,
+                "trace_decay_rate": 0,
+                "trace_bonus_shift": 8,
+            })
+            base_config = PhysicsConfig(**values)
         slots = [
             UniverseSlot.from_dict(record, base_config=base_config)
             for record in raw_slots
