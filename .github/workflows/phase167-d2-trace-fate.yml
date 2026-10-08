@@ -1,0 +1,77 @@
+name: Phase 167 D2 Frozen Trace-Fate Diagnostics
+
+on:
+  pull_request:
+    paths:
+      - "research/trace_fate_d2_167.py"
+      - "tests/test_trace_fate_d2_167.py"
+      - ".github/workflows/phase167-d2-trace-fate.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cohort:
+    name: "D2 decay=${{ matrix.rate }} shard=${{ matrix.shard }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        rate: [0, 256]
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Frozen D2 shard (no held-out / no new physics)
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -m research.trace_fate_d2_167
+          --run-shard
+          --rate ${{ matrix.rate }}
+          --shard ${{ matrix.shard }}
+          --source-sha "$SOURCE_SHA"
+          --output-dir diagnostics/cases
+      - name: Upload authenticated case evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: d2-case-${{ matrix.rate }}-${{ matrix.shard }}
+          path: diagnostics/cases/case-*.json
+          if-no-files-found: error
+          retention-days: 14
+
+  aggregate:
+    name: D2 complete evidence & integrity gate
+    needs: cohort
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Retrieve all exact-head shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: d2-case-*
+          path: diagnostics/cases
+          merge-multiple: true
+      - name: Verify all 40 cases, legacy parity, controls & digests
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -m research.trace_fate_d2_167
+          --aggregate-dir diagnostics/cases
+          --source-sha "$SOURCE_SHA"
+          --output diagnostics/d2_summary.json
+      - name: Upload validated aggregate evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase167-d2-validated-aggregate
+          path: diagnostics/d2_summary.json
+          if-no-files-found: error
+          retention-days: 30
