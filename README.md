@@ -56,15 +56,19 @@ accepted learning result. Phase F / PR #157 ended in
 `ACCEPT-OUTER-SEARCH-GENERALIZATION-IMPLEMENTATION` on main
 `69cd7e99092bda565eec89daed2bb0873fd3c184`: the Legacy SearchPlan is
 exactly equivalent to the frozen pre-generalization oracle and the matched
-density4/density32 performance gate passes. Phase G research child #159 is
-now active. G0 / PR #160 plus provenance-correction PR #161 are accepted on main
-`a776c8e11c608e322735e325d47a253fc1e7af84`: the decay-only research
-SearchPlan consumer is bounded away from the production optimizer, disjoint
-adaptive-search / held-out cohorts are frozen using h0 qualification only, and
-G1 adaptive decay-axis search is the first unfinished checkpoint. No successor
-memory-physics profile is accepted and no held-out post-h0 validation has been
-run. Canonical `learning_claim=false` remains authoritative and P6.10+
-semantic expansion remains frozen.
+density4/density32 performance gate passes. Phase G research child #159 has completed its **first bounded decay-only search**.
+G0 / PRs #160 and #161 froze a research-only SearchPlan, the full teacher
+protocol, and disjoint search/held-out cohorts. G1 / PR #164 then evaluated
+all 12 predeclared trace_decay_rate values on 16 matched adaptive-search seeds
+and 4 negative sentinels (accepted main `abfb478367a209ecaf4165cda22531506275bde3`).
+All 12 candidates passed validity controls, retained B/H distinction for
+13/16 seeds at +100, but **0/16 at +1000**, equal to the decay=256 reference,
+with no turnover witnesses. G1 terminated **CHANGE_PATH**, not
+ROUTE-PHASE-H. There is no accepted new memory-physics profile and no held-out
+post-h0 validation. A different search axis/architecture requires a separately
+predeclared new causal question; it does not automatically begin. Production
+D1 remains inert, canonical `learning_claim=false` remains authoritative, and
+P6.10+ semantic expansion remains frozen.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
