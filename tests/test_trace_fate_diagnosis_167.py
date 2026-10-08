@@ -101,6 +101,35 @@ class TraceFateDiagnosis167Tests(unittest.TestCase):
                 for branch in ("control", "control_repeat", "b", "h"):
                     self.assertEqual(set(new["event_totals"][branch]), set(MEASUREMENTS))
 
+    def test_long_horizon_exact_g1_parity_both_diagnostic_controls(self):
+        # D1 blocking +1000 validity gate, rather than a new Phase H run.
+        for rate in RATES:
+            with self.subTest(rate=rate):
+                observed = observe_case(
+                    seed=self.seed, role="search",
+                    decay_rate=rate, max_horizon=1000,
+                )
+                baseline = case_once(
+                    seed=self.seed, role="search", decay_rate=rate,
+                    frozen=self.frozen, instrumented=False, max_horizon=1000,
+                )
+                for h in ("0", "1", "100", "1000"):
+                    self.assertEqual(
+                        observed["checkpoint_branch_digests"][h],
+                        baseline["checkpoints"][h]["branch_digests"],
+                    )
+                    self.assertEqual(
+                        observed["checkpoints"][h],
+                        baseline["checkpoints"][h]["comparisons"],
+                    )
+                self.assertFalse(observed["checkpoints"]["1000"]["b_vs_h"]["different"])
+                self.assertEqual(
+                    set(observed["h0_teacher_window_events"]["b"]), set(MEASUREMENTS)
+                )
+                self.assertEqual(
+                    set(observed["h0_teacher_window_events"]["h"]), set(MEASUREMENTS)
+                )
+
     def test_replay_and_negative_sentinel(self):
         a = observe_case(seed=self.seed, role="search", decay_rate=256,
                          max_horizon=1)
