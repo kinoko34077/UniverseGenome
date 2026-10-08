@@ -100,6 +100,21 @@ class TraceFateDiagnosis167Tests(unittest.TestCase):
                 self.assertEqual(new["heldout_max_horizon"], 0)
                 for branch in ("control", "control_repeat", "b", "h"):
                     self.assertEqual(set(new["event_totals"][branch]), set(MEASUREMENTS))
+                self.assertEqual(len(new["trace_timeline"]), 101)
+                self.assertEqual(len(new["matched_read_timeline"]), 100)
+                for branch in ("b", "h"):
+                    self.assertEqual(len(new["event_timeline"][branch]), 100)
+                    for key in MEASUREMENTS:
+                        self.assertEqual(
+                            new["event_totals"][branch][key],
+                            sum(point["counters"].get(key, 0)
+                                for point in new["event_timeline"][branch]),
+                        )
+                self.assertEqual(
+                    new["trace_timeline"][-1]["differing_slots"],
+                    new["checkpoints"]["100"]["b_vs_h"]["fields"]
+                       ["slow_trace"]["changed_slots"],
+                )
 
     def test_long_horizon_exact_g1_parity_both_diagnostic_controls(self):
         # D1 blocking +1000 validity gate, rather than a new Phase H run.
