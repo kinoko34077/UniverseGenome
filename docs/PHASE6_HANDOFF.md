@@ -28,6 +28,23 @@ bounded G1 terminal is **CHANGE_PATH**, not an L3 success or automatic
 new tuning authorization. Held-out seeds have never been advanced beyond h0
 in Phase G. Any successor axis/architecture needs a separately frozen new
 research question and cohorts; no Phase H or L4+ route has been earned.
+Research-only follow-up **#167** (PRs #168/#169) observed the already
+G1-exposed adaptive cohort under only the two fixed diagnostic rates 0/256.
+Exact-head D2 workflow `37723855643` accepted all 40 cases and matched
+the frozen G1 controls: 16/16 B/H trace differences at h0, 13/16 at
++100, 0/16 at +1000 at both rates. At +1000 all 16 positive search
+cases per rate still retain anonymous trace mass, but none retain the
+teacher-dependent B/H trace difference. Final trace distinctions disappear
+between generations 55 and 701 (median 278). The same final-loss
+generation contains a trace-bearing FREE event in only 7/16 or 8/16
+search cases, respectively; limited read-width contrast and write
+saturation were also observed, with no isolated causal mechanism.
+D2 PR #169 merged on main `0c13a3672c1f1822f54f2831bebf57ba01074cdc`,
+post-main CI `37724247269` SUCCESS; D3 disposition is
+**HOLD-UNRESOLVED**. No new physics/search profile or Phase H success
+was accepted; any future intervention requires an independently
+predeclared causal research child.
+
 **No automatic P6.10 is authorized.** P6.10 and L4+ remain
 separately gated.
 
@@ -312,6 +329,7 @@ accepted through #127 / PR #129; #130 selected D1, #132 / PR #134 accepted its
 specification, #135 / PR #139 implemented D1 through TEST-ST-010 under inert
 defaults, and #140 / PR #142 completed TEST-ST-012 with
 `FAIL-L3-PERSISTENCE`. The failed gate preserves a valid turnover witness but
-does not establish robust +1000 persistence. No successor learning-path gate is
-currently accepted. L4 recall, active-default promotion and P6.10+ remain
-frozen.
+does not establish robust +1000 persistence. #167's valid observation-only D2 diagnostic has terminal
+`HOLD-UNRESOLVED`; no successor learning-path **capability** gate or
+learning mechanism is accepted. L4 recall, active-default promotion and
+P6.10+ remain frozen.
