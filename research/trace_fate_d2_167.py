@@ -51,9 +51,11 @@ def validate_observation(observed: dict[str, Any], *, rate: int,
     for field, value in expected.items():
         if observed.get(field) != value:
             raise ValueError(f"D2 observation contract mismatch: {field}")
-    if list(observed["checkpoint_branch_digests"]) != [
+    # JSON artifact serialization sorts object keys lexicographically;
+    # checkpoint validity must not depend on mapping insertion order.
+    if set(observed["checkpoint_branch_digests"]) != {
         str(n) for n in CHECKPOINTS
-    ]:
+    }:
         raise ValueError("D2 checkpoint schema mismatch")
     if len(observed["trace_timeline"]) != RUN_HORIZON + 1:
         raise ValueError("D2 trace timeline incomplete")
