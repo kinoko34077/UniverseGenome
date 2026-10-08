@@ -67,7 +67,7 @@ class EventObserver:
         self.read_sites: dict[tuple[int, int, int, int], list[tuple[int, int]]] = {}
         self._state: UniverseState | None = None
 
-    def begin(self, state: UniverseState) -> None:
+    def begin(self, state: UniverseState | None = None) -> None:
         self._state = state
         self.events = Counter()
         self.read_sites = defaultdict(list)
@@ -250,16 +250,24 @@ def observe_case(*, seed: int, role: str, decay_rate: int,
     pre_teacher = advance_to_pre_teacher(
         initial, config=config, protocol=protocol, instrumented=False
     )["a_pre_teacher"]
-    h0 = {
-        name: teacher_step(
-            pre_teacher, config=config, protocol=protocol,
-            teacher_value=value, instrumented=False
-        )["after_snapshot"]
+    # Observe the teacher write window too: h0 state alone cannot reveal
+    # write saturation or first read opportunities during teacher output.
+    observer = EventObserver()
+    h0: dict[str, dict] = {}
+    h0_events: dict[str, dict[str, int]] = {}
+    with observer.attach():
         for name, value in (
             ("control", None), ("control_repeat", None),
             ("b", TEACHER_B), ("h", TEACHER_H),
-        )
-    }
+        ):
+            observer.begin()
+            h0[name] = teacher_step(
+                pre_teacher, config=config, protocol=protocol,
+                teacher_value=value, instrumented=False
+            )["after_snapshot"]
+            h0_events[name] = {
+                key: int(observer.events[key]) for key in MEASUREMENTS
+            }
     states = {name: clone_state(h0[name], config) for name in BRANCHES}
     experiments = {
         name: IOExperiment(states[name], experiment=protocol) for name in BRANCHES
@@ -276,17 +284,16 @@ def observe_case(*, seed: int, role: str, decay_rate: int,
         for key in ("trace", "nontrace", "global")
     }
     previous = {key: False for key in transitions}
-    obs = EventObserver()
-    with obs.attach():
+    with observer.attach():
         for generation in range(0, max_horizon + 1):
             if generation:
                 reads = {}
                 for name in BRANCHES:
-                    obs.begin(states[name])
+                    observer.begin(states[name])
                     experiments[name]._advance(())
-                    totals[name].update(obs.events)
+                    totals[name].update(observer.events)
                     if name in ("b", "h"):
-                        reads[name] = dict(obs.read_sites)
+                        reads[name] = dict(observer.read_sites)
                 read_comparison.update(
                     _matched_reads(reads["b"], reads["h"])
                 )
@@ -324,6 +331,7 @@ def observe_case(*, seed: int, role: str, decay_rate: int,
             for generation, checkpoint in checkpoints.items()
         },
         "branch_stats": branch_stats,
+        "h0_teacher_window_events": h0_events,
         "event_totals": {
             name: {key: int(totals[name][key]) for key in MEASUREMENTS}
             for name in BRANCHES
