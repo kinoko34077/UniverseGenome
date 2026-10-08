@@ -1,0 +1,75 @@
+name: Phase G G1 Frozen Decay Search
+
+on:
+  pull_request:
+    paths:
+      - "research/phase_g_decay_axis_159.py"
+      - "tests/test_phase_g_decay_axis_159.py"
+      - ".github/workflows/phase-g-g1-decay-search.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Phase G G1 exact-head focused tests
+        run: python -m unittest discover -s tests -p "test_phase_g_decay_axis_159.py" -v
+
+  candidates:
+    needs: focused_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        rate: [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Evaluate frozen candidate with matched adaptive search evidence
+        run: >-
+          python -m research.phase_g_decay_axis_159
+          --rate ${{ matrix.rate }}
+          --output candidate-${{ matrix.rate }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase-g-g1-candidate-${{ matrix.rate }}
+          path: candidate-${{ matrix.rate }}.json
+
+  aggregate:
+    needs: candidates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: phase-g-g1-candidate-*
+          merge-multiple: true
+          path: g1_candidates
+      - name: Apply predeclared objective and terminal route
+        run: >-
+          python -m research.phase_g_decay_axis_159
+          --aggregate-dir g1_candidates
+          --output phase_g_g1_result_159.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase-g-g1-aggregate
+          path: phase_g_g1_result_159.json
