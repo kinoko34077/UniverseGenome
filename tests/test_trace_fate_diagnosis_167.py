@@ -44,7 +44,7 @@ class TraceFateDiagnosis167Tests(unittest.TestCase):
 
     def test_event_hook_delegates_once_without_perturbing_state(self):
         config = PhysicsConfig(
-            trace_write_cap=32, trace_transfer_cap=8, trace_discharge_cap=16,
+            initial_density=32, trace_write_cap=32, trace_transfer_cap=8, trace_discharge_cap=16,
             trace_decay_rate=256, trace_bonus_shift=5,
         )
         for seed in (7, 8):
@@ -60,7 +60,7 @@ class TraceFateDiagnosis167Tests(unittest.TestCase):
 
     def test_write_clamp_is_counted_not_changed(self):
         config = PhysicsConfig(
-            trace_write_cap=32, trace_transfer_cap=8,
+            initial_density=32, trace_write_cap=32, trace_transfer_cap=8,
             trace_discharge_cap=16, trace_decay_rate=256, trace_bonus_shift=5,
         )
         state = physics.create_universe(seed=9, config=config)
