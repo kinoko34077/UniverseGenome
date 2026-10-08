@@ -86,6 +86,22 @@ P6.10+ and a canonical learning claim remain unauthorized.
 `learning_claim=false`. #93 remains a separate
 performance/architecture workstream.
 
+Research-only successor **#167** completed D1 observation instrumentation
+(PR #168) and the frozen D2 cohort (PR #169; accepted main
+`0c13a3672c1f1822f54f2831bebf57ba01074cdc`, post-main CI
+`37724247269` SUCCESS). The exact-head diagnostic workflow
+`37723855643` produced a valid 40/40 cases: both decay 0 and 256
+have B/H trace differences 16/16 at h0, 13/16 at +100 and 0/16 at +1000.
+Every positive case still has nonzero **total trace mass** at +1000,
+so persistence of anonymous trace mass is not teacher-content persistence.
+Permanent loss of trace distinction occurs at generations 55–701
+(median 278), with only 7/16 (decay 0) or 8/16 (decay 256) showing
+a same-generation trace-bearing FREE event. Passive observations did not
+isolate write saturation, local transfer, FREE, or sparse read-width
+contrast as the sole cause. **D3 terminal: HOLD-UNRESOLVED.**
+No active physics profile, new search axis, Phase H/held-out post-h0,
+L4/P6.10+ or learning claim follows from this child.
+
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
 
@@ -257,8 +273,10 @@ success claim.
   demonstrated one turnover witness, but only 1/12 primary cases remained
   teacher-specific at +1000 versus the required >=8/12.
 
-Next frontier: **unselected learning-path causal/architecture decision**.
-No second profile or implementation owner is implied by the failed gate.
+Next frontier: **new separately predeclared causal research decision not
+yet selected** after #167's `HOLD-UNRESOLVED` diagnosis.
+Neither #140/#159 failure nor #167 passive observation selects a second
+physical memory profile or production implementation owner.
 `learning_claim=false`, inert production defaults, the P6.10+ freeze and L4
 separation remain authoritative. #93 remains a separate
 performance/architecture workstream.
