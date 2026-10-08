@@ -278,6 +278,9 @@ def observe_case(*, seed: int, role: str, decay_rate: int,
     }
     totals = {name: Counter() for name in BRANCHES}
     read_comparison = Counter()
+    event_timeline: dict[str, list[dict[str, Any]]] = {"b": [], "h": []}
+    trace_timeline: list[dict[str, int]] = []
+    matched_read_timeline: list[dict[str, int]] = []
     transitions: dict[str, dict[str, int | None]] = {
         key: {"first_distinct": None, "last_distinct": None,
               "first_reconvergence": None}
@@ -294,9 +297,25 @@ def observe_case(*, seed: int, role: str, decay_rate: int,
                     totals[name].update(observer.events)
                     if name in ("b", "h"):
                         reads[name] = dict(observer.read_sites)
-                read_comparison.update(
-                    _matched_reads(reads["b"], reads["h"])
-                )
+                        event_timeline[name].append({
+                            "generation": generation,
+                            "counters": {
+                                key: int(value) for key, value in observer.events.items()
+                                if value
+                            },
+                        })
+                matched = _matched_reads(reads["b"], reads["h"])
+                read_comparison.update(matched)
+                matched_read_timeline.append({"generation": generation, **matched})
+            b_trace = states["b"].slow_trace
+            h_trace = states["h"].slow_trace
+            trace_timeline.append({
+                "generation": generation,
+                "b_mass": sum(b_trace),
+                "h_mass": sum(h_trace),
+                "differing_slots": sum(a != b for a, b in zip(b_trace, h_trace)),
+                "absolute_delta_sum": sum(abs(a - b) for a, b in zip(b_trace, h_trace)),
+            })
             diff = _distinctions(states["b"], states["h"])
             for key, differs in diff.items():
                 entry = transitions[key]
@@ -337,6 +356,9 @@ def observe_case(*, seed: int, role: str, decay_rate: int,
             for name in BRANCHES
         },
         "physically_matched_reads": dict(read_comparison),
+        "trace_timeline": trace_timeline,
+        "event_timeline": event_timeline,
+        "matched_read_timeline": matched_read_timeline,
         "transitions": transitions,
         "heldout_max_horizon": 0, "learning_claim": False,
     }
