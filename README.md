@@ -70,6 +70,19 @@ predeclared new causal question; it does not automatically begin. Production
 D1 remains inert, canonical `learning_claim=false` remains authoritative, and
 P6.10+ semantic expansion remains frozen.
 
+Post-G1 diagnostic child **#167** is research-complete at
+`HOLD-UNRESOLVED`. Research-only D1 observation instrumentation was accepted
+through PR #168; D2 PR #169 merged on main
+`0c13a3672c1f1822f54f2831bebf57ba01074cdc`, with post-main CI
+`37724247269` SUCCESS. Frozen D2 run `37723855643` validated
+all 40 observational cases (16 existing G1 search seeds and 4 negative
+sentinels at each of decay rates 0/256): B/H trace distinctions were
+16/16 at h0, 13/16 at +100 and 0/16 at +1000 for both rates. At +1000,
+trace mass remains positive in every positive case, but its B/H distinction
+has vanished. The diagnostic observations cannot identify one dominant
+causal loss mechanism; no new physics profile, Phase H route, L3 persistence
+claim or held-out post-h0 test is authorized.
+
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
 reconciliation #61 is complete via PR #74. No unresolved remediation owner remains. The fresh #60 rerun passed on repaired
