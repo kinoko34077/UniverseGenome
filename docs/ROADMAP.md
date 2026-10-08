@@ -65,16 +65,25 @@ SearchPlan matches the immutable pre-generalization oracle across static state,
 generations 16/128/512/1024, optimizer decisions and continuation; matched
 density4/density32 throughput regression is within the accepted 5% gate.
 
-Phase G research child **#159 is active**. G0 / PR #160 plus provenance-correction PR #161 are accepted on
-main `a776c8e11c608e322735e325d47a253fc1e7af84`. It freezes a
-trace-decay-only research SearchPlan plus disjoint h0-qualified adaptive-search
-and held-out cohorts while leaving the production optimizer legacy-only. The
-first unfinished checkpoint is G1: evaluate only the frozen decay domain on
-the frozen adaptive cohort/sentinels. Held-out post-h0 validation remains
-reserved for a separate Phase H child. No successor memory-physics profile is
-accepted. Production D1 defaults remain `(0,0,0,0,8)`; active-default
-promotion, L4 recall and P6.10+ remain unauthorized. Canonical
-`learning_claim=false` remains authoritative. #93 remains a separate
+Phase G research child **#159 completed its first bounded decay-axis
+question**. G0 / PRs #160+#161 froze the decay-only research SearchPlan,
+qualified disjoint adaptive-search/held-out cohorts and the full protocol.
+G1 / PR #164 was accepted on main
+`abfb478367a209ecaf4165cda22531506275bde3` with exact-head ordinary
+CI and 12-candidate workflow SUCCESS. Every decay rate in
+`[0,1,2,4,8,16,32,64,128,256,512,1024]` passed replay,
+raw/instrumented, duplicate-control and negative-sentinel gates. All produced
++100 B/H distinction `13/16`, but +1000 distinction `0/16` and zero
+turnover witnesses, including reference rate 256. The frozen >=11/16 and
+strict-reference-improvement Phase-H routing criteria therefore failed;
+terminal decision: **CHANGE_PATH**. Deterministic identity tie-breaking
+named rate 1 but does not establish a better physical-memory candidate.
+No Phase H held-out post-h0 evidence was executed and no successor profile
+was accepted. A new parameter axis or architecture requires its **own
+predeclared research contract**, not post-outcome tuning within #159.
+Production D1 defaults remain `(0,0,0,0,8)`; L4, active-default promotion,
+P6.10+ and a canonical learning claim remain unauthorized.
+`learning_claim=false`. #93 remains a separate
 performance/architecture workstream.
 
 ## Gate 0 — Specification basis

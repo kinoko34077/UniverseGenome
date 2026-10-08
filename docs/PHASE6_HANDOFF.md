@@ -17,12 +17,18 @@ density32 performance remains within the accepted 5% gate.
 No new search dimension is active merely because it is registered. Production
 slow-trace defaults remain `(0,0,0,0,8)`, all non-inert values remain
 research-only, and `learning_claim=false` remains authoritative. Phase G
-research child #159 is now active: G0 / PR #160 plus provenance-correction PR #161 are accepted on main
-`a776c8e11c608e322735e325d47a253fc1e7af84`, with a decay-only
-research SearchPlan and disjoint h0-qualified adaptive-search / held-out
-cohorts frozen before long-horizon search. G1 adaptive decay-axis search is the
-first unfinished checkpoint; held-out post-h0 validation remains separately
-gated as Phase H. **No automatic P6.10 is authorized.** P6.10 and L4+ remain
+research child #159 completed the first **trace_decay_rate-only** search:
+G0 / PRs #160+#161 froze the exact h0-qualified disjoint adaptive-search and
+held-out cohorts and complete protocol provenance; G1 / PR #164 on main
+`abfb478367a209ecaf4165cda22531506275bde3` measured all 12
+predeclared decay candidates. All 12 were valid and had +100 B/H distinction
+13/16, but +1000 distinction **0/16**, equal to the reference rate 256,
+with no turnover witnesses. The predeclared gate for Phase H failed and the
+bounded G1 terminal is **CHANGE_PATH**, not an L3 success or automatic
+new tuning authorization. Held-out seeds have never been advanced beyond h0
+in Phase G. Any successor axis/architecture needs a separately frozen new
+research question and cohorts; no Phase H or L4+ route has been earned.
+**No automatic P6.10 is authorized.** P6.10 and L4+ remain
 separately gated.
 
 ## Current v0.1 boundary
