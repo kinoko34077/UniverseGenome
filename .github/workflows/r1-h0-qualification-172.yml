@@ -29,6 +29,7 @@ jobs:
           python -m research.r1_causal_isolation_172 --qualify --output r1/qualification.json
           python -m research.r1_causal_isolation_172 --qualify --output r1/qualification-repeat.json
           cmp r1/qualification.json r1/qualification-repeat.json
+          cat r1/qualification.json
           printf 'exact-head=%s\n' "$SOURCE_SHA" > r1/head.txt
       - uses: actions/upload-artifact@v4
         with:
