@@ -1,0 +1,37 @@
+name: D7 Paired Receiver B-H Contrast Microcase #187
+
+on:
+  pull_request:
+    paths:
+      - "research/d7_receiver_contrast_187.py"
+      - "tests/test_d7_receiver_contrast_187.py"
+      - ".github/workflows/d7-receiver-contrast-187.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  d7_frozen_microcase:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: D7 pre-outcome frozen seed/event stages and physical observer tests
+        run: python -m unittest discover -s tests -p 'test_d7_receiver_contrast_187.py' -v
+      - name: Exact-head seed575 B/H/control, seed545 negative native parity and replay
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.d7_receiver_contrast_187 \
+            --source-sha "$SOURCE_SHA" \
+            --output d7/receiver-summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d7-exposed-receiver-contrast-microcase
+          path: d7/receiver-summary.json
+          if-no-files-found: error
+          retention-days: 30
