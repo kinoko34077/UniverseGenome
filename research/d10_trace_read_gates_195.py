@@ -31,7 +31,7 @@ PROTOCOL={
 
 
 def _mask(*,trace:int,bond:int,shift:int)->int:
-    config=PhysicsConfig(max_cells=8,trace_bonus_shift=shift)
+    config=PhysicsConfig(max_cells=8,initial_density=2,trace_bonus_shift=shift)
     state=create_universe(seed=7,config=config)
     state.slow_trace[0]=trace
     return transmission_mask(
@@ -41,7 +41,7 @@ def _mask(*,trace:int,bond:int,shift:int)->int:
 
 
 def _generic_write()->dict[str,int|bool]:
-    config=PhysicsConfig(max_cells=8,trace_write_cap=8,trace_bonus_shift=5)
+    config=PhysicsConfig(max_cells=8,initial_density=2,trace_write_cap=8,trace_bonus_shift=5)
     states=[create_universe(seed=7,config=config) for _ in range(2)]
     # "B" and "H" are only external report names, NEVER physical inputs.
     for state in states:
