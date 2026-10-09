@@ -341,6 +341,26 @@ post-transfer physics, then a separately preregistered intervention
 with a truly independent cohort, not another scalar parameter sweep.
 Research PR #185 accepted main
 `d59d712ba04f00849c0b92acb384d1f2685a2390`.
+D7 **#187** then followed precisely the *surviving native recipient*
+from seed575 B/H, with no-teacher control and frozen B/H-global-equal
+negative seed545, through all 1000 generations and write/transfer/decay
+stage boundaries. Scientific Action `37961606736` validated exact
+replay, native uninstrumented parity and sentinel control; artifact
+digest `0650e05be640a34cc026d3993ba9644f60e2d93f411344c2a0495cc091d62d4b`.
+Both B/H histories physically delivered **3 units** to receiver slot6
+at +61, retained that receiver life epoch after donor FREE +724 and
+h+1000, but its **B/H slow-trace value never differed at any observed
+stage** (`0/1000` end-of-generation contrasts). The receiver was
+B/H=29 versus no-teacher18 at +61, B/H=67/control65 at +724,
+and B/H=80/control79 at +1000. Thus scalar effects of teacher
+*presence* occurred, but no teacher **B versus H content contrast**
+passed through this survivor, and latent at tested checkpoints was
+identical. This is **one outcome-exposed microcase**, not statistical
+replication, semantic recall, independent causal readout or successful
+L3. Research PR #188 accepted main
+`7aa9882b19e10b4d43fb923a7b6b00838a378fa8`.
+No further unspecified physical search follows automatically.
+
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
