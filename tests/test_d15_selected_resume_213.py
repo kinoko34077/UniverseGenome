@@ -160,11 +160,11 @@ class Selected128InterruptedRecoveryTests(unittest.TestCase):
             with lock_path.open("a+b") as stream:
                 fcntl.flock(stream.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
                 program=(
-                    "from pathlib import Path\\n"
-                    "from core.experiment import ExperimentConfig\\n"
-                    "from research.d15_selected_resume_213 import execute_selected_round\\n"
+                    "from pathlib import Path\n"
+                    "from core.experiment import ExperimentConfig\n"
+                    "from research.d15_selected_resume_213 import execute_selected_round\n"
                     f"execute_selected_round(Path({str(root)!r}),source_commit={SOURCE!r},"
-                    "base_seed=0,experiment=ExperimentConfig(evaluation_timeout_generations=2))\\n"
+                    "base_seed=0,experiment=ExperimentConfig(evaluation_timeout_generations=2))\n"
                 )
                 other=subprocess.run([sys.executable,"-c",program],
                                      capture_output=True,text=True,timeout=30)
