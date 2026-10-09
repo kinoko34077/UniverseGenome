@@ -7,6 +7,8 @@ from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor
 import gc
+import argparse
+from statistics import median
 import json
 import multiprocessing
 from pathlib import Path
@@ -98,9 +100,35 @@ def run_probe()->dict[str,Any]:
 
 
 def main()->None:
-    result=run_probe()
-    output=Path("d15-cpu-worker-probe-213.json")
-    output.write_text(json.dumps(result,indent=2,sort_keys=True)+"\n",encoding="utf-8")
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repeats",type=int,default=1)
+    args=parser.parse_args()
+    if args.repeats not in (1,3):
+        parser.error("D15 probe allows only 1 or 3 fixed repeated comparisons")
+    records=[run_probe() for _ in range(args.repeats)]
+    if args.repeats == 1:
+        result=records[0]
+        path=Path("d15-cpu-worker-probe-213.json")
+    else:
+        assert len({r["native_state_sha256"] for r in records}) == 1
+        serial=median(r["serial_seconds"] for r in records)
+        parallel=median(r["parallel_two_workers_seconds"] for r in records)
+        budget_ok=all(
+            r["measured_parent_rss_bytes"]+r["max_two_worker_reported_rss_bytes"]
+            <= r["budget_mib"]*1024*1024 for r in records
+        )
+        result={
+            "issue":213,"fixed_replays":3,
+            "sha":records[0]["native_state_sha256"],
+            "serial_median_seconds":serial,
+            "parallel_median_seconds":parallel,
+            "verdict":("CANDIDATE_NOT_ENABLED" if budget_ok and parallel<0.9*serial
+                       else "DO_NOT_ADOPT"),
+            "records":records,"selection_exposed":False,
+            "generalization_claim":False,
+        }
+        path=Path("d15-cpu-worker-three-repeats-213.json")
+    path.write_text(json.dumps(result,indent=2,sort_keys=True)+"\\n",encoding="utf-8")
     print(json.dumps(result,sort_keys=True),flush=True)
 
 
