@@ -114,7 +114,23 @@ The local-FREE-relay, transfer-off and read-off interventions yielded 0/24
 long-horizon recoveries; actual downstream latent effects were 0/24.
 This isolates an intervention-responsive *write pathway*, not saturation
 alone, not readout, robust TEST-ST-012 L3 acceptance or autonomous learning.
-No Phase H, R2, P6.10, L4+ or production promotion is authorized by this result.
+R1 alone did not authorize Phase H, R2, P6.10, L4+ or production promotion.
+
+A new explicitly authorized and separately frozen R2 write-rule child
+**#175** / research **PR #176** followed on an independent seed pool
+544..1023. With 16 h0-qualified teacher-trace positives and 8 clean
+negative sentinels, deterministic replay, raw-reference parity and
+24/24 validated case evidence (Action `37950076024`; aggregate digest
+`ff3d8292049e508d56ae117d4027ea371583226efc53ecb7d57aaad88582bc7f`),
+the h+1000 B/H trace contrast was **0/16 native, 10/16 unit_add,
+1/16 empty_site, 1/16 half_ceiling**. unit_add was 10 net rescues
+against unchanged reference but failed the frozen >=12/16 gate; no
+independently certified original-carrier transfer/turnover or latent
+downstream effect was established. R2 therefore completed
+**CHANGE_PATH_NO_R2_FULL_ACCEPTANCE**, without any R3/Phase H permission,
+production switch or learning claim. Accepted research PR #176 merged
+as `90e41860933c59abee8d3f1ea8d68ba5c0e0d92e`.
+
 
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
@@ -287,12 +303,14 @@ success claim.
   demonstrated one turnover witness, but only 1/12 primary cases remained
   teacher-specific at +1000 versus the required >=8/12.
 
-Next frontier: **R1 causal child #172 concluded CAUSE-SUPPORTED only for the
-generic post-h0 write pathway** after #167's `HOLD-UNRESOLVED` diagnosis.
-That bounded intervention result supplies a prospective R2 investigation
-axis, but neither it nor #140/#159 failure selects a new active physical
-memory profile or production implementation owner. R2 needs a separately
-authorized and predeclared implementation/research task.
-`learning_claim=false`, inert production defaults, the P6.10+ freeze and L4
-separation remain authoritative. #93 remains a separate
-performance/architecture workstream.
+Next frontier: R1 #172 identified the ongoing generic trace-write pathway
+as intervention-responsive; follow-up independent R2 #175 tested the
+cause-matched local WRITE axis and terminated `CHANGE_PATH`. Even its
+best unit-add rule only retained 10/16 h+1000 B/H content distinctions,
+below 12/16, with no certified inter-carrier content provenance or
+downstream latent response. No R3, new accepted profile, automatic
+Phase H or learning status is justified. A **new, separately frozen
+narrow causal/architecture question**, not retuning R2 or touching
+held-out seeds, is the legitimate research route if continuing.
+`learning_claim=false`, inert production defaults, P6.10+ freeze and
+L4 separation remain authoritative; #93 separate.
