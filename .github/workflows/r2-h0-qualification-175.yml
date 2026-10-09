@@ -1,0 +1,41 @@
+name: R2 H0-Only Independent Cohort Qualification #175
+
+on:
+  pull_request:
+    paths:
+      - "research/r2_write_rules_175.py"
+      - "tests/test_r2_write_rules_175.py"
+      - ".github/workflows/r2-h0-qualification-175.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  h0_only_qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: R2 no-results physical operator and source-integrity tests
+        run: python -m unittest discover -s tests -p 'test_r2_write_rules_175.py' -v
+      - name: R2 independent H0-only frozen-roster qualification, twice
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.r2_write_rules_175 --qualify --output r2/qualification.json
+          python -m research.r2_write_rules_175 --qualify --output r2/qualification-repeat.json
+          cmp r2/qualification.json r2/qualification-repeat.json
+          cat r2/qualification.json
+          printf 'exact-head=%s\n' "$SOURCE_SHA" > r2/head.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r2-h0-only-qualification
+          path: |
+            r2/qualification.json
+            r2/head.txt
+          if-no-files-found: error
+          retention-days: 30
