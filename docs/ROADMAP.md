@@ -303,14 +303,19 @@ success claim.
   demonstrated one turnover witness, but only 1/12 primary cases remained
   teacher-specific at +1000 versus the required >=8/12.
 
-Next frontier: R1 #172 identified the ongoing generic trace-write pathway
-as intervention-responsive; follow-up independent R2 #175 tested the
-cause-matched local WRITE axis and terminated `CHANGE_PATH`. Even its
-best unit-add rule only retained 10/16 h+1000 B/H content distinctions,
-below 12/16, with no certified inter-carrier content provenance or
-downstream latent response. No R3, new accepted profile, automatic
-Phase H or learning status is justified. A **new, separately frozen
-narrow causal/architecture question**, not retuning R2 or touching
-held-out seeds, is the legitimate research route if continuing.
-`learning_claim=false`, inert production defaults, P6.10+ freeze and
-L4 separation remain authoritative; #93 separate.
+Next frontier: R1 #172 established that continuing generic trace writes
+are intervention-responsive; independent bounded R2 #175 tested the
+physical WRITE rule and ended `CHANGE_PATH` (best unit_add10/16 vs
+required>=12/16, zero certified physical carrier handoffs).
+Subsequent **D4 #178** examined the *same, outcome-exposed* R2 cohort
+using a nonmutating stage observer (24/24 valid, Action 37952291383).
+The six last content-contrast losses were all localized to the
+**post-decay / end-of-step pending-FREE stage**, not to the write or
+transfer stage in that final-loss generation; this is only an
+exploratory association, not an independently confirmed causal root.
+Next legitimate work is a **new separately frozen, prospective
+final-FREE / physical handoff causal question** with independent data,
+not reopening R2 thresholds or touching R3/old Phase-H held-out.
+No R3, new accepted profile, learning or autonomous behavior justified.
+`learning_claim=false`, inert production defaults, P6.10+ freeze,
+L4 separation and #93 separation remain authoritative.
