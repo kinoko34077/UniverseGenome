@@ -1,0 +1,73 @@
+name: D4 Residual Unit-Write Stage Audit #178
+
+on:
+  pull_request:
+    paths:
+      - "research/d4_residual_stage_178.py"
+      - "tests/test_d4_residual_stage_178.py"
+      - ".github/workflows/d4-residual-stage-178.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  d4_cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0,1,2,3,4,5,6,7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Frozen R2 exposed-cohort integrity and synthetic stage-boundary tests
+        run: python -m unittest discover -s tests -p 'test_d4_residual_stage_178.py' -v
+      - name: Observe matched event stages without modifying physics
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          python -m research.d4_residual_stage_178 \
+            --shard "$SHARD" \
+            --source-sha "$SOURCE_SHA" \
+            --output "d4/d4-shard-$SHARD.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d4-case-${{ matrix.shard }}
+          path: d4/d4-shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+  d4_aggregate:
+    needs: d4_cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: d4-case-*
+          path: d4/incoming
+          merge-multiple: true
+      - name: Validate 24/24 observer-parity, all negative sentinels and outcome-exposed stage statistics
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.d4_residual_stage_178 \
+            --aggregate d4/incoming \
+            --source-sha "$SOURCE_SHA" \
+            --output d4/summary.json
+          cat d4/summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d4-exploratory-stage-summary
+          path: d4/summary.json
+          if-no-files-found: error
+          retention-days: 30
