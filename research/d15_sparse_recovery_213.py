@@ -232,6 +232,7 @@ class SparseEvaluationJournal:
                         raise JournalIntegrityError("journal order/chain integrity failed")
                     previous = checksum
                     expected_index += length
+                    packet["checksum"] = checksum
                     patches.append(packet)
                 except (OSError, ValueError, KeyError, TypeError) as exc:
                     if not salvage_last or i != len(files)-1:
