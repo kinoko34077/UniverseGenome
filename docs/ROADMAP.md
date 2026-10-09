@@ -467,6 +467,32 @@ histories before asserting the bottleneck caused the observed
 zero replacements; do not force adaptation or diversity bonuses
 based on synthetic cases.
 
+D12 **#202 / research PR #203** verified that the original
+D9 no-selection observation was a **pre-eligibility time window**,
+not measured diversity maintenance during selection. Under the
+identical frozen native default 128-world, search-only seed16384,
+four real Outer steps, a read-only per-slot observer reproduced
+the **full original D9 case digest**
+`3e6162f8af56d0c802b02fa7e73df567dd7365bafc09fb42917ceb1815caf721`
+and 0..4 real checkpoints. All four category-local strata were
+`GROWTH_HISTORY_INCOMPLETE` throughout: no native prune
+candidate/replacement or absolute-failure route was observed.
+Default training advances 14 physical generations per Outer step,
+so after step4 physical generation56 is short of the first
+growth comparison checkpoint128, and four complete growth
+windows cannot be present. Source-bound scientific Action
+`37971539627` passed all guards; artifact `11638049119`,
+D12 report digest
+`024b4938da6e606434829382b80ad002931313ff201a52cc6ff01389eafb0d61`.
+This is **not** evidence that the optimizer never selects;
+it neither demonstrates selection-pressure genetic diversity nor
+independent held-out task generalization. Actual active
+selection/evolution requires a separately bounded plan with
+real replacement exposure. D13 #204 separately owns
+user-authorized flexible, budgeted Outer research execution;
+it does not retroactively change this frozen D12 result or
+the current fixed legacy population contract.
+
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
