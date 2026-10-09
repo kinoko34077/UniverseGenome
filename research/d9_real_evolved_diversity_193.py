@@ -131,31 +131,77 @@ def trajectory(base_seed:int)->dict[str,Any]:
     return result
 
 
+
+def aggregate(folder:Path,source_sha:str)->dict[str,Any]:
+    if len(source_sha)!=40 or any(ch not in "0123456789abcdef" for ch in source_sha):
+        raise ValueError("D9 invalid source SHA")
+    expected=("run-16384-1.json","run-16384-2.json","run-32768-1.json")
+    paths=sorted(p.name for p in folder.glob("run-*.json"))
+    if paths!=sorted(expected):
+        raise ValueError("D9 exactly three frozen runs required")
+    runs={}
+    for name in expected:
+        case=json.loads((folder/name).read_text(encoding="utf-8"))
+        checksum=case.pop("digest",None)
+        if digest(case)!=checksum or case["source_sha"]!=source_sha or case["protocol_digest"]!=digest(PROTOCOL):
+            raise ValueError("D9 source/frozen protocol/report checksum drift")
+        if case["base_seed"]!=int(name.split("-")[1]) or case["risk"]["overfitting_measured"] or case["learning_claim"]:
+            raise ValueError("D9 roles or overfit classification drift")
+        if len(case["records"])!=5 or [c["generation"] for c in case["records"]]!=[0,1,2,3,4]:
+            raise ValueError("D9 incomplete actual four-step optimizer")
+        case["digest"]=checksum
+        runs[name]=case
+    if runs["run-16384-1.json"]!=runs["run-16384-2.json"]:
+        raise ValueError("D9 duplicate native optimizer replay mismatch")
+    scores={str(seed):runs["run-"+str(seed)+"-1.json"]["risk"]
+            for seed in START_SEEDS}
+    out={
+        "schema_version":1,"issue":ISSUE,"source_sha":source_sha,
+        "protocol_digest":digest(PROTOCOL),
+        "cases":{name:case["digest"] for name,case in runs.items()},
+        "exact_duplicate_replay":True,
+        "outcomes":scores,
+        "classification":"EXPLORATORY_SHORT_EVOLVED_SERIES_NO_HELDOUT_INFERENCE",
+        "overfitting_measured":False,
+        "long_term_diversity_guaranteed":False,
+        "learning_claim":False,
+    }
+    out["digest"]=digest(out)
+    return out
+
+
 def main()->None:
     p=argparse.ArgumentParser()
-    p.add_argument("--base-seed",type=int,required=True)
+    p.add_argument("--base-seed",type=int)
+    p.add_argument("--aggregate",type=Path)
     p.add_argument("--source-sha",required=True)
     p.add_argument("--output",type=Path,required=True)
     args=p.parse_args()
     if len(args.source_sha)!=40 or any(ch not in "0123456789abcdef" for ch in args.source_sha):
         p.error("source-sha must be 40 hex characters")
-    report=trajectory(args.base_seed)
-    report["source_sha"]=args.source_sha
-    report.pop("digest")
-    report["digest"]=digest(report)
+    if (args.base_seed is None)==(args.aggregate is None):
+        p.error("exactly one of --base-seed or --aggregate")
+    if args.aggregate is not None:
+        report=aggregate(args.aggregate,args.source_sha)
+        output={"digest":report["digest"],"outcomes":report["outcomes"],
+                "replay":report["exact_duplicate_replay"],
+                "classification":report["classification"]}
+    else:
+        report=trajectory(args.base_seed)
+        report["source_sha"]=args.source_sha
+        report.pop("digest")
+        report["digest"]=digest(report)
+        output={"base_seed":args.base_seed,"digest":report["digest"],
+                "risk":report["risk"],
+                "per_category":{k:[{"generation":r["generation"],
+                                    "unique":r["strata"][k]["unique_genomes"],
+                                    "dominant":r["strata"][k]["dominant_genome_share"],
+                                    "effective":r["strata"][k]["shannon_effective_genomes"]}
+                                   for r in report["records"]]
+                                for k in CATEGORY_OPERATORS}}
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(report,sort_keys=True,separators=(",",":"))+"\n",encoding="utf-8")
-    print(json.dumps({
-        "base_seed":args.base_seed,
-        "digest":report["digest"],
-        "risk":report["risk"],
-        "per_category":{k:[{"generation":r["generation"],
-                            "unique":r["strata"][k]["unique_genomes"],
-                            "dominant":r["strata"][k]["dominant_genome_share"],
-                            "effective":r["strata"][k]["shannon_effective_genomes"]}
-                           for r in report["records"]]
-                        for k in CATEGORY_OPERATORS}
-    },sort_keys=True),flush=True)
+    print(json.dumps(output,sort_keys=True),flush=True)
 
 
 if __name__=="__main__":
