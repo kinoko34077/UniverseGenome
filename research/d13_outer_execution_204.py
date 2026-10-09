@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 import os
+import signal
 from pathlib import Path
 import time
 from typing import Any
@@ -74,18 +75,19 @@ class OuterResearchPlan:
             raise ValueError("D13 estimated world rounds exceed hard limit")
         # A conservative provision for repeated disposable clone evaluation.
         # The count is an admission estimate, not measured native CPU cycles.
-        mapping_train=sum(
-            (len(m.input_bytes)*experiment.byte_hold_generations
-             + (len(m.input_bytes)-1)*experiment.inter_input_generations
-             + experiment.byte_gap_generations
-             + experiment.teacher_delay_generations
-             + len(m.output_bytes if getattr(m,"output_bytes",()) else
-                   (m.output_byte,)*experiment.output_event_count)
-             + max(0,experiment.output_event_count-1)*
-               max(0,experiment.output_event_interval_generations-1)
-             + 1)
-            for m in experiment.mappings
-        )*experiment.teacher_repetitions
+        def mapping_generations(m:Any)->int:
+            inputs=len(m.input_bytes)
+            outputs=len(m.output_bytes) if getattr(m,"output_bytes",()) else experiment.output_event_count
+            return (
+                inputs*experiment.byte_hold_generations
+                + max(0,inputs-1)*experiment.inter_input_generations
+                + experiment.byte_gap_generations
+                + experiment.teacher_delay_generations
+                + outputs
+                + max(0,outputs-1)*max(0,experiment.output_event_interval_generations-1)
+                + 1  # null teacher event
+            )
+        mapping_train=sum(mapping_generations(m) for m in experiment.mappings)*experiment.teacher_repetitions
         cost=world_rounds*(mapping_train+16*experiment.evaluation_timeout_generations)
         if cost>MAX_WORK_UNITS:
             raise ValueError("D13 estimated physical evaluation work exceeds fixed budget")
@@ -228,7 +230,22 @@ def main()->None:
     args=p.parse_args()
     plan=OuterResearchPlan(args.mode,args.base_seed,args.outer_steps,args.evaluated_worlds,
                            args.worlds_per_batch,args.max_wall_seconds)
-    report=execute(plan,snapshot_out=args.snapshot_out,resume_snapshot=args.resume_snapshot)
+    # Native round calls are not interruptible by the soft between-round check.
+    # On POSIX, enforce a real whole-process wall timer as a second safety layer.
+    can_alarm=hasattr(signal,"setitimer") and hasattr(signal,"SIGALRM")
+    previous_handler=None
+    if can_alarm:
+        def _timeout(_signum: int, _frame: Any)->None:
+            raise TimeoutError("D13 CLI wall-clock budget expired; no partially evaluated round checkpoint committed")
+        previous_handler=signal.getsignal(signal.SIGALRM)
+        signal.signal(signal.SIGALRM,_timeout)
+        signal.setitimer(signal.ITIMER_REAL,plan.max_wall_seconds)
+    try:
+        report=execute(plan,snapshot_out=args.snapshot_out,resume_snapshot=args.resume_snapshot)
+    finally:
+        if can_alarm:
+            signal.setitimer(signal.ITIMER_REAL,0)
+            signal.signal(signal.SIGALRM,previous_handler)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(report,sort_keys=True,separators=(",",":"))+"\n",encoding="utf-8")
     print(json.dumps({"issue":204,"mode":plan.mode,"digest":report["digest"],
