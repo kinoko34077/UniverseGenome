@@ -171,5 +171,25 @@ class RecoveryTests(unittest.TestCase):
             self.assertLess(sum(p.stat().st_size for p in root.iterdir()),8*1024*1024)
 
 
+    def test_orphan_collision_does_not_block_first_resumed_commit(self):
+        """Power-loss after staging a patch must not obstruct its first replay."""
+        with TemporaryDirectory() as directory:
+            root=Path(directory)
+            journal=SparseEvaluationJournal.create(
+                root,base_snapshot=fixture(),source_commit="same")
+            journal.commit([{"index":0,"state":{"generation":5}}])
+            orphan=root/"batch-00001.json.tmp"
+            orphan.write_bytes(b"interrupted writer left this staging file")
+            recovered=SparseEvaluationJournal.open(root,source_commit="same")
+            self.assertEqual(recovered.recover().next_index,1)
+            recovered.commit([{"index":1,"state":{"generation":5}}])
+            newview=SparseEvaluationJournal.open(root,source_commit="same").recover()
+            self.assertEqual(newview.next_index,2)
+            self.assertEqual(
+                [newview.snapshot["slots"][i]["state"]["generation"] for i in range(2)],
+                [5,5],
+            )
+
+
 if __name__=="__main__":
     unittest.main()
