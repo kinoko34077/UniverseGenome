@@ -49,5 +49,7 @@ jobs:
         if: always()
         with:
           name: d15-cpu-worker-probe-213
-          path: |\n            d15-cpu-worker-probe-213.json\n            d15-cpu-worker-three-repeats-213.json
+          path: |
+            d15-cpu-worker-probe-213.json
+            d15-cpu-worker-three-repeats-213.json
           if-no-files-found: warn
