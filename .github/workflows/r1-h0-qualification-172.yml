@@ -1,0 +1,41 @@
+name: R1 H0-Only Cohort Qualification #172
+
+on:
+  pull_request:
+    paths:
+      - "research/r1_causal_isolation_172.py"
+      - "tests/test_r1_causal_isolation_172.py"
+      - ".github/workflows/r1-h0-qualification-172.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Isolated R1 synthetic/operator tests only
+        run: python -m unittest discover -s tests -p 'test_r1_causal_isolation_172.py' -v
+      - name: H0-only qualification reproducibility (no post-h0 evidence)
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.r1_causal_isolation_172 --qualify --output r1/qualification.json
+          python -m research.r1_causal_isolation_172 --qualify --output r1/qualification-repeat.json
+          cmp r1/qualification.json r1/qualification-repeat.json
+          cat r1/qualification.json
+          printf 'exact-head=%s\n' "$SOURCE_SHA" > r1/head.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r1-h0-only-qualification
+          path: |
+            r1/qualification.json
+            r1/head.txt
+          if-no-files-found: error
+          retention-days: 30
