@@ -10,6 +10,7 @@ Linux / POSIX only (memory/cgroup and advisory single-writer lock).
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import json
 from pathlib import Path
 import time
@@ -36,6 +37,7 @@ def execute_selected_round(
     base_seed: int = 0,
     experiment: ExperimentConfig | None = None,
     base_config: PhysicsConfig | None = None,
+    base_snapshot: dict[str, Any] | None = None,
     evaluation_batch_size: int = 16,
     memory_mib: int = 1536,
     checkpoint_policy: CheckpointPolicy | None = None,
@@ -52,6 +54,8 @@ def execute_selected_round(
     """
     if not isinstance(source_commit, str) or not source_commit.strip():
         raise ValueError("D15 source_commit is required")
+    if base_snapshot is not None and not isinstance(base_snapshot, dict):
+        raise ValueError("D15 completed previous-round base_snapshot must be a dictionary")
     if type(evaluation_batch_size) is not int or not 1 <= evaluation_batch_size <= SLOTS:
         raise ValueError("D15 selected evaluation_batch_size must be 1..128 exact int")
     if type(base_seed) is not int or not 0 <= base_seed <= 0x7FFFFFFF:
@@ -114,12 +118,21 @@ def execute_selected_round(
             sample_budget()
             if (root / "manifest.json").exists():
                 journal = SparseEvaluationJournal.open(root, source_commit=source_commit)
+                if base_snapshot is not None:
+                    supplied_hash = hashlib.sha256(json.dumps(
+                        base_snapshot, ensure_ascii=False, sort_keys=True,
+                        separators=(",", ":"),
+                    ).encode("utf-8")).hexdigest()
+                    if supplied_hash != journal.manifest["base_sha256"]:
+                        raise JournalIntegrityError("D15 supplied completed-round base disagrees with journal")
             else:
                 if root.exists() and any(root.iterdir()):
                     raise JournalIntegrityError("incomplete journal initialization requires manual rejection")
-                opt = SteadyStateOptimizer.from_defaults(
-                    base_seed=base_seed, experiment=protocol, base_config=physics,
-                )
+                opt = (SteadyStateOptimizer.from_snapshot(base_snapshot)
+                       if base_snapshot is not None else
+                       SteadyStateOptimizer.from_defaults(
+                           base_seed=base_seed, experiment=protocol, base_config=physics,
+                       ))
                 verify_native_config(opt)
                 sample_budget()
                 journal = SparseEvaluationJournal.create(
