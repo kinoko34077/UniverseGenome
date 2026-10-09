@@ -324,9 +324,23 @@ topology; hence an extra local end-stage relay in the observed six
 failures is `INFEASIBLE / CHANGE_PATH`, not an independently causal
 repair. Research PR #182 accepted on main
 `e4dd70f8e39f4f32c0b505180a60a4a166586aaf`.
-A next bounded research question would have to establish **genuinely
-different physical connectivity or earlier transfer opportunities**
-before any independent h0-only cohort or prospective post-h0 causal test.
+D6 **#184** then resolved the narrower *earlier contact* question
+on the same outcome-exposed R2 cohort. Its native transfer observer
+(Action `37960189337`) validated 24/24 cases with exact event
+replay, uninstrumented parity and clean sentinels. **9/10** last-loss
+donor branch episodes had physically selected earlier contact **and
+actual positive conservative trace transfer**; **2/10** had surviving
+recipient life epochs, both from the *same seed575 B/H pair* each
+receiving an identical 3 units at +61, while teacher content
+difference still disappeared at +724. Therefore prior physical
+transport exists, but no demonstrated teacher-specific persistent
+information path or latent readout. No R3, Phase H, new memory
+candidate or `learning_claim=true` follows. A further causal question
+would require strict B/H-specific content lineage into recipient
+post-transfer physics, then a separately preregistered intervention
+with a truly independent cohort, not another scalar parameter sweep.
+Research PR #185 accepted main
+`d59d712ba04f00849c0b92acb384d1f2685a2390`.
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
