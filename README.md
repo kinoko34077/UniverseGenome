@@ -95,8 +95,25 @@ harms, 8/8 clean negatives and Holm-adjusted exact paired p=0.000732421875
 rescued 0/24; read-off produced no measured downstream latent effect.
 R1's bounded result is **CAUSE-SUPPORTED for ongoing generic trace writes**,
 not isolated saturation, uniquely sufficient root-cause proof, L3/L4
-capability acceptance or learning. No R2 research, production default
-change or Phase H execution follows automatically; `learning_claim=false`.
+capability acceptance or learning. R1 itself never authorized a production
+change, Phase H execution or `learning_claim=true`.
+
+The subsequently authorized independent R2 child **#175**, research PR **#176**,
+tested four predeclared anonymous local trace-WRITE rules on a separate
+h0-only-qualified 16-positive/8-negative cohort (seed pool 544..1023).
+Frozen protocol digest `3087009065925887d9db770d3d9bc216db1ff2deba0bc730a2bbdf0a8d9ba543`;
+24/24 exact-head cases passed deterministic replay, native-baseline parity,
+and all 8/8 negative controls (Action `37950076024`, summary
+`ff3d8292049e508d56ae117d4027ea371583226efc53ecb7d57aaad88582bc7f`).
+At +1000, unchanged additive write 0/16, local unit_add **10/16**,
+empty_site 1/16, half_ceiling 1/16; unit_add net paired improvement
+10/16 but **below predeclared 12/16 minimum**. No downstream latent
+response effect or independently certified original-carrier content
+handoff was shown. R2 terminal **CHANGE_PATH / NO R2 CANDIDATE ACCEPTED**;
+unit_add is an exploratory lead, not an accepted L3/Phase H profile.
+Research PR #176 accepted main `90e41860933c59abee8d3f1ea8d68ba5c0e0d92e`.
+Production D1 remains inert `(0,0,0,0,8)`, `learning_claim=false`,
+and the reserved Phase H cohort and L4/P6.10+ gates remain frozen.
 
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
