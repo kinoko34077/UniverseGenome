@@ -410,6 +410,33 @@ remain separate necessary evidence. D9 Outer diversity #193 is
 unrelated; R2 acceptance failed and all R3/Phase H and D1 production
 restrictions remain unchanged.
 
+D9 **#193 / research PR #194** executed a **real** legacy Outer
+optimizer but did **not** reach evolutionary replacement in its
+predeclared bounded horizon. Frozen search seed bases16384 and32768
+each ran four actual native optimizer steps (checkpoints0..4) on
+fresh disposable 128-slot populations, with an exact duplicate full
+replay of seed16384. Scientific Action `37966342059` passed all
+three seeded runs and its checksum/replay aggregate (artifact
+`11635405921`, digest
+`72249d9592a40d32b991caf340156a17f7c6a2363daa81176807c855d9624722`).
+Both distinct exploratory seeds, all four category-local 32-slot
+strata, remained at initial `unique_genomes=8`,
+dominant-genotype share `0.125`, Shannon effective count `8.0`
+at all five checkpoints, with **0 actual replacements and
+0 mutation-child allocations**. Formal scientific result
+`SELECTION_NOT_EXPOSED / CHANGE_PATH`, *not* a demonstration
+that genetic diversity survives meaningful selection, not
+long-term convergence, and not evidence for or against
+overfitting/held-out generalization. The frozen seed16384
+replay outputs matched exactly. Do not extend this same
+already-exposed 4-step run after inspecting its outcome.
+The specific next research question is whether native category-local
+pruning eligibility (four growth windows, category median thresholds,
+absolute-failure route, parent availability) can ever open the
+replacement gate under the observed flat objective; any new
+diagnostic uses a separately frozen cohort/fixture and cannot
+silently revise accepted selection policy or learner criteria.
+
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
