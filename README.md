@@ -163,6 +163,25 @@ information lineage or downstream latent readout has been shown.
 The cases are exploratory, not independent replication or an accepted
 R3/L3/learning profile. Production D1 remains inert.
 
+D7 **#187 / research PR #188** examined the already outcome-exposed
+seed575 B/H real surviving receiver (slot6 epoch0) with a no-teacher
+control and frozen negative seed545. The exact-head read-only
+1000-generation, all-stage physical observation passed replay,
+original-unit_add snapshot parity and negative sentinel tests
+(scientific Action `37961606736`, artifact `11632150239`,
+digest `0650e05be640a34cc026d3993ba9644f60e2d93f411344c2a0495cc091d62d4b`).
+Native donor15→receiver6 transferred **3 trace units in both B/H**
+at +61; that receiver survived donor FREE at +724 and h+1000, yet
+**B/H receiver trace values remained equal at every stage for all
+1000 generations**. At +61 after transfer B/H=29 vs no-teacher=18;
+at +724 B/H=67/control=65; at +1000 B/H=80/control=79.
+This shows *teacher presence* can affect that scalar in this one case,
+but **not teacher B-vs-H content distinction**; no causal readout,
+independently preserved information or L3/learning claim follows.
+Research-only PR #188 merged main
+`7aa9882b19e10b4d43fb923a7b6b00838a378fa8`; `learning_claim=false`
+and inert production D1 are unchanged.
+
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
 reconciliation #61 is complete via PR #74. No unresolved remediation owner remains. The fresh #60 rerun passed on repaired
