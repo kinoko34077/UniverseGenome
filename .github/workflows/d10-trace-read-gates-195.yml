@@ -1,0 +1,38 @@
+name: D10 Native Slow-Trace Read Gates #195
+
+on:
+  pull_request:
+    paths:
+      - "research/d10_trace_read_gates_195.py"
+      - "tests/test_d10_trace_read_gates_195.py"
+      - ".github/workflows/d10-trace-read-gates-195.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native_read_gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Four strict synthetic accepted-native quantization/reader tests
+        run: python -m unittest discover -s tests -p 'test_d10_trace_read_gates_195.py' -v
+      - name: Source-bound deterministic physical read-opportunity diagnostic (no teacher, no learning)
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.d10_trace_read_gates_195 \
+            --source-sha "$SOURCE_SHA" \
+            --output d10/native-read-gates.json
+          cat d10/native-read-gates.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d10-native-trace-read-thresholds
+          path: d10/native-read-gates.json
+          if-no-files-found: error
+          retention-days: 30
