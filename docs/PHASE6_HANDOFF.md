@@ -58,9 +58,26 @@ Rate0 sensitivity retained 11/24. FREE-local-relay, transfer-off and
 read-off rescued 0/24; no factor produced observed downstream latent
 differences. R1 classified this **CAUSE-SUPPORTED for the general ongoing
 write pathway**, without isolating a saturation/clamp-only cause.
-This is **not** an accepted L3/turnover, L4 readout, L7 learning, Phase H
-or R2 decision; production trace defaults stay inert and
-`learning_claim=false`.
+R1 alone is **not** accepted L3/turnover, L4 readout, L7 learning,
+Phase H or a production profile; D1 defaults stayed inert.
+
+Independently authorized **R2 #175 / accepted research PR #176**
+tested four preregistered generic local write operators including native
+baseline. The pre-outcome h0-only-qualified cohort was 16 positives and
+8 negatives, disjoint from all previous runs and reserved Phase H.
+Machine manifest digest `3087009065925887d9db770d3d9bc216db1ff2deba0bc730a2bbdf0a8d9ba543`;
+Action `37950076024` accepted all 24 cases and all 8 sentinels,
+deterministic replay and sham/raw parity. B/H contrast at +1000 was
+native 0/16; unit_add 10/16; empty_site 1/16; half_ceiling 1/16.
+Unit-add's 10/16 exclusive net gain and exploratory paired p
+0.0009765625 did **not** meet the independent predeclared >=12/16
+retention gate; no trace-dependent downstream latent effect or
+independently certified original-carrier turnover provenance was
+established. Its outcome was **R2 CHANGE_PATH**, no physical candidate
+promoted. R2 research PR #176 accepted main
+`90e41860933c59abee8d3f1ea8d68ba5c0e0d92e`.
+No R3/Phase H/READ L4 progression, no default promotion, no
+`learning_claim=true`; production inert tuple `(0,0,0,0,8)` remains.
 
 **No automatic P6.10 is authorized.** P6.10 and L4+ remain
 separately gated.
