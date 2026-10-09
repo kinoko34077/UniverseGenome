@@ -97,6 +97,29 @@ or improvement of the rejected R2 numerical gate. A new prospective,
 separately frozen physical final-FREE causal question is needed before
 promoting any memory profile; R3 and all held-out evaluation are blocked.
 
+D5 feasibility child **#181 / research PR #182** first tested whether
+that exact final FREE stage even offered physically legal local recipients
+for new bounded discharge. The **same** outcome-exposed R2 cohort
+(16 positive + 8 negative; no new prospective seeds) passed 24/24
+double replay, original-unit_add authoritative parity and sentinel
+checks (Action `37958510937`, artifact `11630096017`,
+aggregate digest `918e4385ce712b11b960f6afe982edc7e4d9fa3919952742a9548b395935d345`).
+The six terminal loss epochs contained **10 combined B/H
+content-differential donor pending-FREE events**; every donor was a
+nonzero-trace BLACK_HOLE but had **0 ACTIVE recipients overlapping its
+physical footprint**: 0/10 eligible terminal transfers. Other
+retaining cases had sparse local eligibility on other generations, so
+the finding is specific to these six observed losses, not universal
+impossibility. Native `_discharge_slow_trace` already precedes terminal
+FREE, and the earlier R1 FREE-local-relay found 0/24 rescue.
+D5.1 therefore classified same-footprint final FREE extra-relay
+`INFEASIBLE / CHANGE_PATH`; no prospective D5 4096..8191 run,
+new candidate, R3 or Phase H. A future independently frozen question
+would need a different physical locality/timing mechanism and genuine
+content-transfer provenance, not repeat this terminal no-recipient
+action or promote `learning_claim=true`. Accepted research main
+`e4dd70f8e39f4f32c0b505180a60a4a166586aaf`.
+
 **No automatic P6.10 is authorized.** P6.10 and L4+ remain
 separately gated.
 
