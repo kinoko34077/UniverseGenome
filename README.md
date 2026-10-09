@@ -128,6 +128,24 @@ where native `pending_free` may free BLACK_HOLE cells (generations
 a proven causal information handoff, an L3 gate, or a new production rule.
 No R3 advancement follows.
 
+D5 **#181 / research PR #182** first checked the necessary physical
+recipient geometry before proposing any new FREE intervention. On the same
+outcome-exposed 16+8 R2 cases, frozen event-stage observation validated
+**24/24** with replay, original-operator parity and 8/8 clean negatives
+(Action `37958510937`; aggregate digest
+`918e4385ce712b11b960f6afe982edc7e4d9fa3919952742a9548b395935d345`).
+At the six D4 final-loss generations, the **10** B/H trace-differential
+pending-FREE donor events all had **0 overlapping ACTIVE recipients** in
+their physical footprint; transfer-eligible events were **0/10**.
+Other, still-retaining seeds did exhibit occasional contact opportunities,
+so this is a *specific terminal same-footprint relay infeasibility* finding,
+not proof that physical transfer is globally impossible. Native
+`_discharge_slow_trace` already executes before final FREE; no new causal
+intervention, independent D5 4096+ cohort or R3 was run.
+Consequently `D5.1 CHANGE_PATH`: redesign of genuinely different
+physical connectivity/timing requires its own frozen research question;
+`learning_claim=false`, production D1 remains inert.
+
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
 reconciliation #61 is complete via PR #74. No unresolved remediation owner remains. The fresh #60 rerun passed on repaired
