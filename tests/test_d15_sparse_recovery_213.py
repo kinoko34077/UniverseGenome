@@ -82,6 +82,37 @@ class RecoveryTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 j.commit_final(fixture())
 
+    def test_real_native_four_world_training_checkpoint_and_resume_identity(self):
+        # This exercises real slot-local physics and exact v7 snapshot restore.
+        # It is not yet a native selected mid-round restart implementation.
+        from core.experiment import ExperimentConfig
+        from search.evolution import SteadyStateOptimizer
+        from research.d8_genome_diversity_190 import digest
+
+        opt=SteadyStateOptimizer.from_defaults(
+            base_seed=0,experiment=ExperimentConfig(evaluation_timeout_generations=2))
+        with TemporaryDirectory() as directory:
+            j=SparseEvaluationJournal.create(
+                Path(directory),base_snapshot=opt.to_snapshot(),
+                source_commit="accepted-d13-native-128")
+            for i in range(0,4,2):
+                updated=[]
+                for slot in opt.slots[i:i+2]:
+                    opt._evaluate_slot(slot)
+                    updated.append(slot.to_dict())
+                j.commit(updated)
+            reconstructed=SparseEvaluationJournal.open(
+                Path(directory),source_commit="accepted-d13-native-128").recover()
+            self.assertEqual(reconstructed.next_index,4)
+            self.assertFalse(reconstructed.evaluation_complete)
+            self.assertEqual(digest(reconstructed.snapshot),digest(opt.to_snapshot()))
+            restored=SteadyStateOptimizer.from_snapshot(reconstructed.snapshot)
+            self.assertEqual(digest(restored.to_snapshot()),digest(opt.to_snapshot()))
+            # Recover and continue from the *first unfinished* physical world.
+            opt._evaluate_slot(opt.slots[4])
+            restored._evaluate_slot(restored.slots[4])
+            self.assertEqual(digest(restored.to_snapshot()),digest(opt.to_snapshot()))
+
     def test_foreign_source_or_modified_base_is_rejected(self):
         with TemporaryDirectory() as directory:
             root=Path(directory)
