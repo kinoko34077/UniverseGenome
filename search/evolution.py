@@ -1059,6 +1059,18 @@ class SteadyStateOptimizer:
                 self._evaluate_slot(slot)
                 evaluated_slots += 1
 
+        return self._finalize_evaluated_step(evaluated_slots=evaluated_slots, started=started)
+
+    def _finalize_evaluated_step(self, *, evaluated_slots: int, started: float) -> dict[str, Any]:
+        """Finish one fully evaluated native round via the original selection code.
+
+        Research crash recovery enters here only after authenticating all 128
+        ordered evaluated world slots. There is no alternative prune policy.
+        """
+        if type(evaluated_slots) is not int or evaluated_slots != OPTIMIZER_POPULATION_SIZE:
+            raise ValueError("native selection requires all 128 evaluated slots")
+        if len(self.slots) != OPTIMIZER_POPULATION_SIZE:
+            raise ValueError("native selection requires 128 authoritative slots")
         replacements: list[dict[str, Any]] = []
         pruned_count = 0
         for _stratum, local in self._comparison_strata():

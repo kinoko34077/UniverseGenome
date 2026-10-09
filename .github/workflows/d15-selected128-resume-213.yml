@@ -1,0 +1,33 @@
+name: D15 Native Selected128 Crash Resume Golden #213
+
+on:
+  pull_request:
+    paths:
+      - "search/evolution.py"
+      - "research/d15_selected_resume_213.py"
+      - "research/d15_selected_resource_probe_213.py"
+      - "tests/test_d15_selected_resume_213.py"
+      - ".github/workflows/d15-selected128-resume-213.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen_native_selected_restart:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: True 128-world native selection interrupted process and original strict golden parity
+        run: python -m unittest discover -s tests -p 'test_d15_selected_resume_213.py' -v
+      - name: Real selected128 source-bound RSS CPU disk and checkpoint cadence witness
+        run: python -m research.d15_selected_resource_probe_213 --batch 16 --memory-mib 1536 --output d15_selected_resource_report.json
+      - name: Archive bounded selected128 resource evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: d15-selected128-resource
+          path: d15_selected_resource_report.json
