@@ -1,0 +1,73 @@
+name: D5 Terminal-FREE Local Recipient Viability #181
+
+on:
+  pull_request:
+    paths:
+      - "research/d5_pending_free_viability_181.py"
+      - "tests/test_d5_pending_free_viability_181.py"
+      - ".github/workflows/d5-pending-free-viability-181.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  feasibility_cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0,1,2,3,4,5,6,7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Pure receiver geometry tests; frozen-exposed cohort only
+        run: python -m unittest discover -s tests -p 'test_d5_pending_free_viability_181.py' -v
+      - name: D5.1 exact-head after-decay terminal-FREE recipient observer
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          python -m research.d5_pending_free_viability_181 \
+            --shard "$SHARD" \
+            --source-sha "$SOURCE_SHA" \
+            --output "d5/d5-shard-$SHARD.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d5-viability-case-${{ matrix.shard }}
+          path: d5/d5-shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+  feasibility_aggregate:
+    needs: feasibility_cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: d5-viability-case-*
+          path: d5/incoming
+          merge-multiple: true
+      - name: Authenticate 24/24 and frozen D4 six last-loss windows
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.d5_pending_free_viability_181 \
+            --aggregate d5/incoming \
+            --source-sha "$SOURCE_SHA" \
+            --output d5/summary.json
+          cat d5/summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d5-exploratory-recipient-viability
+          path: d5/summary.json
+          if-no-files-found: error
+          retention-days: 30
