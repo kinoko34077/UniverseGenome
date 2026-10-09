@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import unittest
 
-from research.r1_causal_analysis_172 import _mcnemar_one_sided, _holm, shard_cases
+from research.r1_causal_analysis_172 import _mcnemar_one_sided, _holm, _wilson95, shard_cases
 
 
 class R1CausalAnalysisTests(unittest.TestCase):
@@ -18,6 +18,11 @@ class R1CausalAnalysisTests(unittest.TestCase):
         self.assertAlmostEqual(adjusted["write"],0.03)
         self.assertAlmostEqual(adjusted["free"],0.03)
         self.assertAlmostEqual(adjusted["transfer"],0.049)
+
+    def test_wilson95_bounds(self):
+        self.assertEqual(_wilson95(0,24)[0],0.0)
+        self.assertEqual(_wilson95(24,24)[1],1.0)
+        self.assertTrue(_wilson95(8,24)[0] < 8/24 < _wilson95(8,24)[1])
 
     def test_shards_disjoint_complete_and_no_reuse(self):
         frozen={"positive_seeds":list(range(160,184)),
