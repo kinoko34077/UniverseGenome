@@ -45,6 +45,23 @@ post-main CI `37724247269` SUCCESS; D3 disposition is
 was accepted; any future intervention requires an independently
 predeclared causal research child.
 
+R1 causal child **#172** / accepted research PR **#173** implemented
+research-only interventions against continued trace writes, local FREE
+relay, local transfer, and trace-dependent read bonus. Frozen independent
+h0-qualified 24 positive + 8 negative seeds at rates 256/0 produced
+64/64 valid exact-head cases (Action `37925171476`, artifact
+`11614007295`). The primary rate256 intervention **post-h0 generic
+trace write suppression** preserved B/H trace distinction at +1000 in
+**12/24** positives vs matched sham, with 0 sham-only harms, 8/8
+negative controls clean, Holm-adjusted exact paired p=0.000732421875.
+Rate0 sensitivity retained 11/24. FREE-local-relay, transfer-off and
+read-off rescued 0/24; no factor produced observed downstream latent
+differences. R1 classified this **CAUSE-SUPPORTED for the general ongoing
+write pathway**, without isolating a saturation/clamp-only cause.
+This is **not** an accepted L3/turnover, L4 readout, L7 learning, Phase H
+or R2 decision; production trace defaults stay inert and
+`learning_claim=false`.
+
 **No automatic P6.10 is authorized.** P6.10 and L4+ remain
 separately gated.
 

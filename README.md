@@ -83,6 +83,21 @@ has vanished. The diagnostic observations cannot identify one dominant
 causal loss mechanism; no new physics profile, Phase H route, L3 persistence
 claim or held-out post-h0 test is authorized.
 
+The separately authorized R1 intervention child **#172** / accepted PR **#173**
+subsequently tested independent h0-qualified 24 positive + 8 negative seeds
+at rates 256 (primary) and 0 (sensitivity), 64 exact-head validated cases.
+Frozen protocol and results are owned by #172; Action `37925171476`
+and aggregate artifact `11614007295` are valid. At +1000,
+research-only **post-h0 generic slow-trace write suppression** rescued
+teacher B/H trace distinction in **12/24** primary cases with 0 sham-only
+harms, 8/8 clean negatives and Holm-adjusted exact paired p=0.000732421875
+(11/24 sensitivity at decay 0). FREE-local-relay and transfer-off each
+rescued 0/24; read-off produced no measured downstream latent effect.
+R1's bounded result is **CAUSE-SUPPORTED for ongoing generic trace writes**,
+not isolated saturation, uniquely sufficient root-cause proof, L3/L4
+capability acceptance or learning. No R2 research, production default
+change or Phase H execution follows automatically; `learning_claim=false`.
+
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
 reconciliation #61 is complete via PR #74. No unresolved remediation owner remains. The fresh #60 rerun passed on repaired

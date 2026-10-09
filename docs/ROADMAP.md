@@ -102,6 +102,20 @@ contrast as the sole cause. **D3 terminal: HOLD-UNRESOLVED.**
 No active physics profile, new search axis, Phase H/held-out post-h0,
 L4/P6.10+ or learning claim follows from this child.
 
+Explicitly selected R1 causal research **#172** / PR **#173** is separately
+completed with **CAUSE-SUPPORTED (generic post-h0 write path only)**.
+A pre-outcome frozen 24-positive/8-negative cohort, each run at rates 256
+(primary) and 0 (sensitivity), yielded **64/64 valid exact-head cases**
+(Action `37925171476`, aggregate artifact `11614007295`). Suppressing
+generic continued writes after teacher h0 preserved +1000 B/H trace contrast
+in **12/24** positives, with 0 sham-only harms, 8/8 clean negatives and
+Holm-adjusted exact paired p=0.000732421875; decay0 sensitivity 11/24.
+The local-FREE-relay, transfer-off and read-off interventions yielded 0/24
+long-horizon recoveries; actual downstream latent effects were 0/24.
+This isolates an intervention-responsive *write pathway*, not saturation
+alone, not readout, robust TEST-ST-012 L3 acceptance or autonomous learning.
+No Phase H, R2, P6.10, L4+ or production promotion is authorized by this result.
+
 ## Gate 0 — Specification basis
 Status: accepted by Phase 0 specification reconciliation.
 
@@ -273,10 +287,12 @@ success claim.
   demonstrated one turnover witness, but only 1/12 primary cases remained
   teacher-specific at +1000 versus the required >=8/12.
 
-Next frontier: **new separately predeclared causal research decision not
-yet selected** after #167's `HOLD-UNRESOLVED` diagnosis.
-Neither #140/#159 failure nor #167 passive observation selects a second
-physical memory profile or production implementation owner.
+Next frontier: **R1 causal child #172 concluded CAUSE-SUPPORTED only for the
+generic post-h0 write pathway** after #167's `HOLD-UNRESOLVED` diagnosis.
+That bounded intervention result supplies a prospective R2 investigation
+axis, but neither it nor #140/#159 failure selects a new active physical
+memory profile or production implementation owner. R2 needs a separately
+authorized and predeclared implementation/research task.
 `learning_claim=false`, inert production defaults, the P6.10+ freeze and L4
 separation remain authoritative. #93 remains a separate
 performance/architecture workstream.
