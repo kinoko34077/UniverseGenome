@@ -61,8 +61,8 @@ class OuterResearchPlan:
         if not 1<=self.max_wall_seconds<=3600:
             raise ValueError("D13 max wall seconds must be 1..3600")
         if self.mode=="native_selection":
-            if self.evaluated_worlds!=128 or self.worlds_per_batch!=128:
-                raise ValueError("D13 native selection requires full legacy 128 worlds; batching is not implemented there")
+            if self.evaluated_worlds!=128 or not 1<=self.worlds_per_batch<=128:
+                raise ValueError("D14 native selection requires all legacy 128 worlds; batch size must be 1..128")
             resident=128
         else:
             if not 1<=self.worlds_per_batch<=min(self.evaluated_worlds,MAX_BATCH_WORLDS):
@@ -164,7 +164,7 @@ def execute(
         for _ in range(plan.outer_steps):
             if time.monotonic()-started>plan.max_wall_seconds:
                 raise TimeoutError("D13 wall budget expired between full native rounds; last complete snapshot retained")
-            result=optimizer.step()  # unmodified authoritative selection, 128 worlds
+            result=optimizer.step(evaluation_batch_size=plan.worlds_per_batch)  # full native selected 128 worlds
             if snapshot_out is not None:
                 _write_snapshot(snapshot_out,optimizer.to_snapshot())
             output["rounds"].append({
