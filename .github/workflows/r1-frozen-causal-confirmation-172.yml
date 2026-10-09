@@ -1,0 +1,70 @@
+name: R1 Frozen Causal Confirmation #172
+
+on:
+  pull_request:
+    paths:
+      - "research/artifacts/r1_frozen_172.json"
+
+permissions:
+  contents: read
+
+jobs:
+  causal-cases:
+    name: "R1 rate=${{ matrix.rate }} shard=${{ matrix.shard }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        rate: [0, 256]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Frozen R1 matched physical interventions, replay, raw-sham parity, negative controls
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -m research.r1_causal_analysis_172
+          --run-shard ${{ matrix.shard }}
+          --rate ${{ matrix.rate }}
+          --source-sha "$SOURCE_SHA"
+          --output-dir research-results/cases
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r1-case-${{ matrix.rate }}-${{ matrix.shard }}
+          path: research-results/cases/case-*.json
+          if-no-files-found: error
+          retention-days: 30
+
+  adjudicate:
+    name: R1 64-case manifest/causal adjudication
+    needs: causal-cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: r1-case-*
+          path: research-results/cases
+          merge-multiple: true
+      - name: Validate all 64 exact-head cases and frozen statistical decisions
+        env:
+          SOURCE_SHA: __HEAD_SHA_EXPR__
+        run: >-
+          python -m research.r1_causal_analysis_172
+          --aggregate-dir research-results/cases
+          --source-sha "$SOURCE_SHA"
+          --output research-results/r1-summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r1-validated-causal-summary
+          path: research-results/r1-summary.json
+          if-no-files-found: error
+          retention-days: 30
