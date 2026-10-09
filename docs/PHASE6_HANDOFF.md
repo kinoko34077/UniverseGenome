@@ -120,6 +120,29 @@ content-transfer provenance, not repeat this terminal no-recipient
 action or promote `learning_claim=true`. Accepted research main
 `e4dd70f8e39f4f32c0b505180a60a4a166586aaf`.
 
+D6 follow-on **#184 / research PR #185** tested actual *earlier*
+physically selected native trace-transfer events rather than inventing
+a new FREE-time receiver. The same exposed 16 positive + 8 negative
+R2 cases passed exact-head 24/24 deterministic event-history,
+uninstrumented unit_add authoritative-parity and negative-control
+checks (Action `37960189337`, artifact `11629803306`,
+digest `8ad3a0808b32c14908fc1d3172ebab9771125a9dfa7694eca360557e2245bcf4`).
+For the ten previously identified D5 dying content-differential donor
+branch episodes, **9/10** had prior physically selected contact and
+actual positive conservative outward trace-unit transfer during the
+*same slot life epoch*; **2/10** donor branch episodes had the recipient
+survive past donor FREE and to h+1000. Those two are *one seed (575)
+observed under B and H*, not two independent success cases:
+both histories passed **3 units** to slot6 at h+61, yet global B/H trace
+contrast still disappeared at h+724. A moving scalar is not proof of
+teacher-content-specific retained information, turnover witness, or
+trace readout. The old #140 FAIL-L3, R2 FAIL>=12/16 and R3 gate
+remain unchanged; no new prospective seeds/higher phases or learning
+claim. The next physical question, if separately authorized/frozen,
+must follow *B/H-differential receiver content* through later
+writes/decay/free and demonstrate real causal survival/readout before
+choosing a new rule.
+
 **No automatic P6.10 is authorized.** P6.10 and L4+ remain
 separately gated.
 
