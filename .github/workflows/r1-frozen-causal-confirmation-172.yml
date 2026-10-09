@@ -56,7 +56,7 @@ jobs:
           merge-multiple: true
       - name: Validate all 64 exact-head cases and frozen statistical decisions
         env:
-          SOURCE_SHA: __HEAD_SHA_EXPR__
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: >-
           python -m research.r1_causal_analysis_172
           --aggregate-dir research-results/cases
