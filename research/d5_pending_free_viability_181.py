@@ -43,6 +43,7 @@ PROTOCOL = {
     "result": "topology feasibility or inapplicability only; not physical transfer cause or independent confirmation",
     "validation": "exact h0 R2 digest, twice-deterministic observer, native unit_add checkpoint authoritative parity, 8 negative B/H identical at every generation and before/end stage, exact all 24 cases and original fixed six windows",
     "forward": "no R3/Phase H; no production defaults, no learning, future new h0 cohort only if separate prospective causal hypothesis remains physically viable",
+    "learning_claim": False,
 }
 
 
