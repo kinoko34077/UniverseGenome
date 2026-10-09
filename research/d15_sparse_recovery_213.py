@@ -11,6 +11,7 @@ import copy
 import hashlib
 import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -38,20 +39,25 @@ def _read_limited(path: Path, limit: int) -> bytes:
 
 def _atomic(path: Path, data: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.with_name(path.name + ".tmp")
+    # Unique same-directory staging prevents a prior crash's orphaned .tmp
+    # file from blocking the FIRST resumed write, not merely the second retry.
+    descriptor, staging = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent,
+    )
+    temp = Path(staging)
     try:
-        with temp.open("xb") as stream:
+        with os.fdopen(descriptor, "wb") as stream:
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temp, path)
         if os.name == "posix":
             # Durable rename: a killed writer cannot expose a partial final file.
-            descriptor = os.open(path.parent, os.O_RDONLY)
+            directory_fd = os.open(path.parent, os.O_RDONLY)
             try:
-                os.fsync(descriptor)
+                os.fsync(directory_fd)
             finally:
-                os.close(descriptor)
+                os.close(directory_fd)
     finally:
         if temp.exists():
             temp.unlink()
