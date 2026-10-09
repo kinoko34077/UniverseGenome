@@ -1,0 +1,80 @@
+name: D9 Real Four-Step Outer Genome Diversity #193
+
+on:
+  pull_request:
+    paths:
+      - "research/d9_real_evolved_diversity_193.py"
+      - "tests/test_d9_real_evolved_diversity_193.py"
+      - ".github/workflows/d9-real-evolved-diversity-193.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen_evolved_cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - base_seed: 16384
+            replay: 1
+          - base_seed: 16384
+            replay: 2
+          - base_seed: 32768
+            replay: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify fixed temporal classifier, no heldout claims, real generation0 read-only
+        run: python -m unittest discover -s tests -p 'test_d9_real_evolved_diversity_193.py' -v
+      - name: Exactly four real native legacy Outer optimizer steps from fresh seed
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          BASE_SEED: ${{ matrix.base_seed }}
+          REPLAY: ${{ matrix.replay }}
+        run: |
+          python -m research.d9_real_evolved_diversity_193 \
+            --base-seed "$BASE_SEED" \
+            --source-sha "$SOURCE_SHA" \
+            --output "d9/run-$BASE_SEED-$REPLAY.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d9-real-evolved-${{ matrix.base_seed }}-${{ matrix.replay }}
+          path: d9/run-${{ matrix.base_seed }}-${{ matrix.replay }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+  frozen_evolved_aggregate:
+    needs: frozen_evolved_cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: d9-real-evolved-*
+          path: d9/incoming
+          merge-multiple: true
+      - name: Authenticate exact 3/3 artifacts, duplicated seed16384 replay, real category transitions
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.d9_real_evolved_diversity_193 \
+            --aggregate d9/incoming \
+            --source-sha "$SOURCE_SHA" \
+            --output d9/summary.json
+          cat d9/summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d9-four-step-diversity-summary
+          path: d9/summary.json
+          if-no-files-found: error
+          retention-days: 30
