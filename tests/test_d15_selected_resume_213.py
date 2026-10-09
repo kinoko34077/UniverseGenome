@@ -128,5 +128,60 @@ class Selected128InterruptedRecoveryTests(unittest.TestCase):
                 self._execute(root)
 
 
+    def test_consecutive_authentic_selected_generations_from_durable_completed_round(self):
+        legacy=SteadyStateOptimizer.from_defaults(base_seed=0,experiment=experiment())
+        legacy.step()
+        expected_first=legacy.to_snapshot()
+        self.assertEqual(digest(expected_first),GOLDEN)
+        legacy.step()
+        expected_second=legacy.to_snapshot()
+        with TemporaryDirectory() as temp:
+            first=self._execute(Path(temp)/"round0")
+            self.assertEqual(first["final_snapshot"],expected_first)
+            second=self._execute(Path(temp)/"round1",
+                                 base_snapshot=first["final_snapshot"])
+            self.assertEqual(second["final_snapshot"],expected_second)
+            self.assertEqual(second["final_snapshot"]["scheduler"],expected_second["scheduler"])
+            self.assertEqual(second["final_snapshot"]["prune_history"],expected_second["prune_history"])
+            self.assertEqual(second["final_snapshot"]["generation"],2)
+            again=self._execute(Path(temp)/"round1",
+                                base_snapshot=first["final_snapshot"])
+            self.assertEqual(again["final_snapshot"],expected_second)
+            self.assertFalse(again["finalization_performed"])
+            with self.assertRaises((JournalIntegrityError,ValueError)):
+                self._execute(Path(temp)/"round1",
+                              base_snapshot=expected_second)
+
+    def test_real_selected_rss_journal_write_count_and_single_writer_admission(self):
+        import fcntl
+        with TemporaryDirectory() as temp:
+            root=Path(temp)/"journal"
+            lock_path=root.with_name(root.name+".writer.lock")
+            with lock_path.open("a+b") as stream:
+                fcntl.flock(stream.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+                program=(
+                    "from pathlib import Path\\n"
+                    "from core.experiment import ExperimentConfig\\n"
+                    "from research.d15_selected_resume_213 import execute_selected_round\\n"
+                    f"execute_selected_round(Path({str(root)!r}),source_commit={SOURCE!r},"
+                    "base_seed=0,experiment=ExperimentConfig(evaluation_timeout_generations=2))\\n"
+                )
+                other=subprocess.run([sys.executable,"-c",program],
+                                     capture_output=True,text=True,timeout=30)
+                self.assertNotEqual(other.returncode,0)
+                self.assertIn("active writer",other.stderr)
+                self.assertFalse((root/"manifest.json").exists())
+                fcntl.flock(stream.fileno(),fcntl.LOCK_UN)
+            complete=self._execute(root)
+            self.assertEqual(complete["final_digest"],GOLDEN)
+            self.assertGreater(complete["journal_bytes"],0)
+            self.assertGreater(complete["peak_rss_bytes"],0)
+            self.assertLess(complete["peak_rss_bytes"],1536*1024*1024)
+            self.assertEqual(complete["checkpoint_writes"],8)
+            initial_full_bytes=(root/"base.json").stat().st_size
+            comparison_initial_full_every_checkpoint=initial_full_bytes*9
+            self.assertLess(complete["journal_bytes"],comparison_initial_full_every_checkpoint)
+
+
 if __name__=="__main__":
     unittest.main()
