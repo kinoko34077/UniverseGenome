@@ -493,6 +493,62 @@ user-authorized flexible, budgeted Outer research execution;
 it does not retroactively change this frozen D12 result or
 the current fixed legacy population contract.
 
+D13 **#204 / research PR #205** introduced a **bounded
+research-only Outer execution controller** without changing native
+128-slot selection, fitness, pruning, SearchPlan, snapshot-v7 or
+physics. `native_selection` invokes the original complete
+`SteadyStateOptimizer.step()` on all 4×32 authoritative slots
+with configurable complete `outer_steps`; `worlds_per_batch=128`
+is required in this mode because *native per-batch interruption,
+parallelism, and variable selected population size do not exist*.
+The runner writes optional atomic full-round snapshot checkpoints
+and validates resumed base physics/protocol/seed.
+
+Separate `sampled_evaluation` evaluates a configurable 1..128
+deterministically category-spread initial worlds via native physical
+training, holding at most `worlds_per_batch`=1..16 worlds at
+once, with configurable Outer training rounds. **It performs NO
+genetic selection, mutation or replacement**, and is not a
+128-world genetic diversity or unknown-seed generalization test.
+The runner reports native attempted selection separately from
+actual >0 genome replacements, preventing another D9 false
+preservation inference.
+
+Admission BEFORE allocation rejects >512 world-rounds,
+>10 million conservative simulator work units, physical
+`max_cells>1024`, projected resident state >768MiB, invalid
+seed/count/batch, unsupported auxiliary test modes or unsafe
+resume input >256MiB; POSIX CLI has a wall-time interrupt and
+GitHub Action enforces a 30-minute job timeout. The work/RAM
+projections are conservative **estimates**, not hard guarantees;
+the Python API has between-round/batch soft time checks.
+Exact-head scientific Action `37975398181` passed 7/7 tests
+and performed actual 128-world direct-native versus controller
+comparison with identical experimental timeout=2: full state
+SHA256 `0ad8268476bf79f3c9db02a91ebf92dba3250339571fb651913eaf845410b321`,
+scheduler, prune/replacement counts and generation all matched.
+Normal exact-head CI `37975398214` both SUCCESS; formal
+Review `5474074535` PASS. Because the **original native
+method and its defaults remain unchanged**, setting the
+controller's native parameters to the legacy values retains
+the historical computation path; the single low-cost
+experimental setting parity check is not a statistical learning
+or all-parameter performance proof.
+
+CLI research example (exploratory, not selection):
+```sh
+python -m research.d13_outer_execution_204 --mode sampled_evaluation --base-seed 16384 --outer-steps 3 --evaluated-worlds 8 --worlds-per-batch 2 --output d13/sample.json
+```
+For actual legacy selection, use `--mode native_selection
+--evaluated-worlds 128 --worlds-per-batch 128` with bounded
+`--outer-steps`; optional `--snapshot-out` and
+`--resume-snapshot` support complete-round recovery only.
+Actual *variable-size selected population* or mid-round native
+pause needs an independent evidence and snapshot-semantic
+specification, not renaming sampled evaluations as selection.
+No independent teacher-content memory or `learning_claim`
+was established.
+
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
