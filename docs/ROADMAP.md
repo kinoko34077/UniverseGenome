@@ -590,8 +590,9 @@ parity `37986897568`, ordinary CI `37986897544`, Phase F
 `37986897546` and Formal Review `5475061252` passed;
 PR #216 native guarded merge produced main
 `d0dd71f22453659ac873de14a4468621ac82c87b`.
-Its post-main CI `37988048336` and Phase F `37988048181`
-are final acceptance gates (pending at this docs proposal).
+Its exact-main ordinary CI `37988048336` and Phase F
+`37988048181` both completed SUCCESS, satisfying the D15
+native integration acceptance checks.
 
 Authentic first selected128 research resource witness: 8 sparse
 patch saves, total journal 10,452,645 bytes, sampled parent RSS
