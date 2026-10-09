@@ -141,13 +141,15 @@ def execute(
         "issue":204,"mode":plan.mode,"plan":vars(plan),
         "admission":admission,
         "research_only":True,
-        "genetic_selection_performed":plan.mode=="native_selection" and plan.outer_steps>0,
+        "genetic_selection_performed":False,
         "learning_claim":False,
         "independent_heldout_tested":False,
         "rounds":[],
     }
     if plan.mode=="native_selection":
         if resume_snapshot is not None:
+            if resume_snapshot.stat().st_size>256*1024*1024:
+                raise ValueError("D13 snapshot exceeds safe 256MiB read bound")
             raw=json.loads(resume_snapshot.read_text(encoding="utf-8"))
             optimizer=SteadyStateOptimizer.from_snapshot(raw)
             if optimizer.experiment.to_dict()!=protocol.to_dict() or optimizer.base_config.to_dict()!=base.to_dict():
@@ -175,6 +177,10 @@ def execute(
         output["final_optimizer_generation"]=optimizer.generation
         output["final_state_digest"]=digest(optimizer.to_snapshot())
         output["scheduler"]=dict(optimizer.scheduler)
+        output["native_selection_policy_invoked"]=plan.outer_steps>0
+        output["observed_genetic_replacements"]=sum(x["replacements"] for x in output["rounds"])
+        output["genetic_selection_performed"]=output["observed_genetic_replacements"]>0
+        output["selection_not_exposed"]=plan.outer_steps>0 and not output["genetic_selection_performed"]
     else:
         genomes=UniverseGenome.initial_population()
         shell=SteadyStateOptimizer(
