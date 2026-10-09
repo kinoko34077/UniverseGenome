@@ -1,0 +1,21 @@
+name: D15 Sparse Crash Recovery #213
+on:
+  pull_request:
+    paths:
+      - 'research/d15_sparse_recovery_213.py'
+      - 'tests/test_d15_sparse_recovery_213.py'
+      - '.github/workflows/d15-sparse-recovery-213.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sparse_recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Frozen D15 journal and memory safety tests
+        run: python -m unittest discover -s tests -p 'test_d15_sparse_recovery_213.py' -v

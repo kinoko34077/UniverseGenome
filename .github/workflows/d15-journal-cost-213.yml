@@ -1,0 +1,27 @@
+name: D15 Sparse Journal Actual IO Cost #213
+on:
+  pull_request:
+    paths:
+      - 'research/d15_checkpoint_cost_probe_213.py'
+      - 'research/d15_sparse_recovery_213.py'
+      - '.github/workflows/d15-journal-cost-213.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  normal_volatile_cost:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Actual native worlds normal and bounded denser-activity fixture
+        run: python -m research.d15_checkpoint_cost_probe_213
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: d15-journal-disk-cost-213
+          path: d15-checkpoint-cost-213.json
+          if-no-files-found: warn

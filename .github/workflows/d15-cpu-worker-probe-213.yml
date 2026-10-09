@@ -1,0 +1,31 @@
+name: D15 World-Level CPU Exactness Probe #213
+on:
+  pull_request:
+    paths:
+      - 'research/d15_world_worker_probe_213.py'
+      - 'research/d15_sparse_recovery_213.py'
+      - '.github/workflows/d15-cpu-worker-probe-213.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  independent_world_cpu_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Eight real world executions serial versus two spawn workers
+        run: python -m research.d15_world_worker_probe_213
+      - name: Prospective three-repeat fixed world cohort via importable module
+        run: python -m research.d15_world_worker_probe_213 --repeats 3
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: d15-cpu-worker-probe-213
+          path: |
+            d15-cpu-worker-probe-213.json
+            d15-cpu-worker-three-repeats-213.json
+          if-no-files-found: warn
