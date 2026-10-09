@@ -143,6 +143,29 @@ must follow *B/H-differential receiver content* through later
 writes/decay/free and demonstrate real causal survival/readout before
 choosing a new rule.
 
+D7 **#187 / research PR #188** addressed the narrower
+teacher-content receiver question in precisely **one previously exposed
+seed575 B/H + no-teacher control**, with frozen seed545 B/H negative.
+The real donor slot15 epoch0 → recipient slot6 epoch0 transfer at
+h+61 added exactly 3 units under both B and H, and receiver epoch0
+remained nonFREE through donor FREE at +724 and +1000. The 1000-step
+all-operator-stage read-only observer found **no receiver trace
+B-vs-H difference ever**, validated with deterministic replay,
+uninstrumented original `unit_add` parity and negative matched trace
+stages (Action `37961606736`, artifact `11632150239`, digest
+`0650e05be640a34cc026d3993ba9644f60e2d93f411344c2a0495cc091d62d4b`).
+Representative *after-event* scalar values: +61 B/H 29 vs no-teacher
+18, +724 B/H 67/control 65, +1000 B/H 80/control 79.
+Observed recipient latent remained 1 for B/H/control at recorded
+checkpoints. The distinct teacher-present versus no-teacher scalar
+values are **not** B/H content-specific retention or causal
+learning/readout: `recipient_BH_end_distinct_generation_count=0`.
+Formal bounded research PR #188 merged main
+`7aa9882b19e10b4d43fb923a7b6b00838a378fa8`.
+R2 unit_add10/16 remains below frozen >=12/16; no automatic new
+physical candidate, R3, Phase H, L4, P6.10 or `learning_claim=true`.
+D1 production stays inert `(0,0,0,0,8)`.
+
 **No automatic P6.10 is authorized.** P6.10 and L4+ remain
 separately gated.
 
