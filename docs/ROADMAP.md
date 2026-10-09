@@ -565,10 +565,58 @@ D13 regression `37977423401`, Phase F `37977423518`, ordinary CI
 PR #210 merged by native expected-head GitHub operation as main
 `deaf6ee50ec0aea37bed2134854e613ffb0e9030`, with post-main
 Phase F `37984952849` and CI `37984952850` both SUCCESS.
-D14 does **not** implement crash-recoverable partial selected rounds,
-parallel world workers, population downsizing or a measured full-workload
-RSS/speedup claim. D15 #213 separately owns research-only crash journal
-and the next full selected-128 midround resume acceptance.
+D14 does **not** itself implement crash-recoverable partial
+selected rounds, parallel world workers, population downsizing or
+measured full-workload RSS/speedup. D15 #213 is the separate owner
+of selected128 interruption recovery.
+
+D15 **#213 / PRs #214 and #216** integrated research-only resource
+admission, a source/hash-chained sparse per-world checkpoint journal,
+POSIX single-writer exclusion, and genuine native selected128
+mid-round recovery. PR #214 foundational journal, normal expected-head
+merge `9f43abf71bbe83185c6aea374d66ae0162c2bf24`, post-main
+CI `37985853000` SUCCESS. PR #216 extracted the *unchanged*
+native category-local post-evaluation selection/finalization into
+one shared method: normal native steps and restored interrupted
+steps use the same logic after all 128 original physical slots.
+It passed exact pre-D14 one-step SHA256
+`0ad8268476bf79f3c9db02a91ebf92dba3250339571fb651913eaf845410b321`
+and six tests including real hard-process stops after 32 evaluated
+worlds, immediately before final selection commit and immediately
+after final commit; no repeat completed world evaluations or
+double selection, and two complete generations matched native
+uninterrupted full state (Action `37986897442`). Native D14
+parity `37986897568`, ordinary CI `37986897544`, Phase F
+`37986897546` and Formal Review `5475061252` passed;
+PR #216 native guarded merge produced main
+`d0dd71f22453659ac873de14a4468621ac82c87b`.
+Its post-main CI `37988048336` and Phase F `37988048181`
+are final acceptance gates (pending at this docs proposal).
+
+Authentic first selected128 research resource witness: 8 sparse
+patch saves, total journal 10,452,645 bytes, sampled parent RSS
+112,168,960 bytes, CPU 11.999s (artifact `11643582697`).
+The 34,950,620-byte alternative is *hypothetical* repeated
+copies of the first full snapshot, not a second observed writer.
+Only normal initial density / one-step / timeout2 has this cost
+evidence; no OS hard RSS guarantee under runaway world growth,
+all-host restart guarantee, CPU parallel speedup for full selected
+128 or demonstrated fitness/learning improvement follows.
+The world population remains 128, CPU worker distribution is
+not automatically enabled, and snapshot-v7/physics/fitness/
+prune/mutation/production defaults are unchanged.
+
+The original evolutionary research next frontier is **D16 #217**:
+frozen outcome-exposed D9/D12 seed16384 under unchanged default
+physics/experiment for at most 40 real selected Outer rounds,
+to observe completed four growth windows and actual native
+prune/replacement events within the declared resource budget.
+D12 #202 observed 0 replacements by generation4 because the
+128-physical-generation growth boundary had not yet been reached.
+D16 cannot start before D15 post-main and Current State acceptance.
+This research tests actual selection exposure, not independent
+heldout behavior, maintained diversity, lack of overfitting,
+teacher-content memory, or autonomous learning.
 
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
