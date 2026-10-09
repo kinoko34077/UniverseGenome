@@ -1,0 +1,25 @@
+name: D14 Exact Native Selected Outer Batch Parity #208
+
+on:
+  pull_request:
+    paths:
+      - "search/evolution.py"
+      - "research/d13_outer_execution_204.py"
+      - "tests/test_d14_native_outer_batches_208.py"
+      - ".github/workflows/d14-native-outer-batches-208.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen_native_batch_cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Real 128-world PRE-D14 golden snapshot at batch1,7,16,128 and invalid inputs
+        run: python -m unittest discover -s tests -p 'test_d14_native_outer_batches_208.py' -v

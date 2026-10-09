@@ -1044,15 +1044,20 @@ class SteadyStateOptimizer:
             if local
         }
 
-    def step(self) -> dict[str, Any]:
+    def step(self, *, evaluation_batch_size: int = OPTIMIZER_POPULATION_SIZE) -> dict[str, Any]:
+        """Evaluate all 128 worlds in fixed order; batch bounds transient results only."""
+        if type(evaluation_batch_size) is not int or not 1 <= evaluation_batch_size <= OPTIMIZER_POPULATION_SIZE:
+            raise ValueError("evaluation_batch_size must be a positive integer at most 128")
         if len(self.slots) != OPTIMIZER_POPULATION_SIZE:
             raise ValueError(
                 f"integrated optimizer requires {OPTIMIZER_POPULATION_SIZE} authoritative slots"
             )
         started = time.perf_counter()
-        measurements: dict[int, LearningMeasurement] = {}
-        for slot in self.slots:
-            measurements[slot.index] = self._evaluate_slot(slot)
+        evaluated_slots = 0
+        for start_index in range(0, len(self.slots), evaluation_batch_size):
+            for slot in self.slots[start_index:start_index+evaluation_batch_size]:
+                self._evaluate_slot(slot)
+                evaluated_slots += 1
 
         replacements: list[dict[str, Any]] = []
         pruned_count = 0
@@ -1147,11 +1152,11 @@ class SteadyStateOptimizer:
 
         self.generation += 1
         self.scheduler["replacement_count"] += len(replacements)
-        self.scheduler["evaluation_count"] += len(measurements)
+        self.scheduler["evaluation_count"] += evaluated_slots
         elapsed = max(time.perf_counter() - started, 1e-12)
         return {
             "generation": self.generation,
-            "evaluated_slots": len(measurements),
+            "evaluated_slots": evaluated_slots,
             "category_counts": self._category_counts(),
             "group_counts": self.group_counts(),
             "cross_category_selection": False,

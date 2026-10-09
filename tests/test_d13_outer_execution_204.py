@@ -24,7 +24,7 @@ class ResearchOuterTests(unittest.TestCase):
         bad=(
             d13.OuterResearchPlan(outer_steps=100),
             d13.OuterResearchPlan(evaluated_worlds=127),
-            d13.OuterResearchPlan(worlds_per_batch=16),
+            d13.OuterResearchPlan(worlds_per_batch=129),
             d13.OuterResearchPlan(mode="sampled_evaluation",evaluated_worlds=8,worlds_per_batch=9),
             d13.OuterResearchPlan(mode="sampled_evaluation",evaluated_worlds=8,worlds_per_batch=0),
             d13.OuterResearchPlan(mode="sampled_evaluation",outer_steps=64,evaluated_worlds=128,worlds_per_batch=16),
