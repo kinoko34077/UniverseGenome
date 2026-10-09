@@ -115,6 +115,17 @@ def _mcnemar_one_sided(rescue: int, harm: int) -> float:
     return sum(comb(n,k) for k in range(rescue,n+1))/(2**n) if n else 1.0
 
 
+def _wilson95(successes: int, total: int) -> list[float]:
+    if total <= 0 or not 0 <= successes <= total:
+        raise ValueError("invalid Wilson denominator")
+    z = 1.959963984540054
+    p = successes / total
+    denom = 1 + z*z/total
+    center = (p + z*z/(2*total)) / denom
+    margin = z * ((p*(1-p)/total + z*z/(4*total*total)) ** 0.5) / denom
+    return [max(0., center-margin), min(1., center+margin)]
+
+
 def _holm(pvals: dict[str,float]) -> dict[str,float]:
     ordered = sorted(pvals,key=lambda k:(pvals[k],k))
     adjusted = {}
@@ -189,6 +200,8 @@ def aggregate(out_dir: Path, source_sha: str) -> dict:
                 "latent_affected_cases":downstream,
                 "teacher_latent_interaction_with_exposure":teacher_interaction,
                 "negative_clean":clean_sentinels,
+                "rescue_only_wilson95":_wilson95(naive_rescues,24),
+                "sham_only_wilson95":_wilson95(harms,24),
                 "positive_denominator":24,"negative_denominator":8,
             }
         if rate == 256:
