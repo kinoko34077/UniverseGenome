@@ -295,6 +295,11 @@ def evaluate_seed(seed: int, *, rate: int, frozen: dict,
                 "latent_distinct": b["latent"] != h["latent"],
                 "b_latent_vs_sham": b["latent"] != sham_b["latent"],
                 "h_latent_vs_sham": h["latent"] != sham_h["latent"],
+                "teacher_latent_response_interaction_slots": sum(
+                    (int(b["latent"][index]) - int(sham_b["latent"][index]))
+                    != (int(h["latent"][index]) - int(sham_h["latent"][index]))
+                    for index in range(len(b["latent"]))
+                ),
                 "b_digest": b["snapshot_digest"], "h_digest": h["snapshot_digest"],
             }
         by_factor[factor] = item
@@ -323,7 +328,21 @@ def evaluate_seed(seed: int, *, rate: int, frozen: dict,
                     p["b_latent_vs_sham"] or p["h_latent_vs_sham"]
                     for p in by_factor[factor]["checkpoints"].values()
                 ),
+                "teacher_latent_response_interaction": any(
+                    p["teacher_latent_response_interaction_slots"] > 0
+                    for p in by_factor[factor]["checkpoints"].values()
+                ),
+                "factor_exposure": (
+                    sum(by_factor[factor]["events"][teacher].get(event, 0)
+                        for teacher in ("b", "h")) > 0
+                ),
             } for factor in FACTORS
+            for event in ((
+                "relay_events" if factor == "free_local_relay" else
+                "write_sites" if factor == "post_h0_write_off" else
+                "transfer_opportunities" if factor == "transfer_off" else
+                "read_mask_difference_opportunities"
+            ),)
         },
         "learning_claim": False, "heldout_max_horizon": 0,
     }
