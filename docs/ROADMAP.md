@@ -361,6 +361,31 @@ L3. Research PR #188 accepted main
 `7aa9882b19e10b4d43fb923a7b6b00838a378fa8`.
 No further unspecified physical search follows automatically.
 
+D8 **#190 / research PR #191** added a **read-only, category-local
+genetic diversity and cohort-leakage monitor** rather than changing
+legacy 128-slot Outer selection. The real *fresh initial* generation0
+population is 4 categories ×32 slots, each with **8 distinct complete
+11-field UniverseGenomes ×4 physical seed-evidence slots**, dominant
+genotype share **12.5%**, Shannon effective genome count **8.0**,
+inverse Simpson effective **8.0** (Action `37964958227`, baseline
+report digest `443c7a2616f5eb90deb832d5cac52fd500e4de6a3b126d87d5906b56e2932c54`).
+Six unit tests passed: real 128-slot snapshot unchanged, synthetic
+single-genotype fixation (U1/top100%/effective1), unequal 16:8:8
+concentration (top50%, Simpson2.6666666667), category isolation and
+training/validation/heldout seed-leakage rejection. Cross-category
+replication of eight matched genomes is intentionally **not**
+32 independent genotypes. It remains **UNKNOWN** whether selection
+over many optimizer generations collapses genotype diversity or
+overfits a narrow teacher/input cohort: the D8 measurement is
+generation0 and neither evolved time-series nor genuine untouched
+held-out performance was evaluated. Before any new candidate
+promotion, require separately frozen temporal diversity metrics
+and disjoint evidence roles across input/teacher/seed/noise/horizon,
+and inspect generalization gaps and capability regressions.
+**Do not automatically award selection diversity bonuses or change
+fitness ranking, active D1 configuration or `learning_claim=false`
+based solely on this descriptive baseline.
+
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
