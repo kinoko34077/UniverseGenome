@@ -1,0 +1,44 @@
+name: D13 Bounded Flexible Outer Parity #204
+
+on:
+  pull_request:
+    paths:
+      - "research/d13_outer_execution_204.py"
+      - "tests/test_d13_outer_execution_204.py"
+      - ".github/workflows/d13-flexible-outer-204.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native_budgeted_parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: D13 early resource admission and native single-world/batch replay controls
+        run: python -m unittest discover -s tests -p 'test_d13_outer_execution_204.py' -v
+      - name: Real original native 128-world Outer step == research controller with identical accepted settings
+        run: |
+          python - <<'PY'
+          from core.experiment import ExperimentConfig
+          from research.d8_genome_diversity_190 import digest
+          from research.d13_outer_execution_204 import OuterResearchPlan, execute
+          from search.evolution import SteadyStateOptimizer
+          proto=ExperimentConfig(evaluation_timeout_generations=2)
+          baseline=SteadyStateOptimizer.from_defaults(base_seed=0,experiment=proto)
+          legacy=baseline.step()
+          expected=digest(baseline.to_snapshot())
+          new=execute(OuterResearchPlan(),experiment=proto)
+          assert new["final_state_digest"]==expected, (new["final_state_digest"],expected)
+          assert new["scheduler"]==baseline.scheduler
+          assert new["rounds"][0]["replacements"]==legacy["replacement_count"]
+          assert new["rounds"][0]["pruned"]==legacy["pruned_count"]
+          assert new["rounds"][0]["evaluated_slots"]==128
+          assert new["final_optimizer_generation"]==1
+          print("D13 native strict 128-world state+schedule parity VERIFIED",expected,flush=True)
+          PY
