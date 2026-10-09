@@ -146,6 +146,23 @@ Consequently `D5.1 CHANGE_PATH`: redesign of genuinely different
 physical connectivity/timing requires its own frozen research question;
 `learning_claim=false`, production D1 remains inert.
 
+D6 **#184 / research PR #185** next audited accepted *earlier* physical
+selected-contact/trace transfers during the same carrier life epoch,
+rather than another end-FREE action. Frozen, already outcome-exposed
+16+8 R2 cases passed 24/24 twice-deterministic native-state parity
+and negative controls (Action `37960189337`; aggregate digest
+`8ad3a0808b32c14908fc1d3172ebab9771125a9dfa7694eca360557e2245bcf4`).
+Of ten donor branch episodes ending in the six terminal contrast
+losses, **9/10** had real earlier selected local contact and positive
+outward conservative trace transfer; **2/10** (B/H branches of the
+*same seed 575*) had a recipient life epoch survive past donor FREE.
+Both teacher branches delivered the **same 3 units** at +61 to that
+recipient; content contrast still vanished at +724. Thus physical
+trace transfer exists, but no teacher-content-specific persistent
+information lineage or downstream latent readout has been shown.
+The cases are exploratory, not independent replication or an accepted
+R3/L3/learning profile. Production D1 remains inert.
+
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
 reconciliation #61 is complete via PR #74. No unresolved remediation owner remains. The fresh #60 rerun passed on repaired
