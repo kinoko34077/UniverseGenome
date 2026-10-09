@@ -287,10 +287,12 @@ success claim.
   demonstrated one turnover witness, but only 1/12 primary cases remained
   teacher-specific at +1000 versus the required >=8/12.
 
-Next frontier: **new separately predeclared causal research decision not
-yet selected** after #167's `HOLD-UNRESOLVED` diagnosis.
-Neither #140/#159 failure nor #167 passive observation selects a second
-physical memory profile or production implementation owner.
+Next frontier: **R1 causal child #172 concluded CAUSE-SUPPORTED only for the
+generic post-h0 write pathway** after #167's `HOLD-UNRESOLVED` diagnosis.
+That bounded intervention result supplies a prospective R2 investigation
+axis, but neither it nor #140/#159 failure selects a new active physical
+memory profile or production implementation owner. R2 needs a separately
+authorized and predeclared implementation/research task.
 `learning_claim=false`, inert production defaults, the P6.10+ freeze and L4
 separation remain authoritative. #93 remains a separate
 performance/architecture workstream.
