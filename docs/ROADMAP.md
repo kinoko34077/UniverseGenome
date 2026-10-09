@@ -386,6 +386,30 @@ and inspect generalization gaps and capability regressions.
 fitness ranking, active D1 configuration or `learning_claim=false`
 based solely on this descriptive baseline.
 
+D10 **#195 / research PR #196** verified a native D1 **trace-read opportunity
+gate** without changing physics or promoting learning. With a frozen
+synthetic ACTIVE-cell native reader fixture (seed7, generation11,
+address19, pair(0,1), shift5), trace10 vs18 produced the same mask8192,
+whereas 31 vs32 crossed the right-shift threshold and yielded width1→2
+and distinct masks8192→8448. Bond255 saturated to width16 and mask65535
+for trace0 vs255; production-inert shift8 gave identical width1 for
+trace0 vs255. A native generic write with initial trace4, activity5,
+cap8 produced trace9 under both externally named preparations: physics
+received no teacher label. Exact-head Action `37968783233` passed 4/4,
+report digest
+`751a1fdbf583bcc9bfacd7a7f32f4de5acee0ac2e90a67e7ed0378d93d8e7e7c`.
+An initial failed fixture Action `37968619345` used an EMPTY default
+world (initial_density0), correctly preventing writes to FREE slot0;
+#195 documented the eligibility-only correction (ACTIVE slots via
+initial_density2) before rerunning. This proves **only a conditional
+synthetic read-width gate**, NOT any naturally selected B/H differential
+contact, altered latent/output, independent generalization or learning.
+Actual teacher-content trace survival, an unsaturated selected reader
+contact, a downstream difference and independent causal verification
+remain separate necessary evidence. D9 Outer diversity #193 is
+unrelated; R2 acceptance failed and all R3/Phase H and D1 production
+restrictions remain unchanged.
+
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
