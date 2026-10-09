@@ -20,7 +20,7 @@ class R1CausalAnalysisTests(unittest.TestCase):
         self.assertAlmostEqual(adjusted["transfer"],0.049)
 
     def test_wilson95_bounds(self):
-        self.assertEqual(_wilson95(0,24)[0],0.0)
+        self.assertAlmostEqual(_wilson95(0,24)[0],0.0)
         self.assertEqual(_wilson95(24,24)[1],1.0)
         self.assertTrue(_wilson95(8,24)[0] < 8/24 < _wilson95(8,24)[1])
 
