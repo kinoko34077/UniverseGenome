@@ -19,32 +19,8 @@ jobs:
           python-version: '3.12'
       - name: Eight real world executions serial versus two spawn workers
         run: python -m research.d15_world_worker_probe_213
-      - name: Prospective three-repeat identical-world workload and conservative decision
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          from statistics import median
-          from research.d15_world_worker_probe_213 import run_probe
-          records = [run_probe() for _ in range(3)]
-          assert len({r["native_state_sha256"] for r in records}) == 1
-          serial = median(r["serial_seconds"] for r in records)
-          parallel = median(r["parallel_two_workers_seconds"] for r in records)
-          budget_ok = all(
-              r["measured_parent_rss_bytes"] + r["max_two_worker_reported_rss_bytes"]
-              <= r["budget_mib"] * 1024 * 1024 for r in records
-          )
-          verdict = "CANDIDATE_NOT_ENABLED" if budget_ok and parallel < 0.9*serial else "DO_NOT_ADOPT"
-          report = {"issue": 213, "fixed_replays": 3,
-                    "sha": records[0]["native_state_sha256"],
-                    "serial_median_seconds": serial,
-                    "parallel_median_seconds": parallel,
-                    "verdict": verdict, "records": records,
-                    "selection_exposed": False, "generalization_claim": False}
-          Path("d15-cpu-worker-three-repeats-213.json").write_text(
-              json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-          print(json.dumps({k:v for k,v in report.items() if k != "records"},sort_keys=True))
-          PY
+      - name: Prospective three-repeat fixed world cohort via importable module
+        run: python -m research.d15_world_worker_probe_213 --repeats 3
       - uses: actions/upload-artifact@v4
         if: always()
         with:
