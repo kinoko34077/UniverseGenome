@@ -313,9 +313,21 @@ The six last content-contrast losses were all localized to the
 **post-decay / end-of-step pending-FREE stage**, not to the write or
 transfer stage in that final-loss generation; this is only an
 exploratory association, not an independently confirmed causal root.
-Next legitimate work is a **new separately frozen, prospective
-final-FREE / physical handoff causal question** with independent data,
-not reopening R2 thresholds or touching R3/old Phase-H held-out.
+D5 **#181** then checked *physical recipient feasibility* before attempting
+that counterfactual. With the same already outcome-exposed 16+8 cohort
+(24/24 deterministic/observer-parity valid; Action 37958510937), all
+ten B/H content-differential pending-FREE events at the six last-loss
+epochs had **zero overlapping ACTIVE receiver cells** (`0/10` eligible),
+despite rare eligible contact at other epochs in two retained cases.
+Native discharge before final FREE already uses this same-footprint
+topology; hence an extra local end-stage relay in the observed six
+failures is `INFEASIBLE / CHANGE_PATH`, not an independently causal
+repair. Research PR #182 accepted on main
+`e4dd70f8e39f4f32c0b505180a60a4a166586aaf`.
+A next bounded research question would have to establish **genuinely
+different physical connectivity or earlier transfer opportunities**
+before any independent h0-only cohort or prospective post-h0 causal test.
+Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
 L4 separation and #93 separation remain authoritative.
