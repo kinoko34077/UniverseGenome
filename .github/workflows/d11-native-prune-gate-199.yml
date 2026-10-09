@@ -1,0 +1,38 @@
+name: D11 Native Outer Pruning Eligibility #199
+
+on:
+  pull_request:
+    paths:
+      - "research/d11_native_prune_gate_199.py"
+      - "tests/test_d11_native_prune_gate_199.py"
+      - ".github/workflows/d11-native-prune-gate-199.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native_prune_gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Native category-local pruning zero-median and positive sentinel tests
+        run: python -m unittest discover -s tests -p 'test_d11_native_prune_gate_199.py' -v
+      - name: Source-bound native pruning gate report, NO actual genetic evolution
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.d11_native_prune_gate_199 \
+            --source-sha "$SOURCE_SHA" \
+            --output d11/native-prune-gate.json
+          cat d11/native-prune-gate.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d11-native-prune-eligibility
+          path: d11/native-prune-gate.json
+          if-no-files-found: error
+          retention-days: 30
