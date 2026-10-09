@@ -115,6 +115,19 @@ Research PR #176 accepted main `90e41860933c59abee8d3f1ea8d68ba5c0e0d92e`.
 Production D1 remains inert `(0,0,0,0,8)`, `learning_claim=false`,
 and the reserved Phase H cohort and L4/P6.10+ gates remain frozen.
 
+Separate exploratory event-stage diagnosis **#178 / research PR #179** reused
+those same **outcome-exposed** R2 cases (not independent confirmation)
+with a trace-only, nonmutating observer. All 24/24 deterministic,
+uninstrumented-parity and negative-sentinel controls passed (Action
+`37952291383`, aggregate digest
+`b9287a5bb701678f82f9f36801a67841145c73ac0bf48a421982a31a935bcd6a`).
+In all **6/16** unit_add nonretainers, the final irreversible B/H trace
+difference vanished between the after-decay and end-of-step boundary,
+where native `pending_free` may free BLACK_HOLE cells (generations
+256–762). This **localizes an event stage**, not why carriers died,
+a proven causal information handoff, an L3 gate, or a new production rule.
+No R3 advancement follows.
+
 The full traceability audit (#64) and its handoff (#67/#68) identified three
 P1 remediation tracks; #66, #65, and #63 are complete. Post-v0.1 residual
 reconciliation #61 is complete via PR #74. No unresolved remediation owner remains. The fresh #60 rerun passed on repaired
