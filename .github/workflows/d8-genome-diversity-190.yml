@@ -1,0 +1,39 @@
+name: D8 Genome Diversity and Overfit Sentinel #190
+
+on:
+  pull_request:
+    paths:
+      - "research/d8_genome_diversity_190.py"
+      - "tests/test_d8_genome_diversity_190.py"
+      - ".github/workflows/d8-genome-diversity-190.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diversity_frozen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Synthetic collapse, allele diversity, evidence-role guard and 128-slot nonmutation tests
+        run: python -m unittest discover -s tests -p 'test_d8_genome_diversity_190.py' -v
+      - name: Report exact-head real baseline 128-slot diversity (NOT evolved collapse evidence)
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.d8_genome_diversity_190 \
+            --base-seed 0 \
+            --source-sha "$SOURCE_SHA" \
+            --output d8/diversity-baseline.json
+          cat d8/diversity-baseline.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d8-real-baseline-diversity-and-role-guards
+          path: d8/diversity-baseline.json
+          if-no-files-found: error
+          retention-days: 30
