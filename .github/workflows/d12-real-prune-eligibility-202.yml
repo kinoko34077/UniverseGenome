@@ -1,0 +1,37 @@
+name: D12 Real D9 Prune Eligibility Parity Replay #202
+
+on:
+  pull_request:
+    paths:
+      - "research/d12_real_prune_eligibility_202.py"
+      - "tests/test_d12_real_prune_eligibility_202.py"
+      - ".github/workflows/d12-real-prune-eligibility-202.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real_eligibility_replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test native SelectionRecord observer leaves real 128 slots untouched
+        run: python -m unittest discover -s tests -p 'test_d12_real_prune_eligibility_202.py' -v
+      - name: Exactly ONE native 16384 seed four-step replay plus original D9 whole-case checksum parity
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.d12_real_prune_eligibility_202 \
+            --source-sha "$SOURCE_SHA" \
+            --output d12/real-selection-eligibility.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d12-real-d9-parity-pruning-witness
+          path: d12/real-selection-eligibility.json
+          if-no-files-found: error
+          retention-days: 30
