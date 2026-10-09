@@ -1,0 +1,73 @@
+name: D6 Preterminal Native Transfer Life-Epoch Audit #184
+
+on:
+  pull_request:
+    paths:
+      - "research/d6_preterminal_contact_184.py"
+      - "tests/test_d6_preterminal_contact_184.py"
+      - ".github/workflows/d6-preterminal-contact-184.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  d6_cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0,1,2,3,4,5,6,7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Native selected transfer/slot-lifetime/guard unit tests
+        run: python -m unittest discover -s tests -p 'test_d6_preterminal_contact_184.py' -v
+      - name: D6 exact-head twice-deterministic 3-case observer and native-state parity
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          python -m research.d6_preterminal_contact_184 \
+            --shard "$SHARD" \
+            --source-sha "$SOURCE_SHA" \
+            --output "d6/d6-shard-$SHARD.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d6-contact-cases-${{ matrix.shard }}
+          path: d6/d6-shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+  d6_aggregate:
+    needs: d6_cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: d6-contact-cases-*
+          path: d6/incoming
+          merge-multiple: true
+      - name: Validate complete 24 original cases, content-donor life epochs and summary
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.d6_preterminal_contact_184 \
+            --aggregate d6/incoming \
+            --source-sha "$SOURCE_SHA" \
+            --output d6/summary.json
+          cat d6/summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d6-exploratory-contact-lineage-summary
+          path: d6/summary.json
+          if-no-files-found: error
+          retention-days: 30
