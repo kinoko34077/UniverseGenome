@@ -79,6 +79,24 @@ promoted. R2 research PR #176 accepted main
 No R3/Phase H/READ L4 progression, no default promotion, no
 `learning_claim=true`; production inert tuple `(0,0,0,0,8)` remains.
 
+Follow-on diagnosis **D4 #178 / research PR #179** *did not select or
+tune a new candidate*: it traced the same 16 positive + 8 negative
+**R2 outcome-exposed seeds** (exploratory only) through matched physical
+operator boundaries using the frozen unit_add profile. Exact-head
+Action `37952291383` validated 24/24 deterministic/replayed,
+nonmutating observer-parity cases with 8/8 negative controls, artifact
+`11625694644` digest
+`b9287a5bb701678f82f9f36801a67841145c73ac0bf48a421982a31a935bcd6a`.
+All six final trace-content losses (seed 555 +499, 556 +320,
+560 +256, 563 +762, 575 +724, 582 +576) occurred in the
+**after-decay → end-of-step** window, corresponding to the final
+`pending_free` / `state.free()` window in native physics.
+This is **stage-localized observational evidence**, not proof of a
+unique upstream cause, teacher-content transfer to a surviving carrier,
+or improvement of the rejected R2 numerical gate. A new prospective,
+separately frozen physical final-FREE causal question is needed before
+promoting any memory profile; R3 and all held-out evaluation are blocked.
+
 **No automatic P6.10 is authorized.** P6.10 and L4+ remain
 separately gated.
 
