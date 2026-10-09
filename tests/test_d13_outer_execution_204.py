@@ -56,6 +56,23 @@ class ResearchOuterTests(unittest.TestCase):
         self.assertFalse(first["learning_claim"])
         self.assertFalse(first["independent_heldout_tested"])
 
+    def test_native_zero_round_does_not_claim_selection_or_replacement(self):
+        result=d13.execute(d13.OuterResearchPlan(outer_steps=0))
+        self.assertFalse(result["genetic_selection_performed"])
+        self.assertFalse(result["native_selection_policy_invoked"])
+        self.assertEqual(result["observed_genetic_replacements"],0)
+        self.assertEqual(result["start_optimizer_generation"],0)
+        self.assertEqual(result["final_optimizer_generation"],0)
+        self.assertFalse(result["selection_not_exposed"])
+
+    def test_sampled_outer_round_count_controls_real_physical_clock(self):
+        plan=d13.OuterResearchPlan(mode="sampled_evaluation",base_seed=16384,
+                                   outer_steps=3,evaluated_worlds=1,worlds_per_batch=1)
+        value=d13.execute(plan,experiment=ExperimentConfig(evaluation_timeout_generations=2))
+        self.assertEqual(value["sampled_world_results"][0]["physical_generation"],42)
+        self.assertEqual(value["admission"]["world_rounds"],3)
+        self.assertFalse(value["genetic_selection_performed"])
+
     def test_category_coverage_and_batch_boundary_same_results(self):
         proto=ExperimentConfig(evaluation_timeout_generations=2)
         a=d13.execute(d13.OuterResearchPlan(
