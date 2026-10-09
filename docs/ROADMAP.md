@@ -437,6 +437,36 @@ replacement gate under the observed flat objective; any new
 diagnostic uses a separately frozen cohort/fixture and cannot
 silently revise accepted selection policy or learner criteria.
 
+D11 **#199 / research PR #200** isolated **conditional native
+Outer pruning eligibility**, not a new evolutionary success.
+Frozen read-only native `SelectionRecord` fixtures each use four
+categories ×32 slots, 8 genotype groups ×4 evidence slots.
+Under the accepted native category-local pruning functions:
+F0 four complete all-zero growth windows produce a zero category
+median and threshold0, and therefore no record satisfies strict
+`growth < threshold`; F1 incomplete three-window history also
+cannot be growth-pruned. F2, in one category only, 31 slots with
+four windows `(3,3,3,3)` and one unprotected worst slot31 with
+four zero windows yield median growth bitcount2/threshold1,
+natively pruned target31 and a same-category parent0.
+F3 makes the same worst slot an absolute failure and prunes it
+even with all-zero category medians. The other three
+categories remain unpruned. Exact-head native Action
+`37970419273` passed 3/3 tests; research artifact
+`11634833377`, digest
+`8dcd4c41ca42e9e520daf192bd6da19d271eeb2f9c68ac81eceb57d303e33d1f`.
+This establishes a **conditional no-growth/no-failure pruning
+gate**, *not* proof that the D9 real optimizer's unrecorded
+individual growth histories had those exact values. Therefore
+D9's no-replacement cause remains unconfirmed and genetic
+diversity under genuine selection remains unmeasured.
+No accepted selection, fitness, mutation or production D1
+settings were changed. A later direct D9-like diagnostic
+would have to measure actual pruning eligibility and growth
+histories before asserting the bottleneck caused the observed
+zero replacements; do not force adaptation or diversity bonuses
+based on synthetic cases.
+
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
