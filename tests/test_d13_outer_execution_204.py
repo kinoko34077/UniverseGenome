@@ -1,5 +1,7 @@
 """D13 #204: bounded plan, actual small-world evaluation, and role invariants."""
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from core.experiment import ExperimentConfig
@@ -35,6 +37,35 @@ class ResearchOuterTests(unittest.TestCase):
                 with self.subTest(plan=plan):
                     with self.assertRaises(ValueError):
                         d13.execute(plan)
+
+    def test_real_full_128_native_complete_round_atomic_resume_is_bit_identical(self):
+        # One genuine full native step, not a simulated state or a partial cohort.
+        proto=ExperimentConfig(evaluation_timeout_generations=2)
+        with TemporaryDirectory() as directory:
+            path=Path(directory)/"native-checkpoint.json"
+            original=d13.execute(d13.OuterResearchPlan(outer_steps=1),
+                                 experiment=proto,snapshot_out=path)
+            self.assertTrue(path.is_file())
+            resumed=d13.execute(d13.OuterResearchPlan(outer_steps=0),
+                                experiment=proto,resume_snapshot=path)
+            self.assertEqual(original["final_state_digest"],resumed["final_state_digest"])
+            self.assertEqual(original["scheduler"],resumed["scheduler"])
+            self.assertEqual(original["final_optimizer_generation"],1)
+            self.assertEqual(resumed["start_optimizer_generation"],1)
+            self.assertEqual(resumed["final_optimizer_generation"],1)
+            self.assertFalse(resumed["genetic_selection_performed"])
+
+    def test_large_resume_snapshot_is_rejected_before_read(self):
+        # Sparse file forces admission rejection without allocating 256 MiB.
+        with TemporaryDirectory() as directory:
+            path=Path(directory)/"oversized.json"
+            with path.open("wb") as stream:
+                stream.truncate(256*1024*1024+1)
+            with patch.object(Path,"read_text",
+                              side_effect=AssertionError("oversized file was read")):
+                with self.assertRaises(ValueError):
+                    d13.execute(d13.OuterResearchPlan(outer_steps=0),
+                                resume_snapshot=path)
 
     def test_stratified_world_ids_and_no_partial_selection(self):
         self.assertEqual(d13._sample_indices(1),(0,))
