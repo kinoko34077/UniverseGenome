@@ -98,8 +98,47 @@ class ResourceBudget:
         with Path("/proc/meminfo").open("r", encoding="ascii") as stream:
             for line in stream:
                 if line.startswith("MemAvailable:"):
-                    return int(line.split()[1]) * 1024
+                    host = int(line.split()[1]) * 1024
+                    # Linux cgroup-v2 limits matter on CI and container hosts:
+                    # host MemAvailable alone can be many times the true cap.
+                    cap_path = Path("/sys/fs/cgroup/memory.max")
+                    used_path = Path("/sys/fs/cgroup/memory.current")
+                    if cap_path.is_file() and used_path.is_file():
+                        maximum = cap_path.read_text(encoding="ascii").strip()
+                        if maximum != "max":
+                            remaining = max(0, int(maximum) -
+                                            int(used_path.read_text(encoding="ascii").strip()))
+                            host = min(host, remaining)
+                    return host
         raise RuntimeError("D15 host availability is unavailable")
+
+
+@dataclass(frozen=True)
+class CheckpointPolicy:
+    """Bound loss to a group of worlds or elapsed work, never per cell.
+
+    Not yet connected to optimizer.step; the owner is responsible for
+    supplying monotonic elapsed time and triggering journal.commit().
+    """
+
+    max_worlds_between_saves: int = 16
+    max_seconds_between_saves: float = 120.0
+
+    def __post_init__(self) -> None:
+        if (type(self.max_worlds_between_saves) is not int
+            or not 1 <= self.max_worlds_between_saves <= 32):
+            raise ValueError("checkpoint span must be 1..32 evaluated worlds")
+        if (type(self.max_seconds_between_saves) not in (int,float)
+            or not 1 <= self.max_seconds_between_saves <= 3600):
+            raise ValueError("checkpoint wall interval must be 1..3600 seconds")
+
+    def should_commit(self, *, pending_worlds: int, seconds_since_save: float) -> bool:
+        if type(pending_worlds) is not int or pending_worlds < 0 or seconds_since_save < 0:
+            raise ValueError("invalid checkpoint progress")
+        return pending_worlds > 0 and (
+            pending_worlds >= self.max_worlds_between_saves
+            or seconds_since_save >= self.max_seconds_between_saves
+        )
 
 
 @dataclass(frozen=True)
