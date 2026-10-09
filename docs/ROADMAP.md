@@ -498,9 +498,12 @@ research-only Outer execution controller** without changing native
 128-slot selection, fitness, pruning, SearchPlan, snapshot-v7 or
 physics. `native_selection` invokes the original complete
 `SteadyStateOptimizer.step()` on all 4×32 authoritative slots
-with configurable complete `outer_steps`; `worlds_per_batch=128`
-is required in this mode because *native per-batch interruption,
-parallelism, and variable selected population size do not exist*.
+with configurable complete `outer_steps`. At D13 acceptance,
+`worlds_per_batch=128` was the only native selection setting;
+D14 #208 subsequently generalized sequential evaluation batches to 1..128
+without changing the 128 resident authoritative slots. Native per-batch
+checkpointing, concurrency, and variable selected population size are not
+provided by D14.
 The runner writes optional atomic full-round snapshot checkpoints
 and validates resumed base physics/protocol/seed.
 
@@ -528,10 +531,10 @@ comparison with identical experimental timeout=2: full state
 SHA256 `0ad8268476bf79f3c9db02a91ebf92dba3250339571fb651913eaf845410b321`,
 scheduler, prune/replacement counts and generation all matched.
 Normal exact-head CI `37975398214` both SUCCESS; formal
-Review `5474074535` PASS. Because the **original native
-method and its defaults remain unchanged**, setting the
-controller's native parameters to the legacy values retains
-the historical computation path; the single low-cost
+Review `5474074535` PASS. At D13 acceptance, the original native method and defaults were unchanged;
+D14 #208 subsequently altered transient evaluation scheduling but proved
+identical complete native states at the historical defaults. Setting the
+controller's native parameters to legacy values retains the original result; the single low-cost
 experimental setting parity check is not a statistical learning
 or all-parameter performance proof.
 
@@ -548,6 +551,24 @@ pause needs an independent evidence and snapshot-semantic
 specification, not renaming sampled evaluations as selection.
 No independent teacher-content memory or `learning_claim`
 was established.
+
+D14 **#208 / PR #210** subsequently accepted sequential batching of
+all 128 physically selected native Outer worlds at exact batch sizes
+1, 7, 16 and 128. The original slot order, population cardinality,
+fitness, scheduler, growth/pruning/replacement policy and snapshot v7
+remain unchanged; only temporary `LearningMeasurement` retention
+was removed. The fixed PRE-D14 real one-step state SHA256
+`0ad8268476bf79f3c9db02a91ebf92dba3250339571fb651913eaf845410b321`
+matched for every batch size (source-frozen Action `37977424233`).
+D13 regression `37977423401`, Phase F `37977423518`, ordinary CI
+`37977423501` and exact-head formal Review `5474246054` passed;
+PR #210 merged by native expected-head GitHub operation as main
+`deaf6ee50ec0aea37bed2134854e613ffb0e9030`, with post-main
+Phase F `37984952849` and CI `37984952850` both SUCCESS.
+D14 does **not** implement crash-recoverable partial selected rounds,
+parallel world workers, population downsizing or a measured full-workload
+RSS/speedup claim. D15 #213 separately owns research-only crash journal
+and the next full selected-128 midround resume acceptance.
 
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
