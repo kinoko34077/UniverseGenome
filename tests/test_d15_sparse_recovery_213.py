@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 import unittest
 
 from research.d15_sparse_recovery_213 import (
-    ResourceBudget, SparseEvaluationJournal, JournalIntegrityError,
+    ResourceBudget, CheckpointPolicy, SparseEvaluationJournal, JournalIntegrityError,
 )
 
 
@@ -36,6 +36,21 @@ class RecoveryTests(unittest.TestCase):
         with self.assertRaises(MemoryError):
             b.admit(estimated_additional_bytes=500*1024*1024,
                     current_rss_bytes=128*1024*1024,available_host_bytes=200*1024*1024)
+
+    def test_adaptive_checkpoint_by_worlds_or_elapsed_seconds(self):
+        policy=CheckpointPolicy(max_worlds_between_saves=16,
+                                max_seconds_between_saves=120)
+        self.assertFalse(policy.should_commit(pending_worlds=0,seconds_since_save=999))
+        self.assertFalse(policy.should_commit(pending_worlds=1,seconds_since_save=10))
+        self.assertTrue(policy.should_commit(pending_worlds=16,seconds_since_save=1))
+        self.assertTrue(policy.should_commit(pending_worlds=1,seconds_since_save=121))
+        for opts in (
+            {"max_worlds_between_saves":0},
+            {"max_worlds_between_saves":33},
+            {"max_seconds_between_saves":0},
+        ):
+            with self.assertRaises(ValueError):
+                CheckpointPolicy(**opts)
 
     def test_mid_round_crash_replays_only_unfinished_worlds(self):
         start=fixture()
