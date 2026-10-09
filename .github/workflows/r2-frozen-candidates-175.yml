@@ -1,0 +1,74 @@
+name: R2 Frozen Local Write-Candidate Confirmation #175
+
+on:
+  pull_request:
+    paths:
+      - "research/artifacts/r2_frozen_175.json"
+      - "research/r2_candidate_analysis_175.py"
+      - ".github/workflows/r2-frozen-candidates-175.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen_r2_cases:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0,1,2,3,4,5,6,7]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify preregistered immutable manifest and operator SHA
+        run: |
+          python -c 'from research.r2_write_rules_175 import load_frozen; f=load_frozen(); assert len(f["positive_seeds"])==16 and len(f["negative_seeds"])==8; print("FROZEN SHA",f["digest"])'
+      - name: Frozen deterministic replay, sham parity, and sentinel-validated cases
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          python -m research.r2_candidate_analysis_175 \
+            --shard "$SHARD" \
+            --source-sha "$SOURCE_SHA" \
+            --output "r2/shard-$SHARD.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r2-cases-${{ matrix.shard }}
+          path: r2/shard-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+  frozen_r2_aggregate:
+    needs: frozen_r2_cases
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: r2-cases-*
+          path: r2/incoming
+          merge-multiple: true
+      - name: Validate exact-head 24/24 case, immutable protocol, negative-control and selection gates
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python -m research.r2_candidate_analysis_175 \
+            --aggregate r2/incoming \
+            --source-sha "$SOURCE_SHA" \
+            --output r2/summary.json
+          cat r2/summary.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: r2-frozen-candidate-summary
+          path: r2/summary.json
+          if-no-files-found: error
+          retention-days: 30
