@@ -265,7 +265,7 @@ def execute_selected_round(
             if on_stage is not None:
                 on_stage("after_final_commit")
             sample_budget()
-            return {
+            result = {
                 "final_snapshot": final_snapshot,
                 "final_digest": final_digest,
                 "resumed_from": resumed_from,
@@ -279,5 +279,11 @@ def execute_selected_round(
                 "elapsed_wall_seconds": time.perf_counter() - started,
                 "learning_claim": False,
             }
+            if worker_pool is not None:
+                # Retain new opt-in worker resource evidence only. Original
+                # workers=1 return contract remains byte-for-byte identical.
+                result["peak_aggregate_rss_bytes"] = worker_pool.peak_aggregate_rss
+                result["worker_hard_virtual_cap_bytes"] = worker_pool.virtual_cap
+            return result
         finally:
             fcntl.flock(single_writer.fileno(), fcntl.LOCK_UN)
