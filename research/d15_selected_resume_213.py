@@ -12,7 +12,9 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
+import threading
 from pathlib import Path
+from contextlib import nullcontext
 import time
 from typing import Any, Callable
 
@@ -24,7 +26,7 @@ from research.d15_sparse_recovery_213 import (
     SparseEvaluationJournal,
 )
 from research.d8_genome_diversity_190 import digest
-from search.evolution import SteadyStateOptimizer
+from search.evolution import SteadyStateOptimizer, UniverseSlot
 
 FROZEN_PRE_D14_SELECTED_SHA = "0ad8268476bf79f3c9db02a91ebf92dba3250339571fb651913eaf845410b321"
 SLOTS = 128
@@ -42,6 +44,7 @@ def execute_selected_round(
     memory_mib: int = 1536,
     checkpoint_policy: CheckpointPolicy | None = None,
     max_journal_bytes: int = 128 * 1024 * 1024,
+    workers: int = 1,
     on_checkpoint: Callable[[int], None] | None = None,
     on_stage: Callable[[str], None] | None = None,
 ) -> dict[str, Any]:
@@ -52,6 +55,10 @@ def execute_selected_round(
     Call with the true current implementation/source revision: the journal
     rejects any different revision on future open.
     """
+    if type(workers) is not int or workers not in (1, 2, 4):
+        raise ValueError("D15 workers must be exactly 1, 2 or 4")
+    if workers > 1 and threading.current_thread() is not threading.main_thread():
+        raise ValueError("D15 spawn workers require the original long-lived main thread")
     if not isinstance(source_commit, str) or not source_commit.strip():
         raise ValueError("D15 source_commit is required")
     if base_snapshot is not None and not isinstance(base_snapshot, dict):
@@ -173,26 +180,57 @@ def execute_selected_round(
             pending: list[dict[str, Any]] = []
             last_save_at = time.monotonic()
 
-            for first in range(resumed_from, SLOTS, evaluation_batch_size):
-                for index in range(first, min(first + evaluation_batch_size, SLOTS)):
-                    sample_budget()
-                    slot = opt.slots[index]
-                    if slot.index != index:
-                        raise JournalIntegrityError("D15 native evaluation index diverged")
-                    # Original physics/fitness path, original slot order.
-                    opt._evaluate_slot(slot)
-                    pending.append(slot.to_dict())
-                    if policy.should_commit(
-                        pending_worlds=len(pending),
-                        seconds_since_save=time.monotonic() - last_save_at,
-                    ) or index + 1 == SLOTS:
-                        journal.commit(pending)
-                        saves += 1
-                        pending = []
-                        last_save_at = time.monotonic()
+            if workers == 1:
+                # Preserve original serial evaluation and journal semantics.
+                worker_context = nullcontext(None)
+            else:
+                from research.d15_spawn_workers_226 import SpawnEvaluator
+                worker_context = SpawnEvaluator(
+                    opt.to_snapshot(), workers=workers,
+                    budget=budget, lock_path=lock_path,
+                )
+            # Pool ends BEFORE native selection and final commit; only the
+            # parent owns the existing journal + exclusive writer lock.
+            with worker_context as worker_pool:
+                for first in range(resumed_from, SLOTS, evaluation_batch_size):
+                    indices = tuple(range(first, min(first + evaluation_batch_size, SLOTS)))
+                    # Evaluate the complete bounded batch in children without
+                    # committing ANY unvalidated partial set to the journal.
+                    child_records = (
+                        {} if worker_pool is None else worker_pool.evaluate(indices)
+                    )
+                    for index in indices:
                         sample_budget()
-                        if on_checkpoint is not None:
-                            on_checkpoint(index + 1)
+                        slot = opt.slots[index]
+                        if slot.index != index:
+                            raise JournalIntegrityError("D15 native evaluation index diverged")
+                        if worker_pool is None:
+                            # Original authoritative source, unchanged.
+                            opt._evaluate_slot(slot)
+                        else:
+                            candidate = UniverseSlot.from_dict(
+                                child_records[index], base_config=opt.base_config,
+                            )
+                            if (
+                                candidate.index != index or
+                                candidate.seed != slot.seed or
+                                candidate.category != slot.category or
+                                candidate.genome_key != slot.genome_key
+                            ):
+                                raise JournalIntegrityError("D15 worker slot identity changed")
+                            opt.slots[index] = slot = candidate
+                        pending.append(slot.to_dict())
+                        if policy.should_commit(
+                            pending_worlds=len(pending),
+                            seconds_since_save=time.monotonic() - last_save_at,
+                        ) or index + 1 == SLOTS:
+                            journal.commit(pending)
+                            saves += 1
+                            pending = []
+                            last_save_at = time.monotonic()
+                            sample_budget()
+                            if on_checkpoint is not None:
+                                on_checkpoint(index + 1)
 
             if pending:
                 raise JournalIntegrityError("D15 uncommitted evaluations after loop")
@@ -227,7 +265,7 @@ def execute_selected_round(
             if on_stage is not None:
                 on_stage("after_final_commit")
             sample_budget()
-            return {
+            result = {
                 "final_snapshot": final_snapshot,
                 "final_digest": final_digest,
                 "resumed_from": resumed_from,
@@ -241,5 +279,11 @@ def execute_selected_round(
                 "elapsed_wall_seconds": time.perf_counter() - started,
                 "learning_claim": False,
             }
+            if worker_pool is not None:
+                # Retain new opt-in worker resource evidence only. Original
+                # workers=1 return contract remains byte-for-byte identical.
+                result["peak_aggregate_rss_bytes"] = worker_pool.peak_aggregate_rss
+                result["worker_hard_virtual_cap_bytes"] = worker_pool.virtual_cap
+            return result
         finally:
             fcntl.flock(single_writer.fileno(), fcntl.LOCK_UN)
