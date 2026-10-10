@@ -128,14 +128,14 @@ class NativeSpawnD15Tests(unittest.TestCase):
             with self.subTest(stage=stage),TemporaryDirectory() as d:
                 root=Path(d)/"journal"
                 program=(
-                    "import os\\nfrom pathlib import Path\\n"
-                    "from core.experiment import ExperimentConfig\\n"
-                    "from research.d15_selected_resume_213 import execute_selected_round\\n"
+                    "import os\nfrom pathlib import Path\n"
+                    "from core.experiment import ExperimentConfig\n"
+                    "from research.d15_selected_resume_213 import execute_selected_round\n"
                     f"execute_selected_round(Path({str(root)!r}),"
                     f"source_commit={SOURCE!r},base_seed=0,"
                     "experiment=ExperimentConfig(evaluation_timeout_generations=2),"
                     "evaluation_batch_size=16,memory_mib=1536,workers=2,"
-                    f"on_stage=lambda st: os._exit({exit_code}) if st=={stage!r} else None)\\n"
+                    f"on_stage=lambda st: os._exit({exit_code}) if st=={stage!r} else None)\n"
                 )
                 crashed=subprocess.run([sys.executable,"-c",program],
                                        stdout=subprocess.DEVNULL,
