@@ -950,23 +950,27 @@ def step(
     pending_free: set[int] = set()
     activity_amounts: dict[int, int] = {}
 
-    for slot in range(state.max_cells):
-        if state.lifecycle[slot] != Lifecycle.BLACK_HOLE:
-            continue
-        if slot in stimulated:
-            state.lifecycle[slot] = int(Lifecycle.ACTIVE)
-            state.hp[slot] = resolved.recovery_hp
-            state.black_hole_timer[slot] = 0
-            recovered_slots.add(slot)
-            if slot in external_stimulated:
-                activity_amounts[slot] = activity_amounts.get(slot, 0) + resolved.recovery_hp
-        else:
-            state.black_hole_timer[slot] -= 1
-            if state.black_hole_timer[slot] <= 0:
-                if _slow_trace_inert(resolved):
-                    state.free(slot)
-                else:
-                    pending_free.add(slot)
+    # A BH-free generation must not scan 1024 cells in Python solely to
+    # discover that there is no black-hole lifecycle work. Keep the exact
+    # original ascending scan and mutation path whenever any BH is present.
+    if int(Lifecycle.BLACK_HOLE) in state.lifecycle:
+        for slot in range(state.max_cells):
+            if state.lifecycle[slot] != Lifecycle.BLACK_HOLE:
+                continue
+            if slot in stimulated:
+                state.lifecycle[slot] = int(Lifecycle.ACTIVE)
+                state.hp[slot] = resolved.recovery_hp
+                state.black_hole_timer[slot] = 0
+                recovered_slots.add(slot)
+                if slot in external_stimulated:
+                    activity_amounts[slot] = activity_amounts.get(slot, 0) + resolved.recovery_hp
+            else:
+                state.black_hole_timer[slot] -= 1
+                if state.black_hole_timer[slot] <= 0:
+                    if _slow_trace_inert(resolved):
+                        state.free(slot)
+                    else:
+                        pending_free.add(slot)
 
     for slot in external_stimulated:
         if state.lifecycle[slot] == Lifecycle.ACTIVE and slot not in recovered_slots:
