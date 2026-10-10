@@ -1,0 +1,30 @@
+name: PERF226 Spawn D15 Ordered Journal and Crash Parity
+
+on:
+  pull_request:
+    paths:
+      - "research/d15_selected_resume_213.py"
+      - "research/d15_spawn_workers_226.py"
+      - "tests/test_d15_spawn_workers_226.py"
+      - ".github/workflows/perf-d15-spawn-226.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spawn_native_selected_safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Opt-in spawn original selected128/2 rounds/parent SIGKILL recovery
+        run: timeout 470s python -m unittest discover -s tests -p 'test_d15_spawn_workers_226.py' -v
+      - name: Existing serial D15 native128 process-kill and replay gold
+        run: timeout 160s python -m unittest discover -s tests -p 'test_d15_selected_resume_213.py' -v
