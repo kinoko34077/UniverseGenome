@@ -13,12 +13,80 @@ import subprocess
 from tempfile import TemporaryDirectory
 import time
 import argparse
+import fcntl
 
 from core.experiment import ExperimentConfig
 from research.d15_selected_resume_213 import execute_selected_round
+from research.d15_spawn_workers_226 import SpawnEvaluator
+from research.d15_sparse_recovery_213 import ResourceBudget
+from search.evolution import SteadyStateOptimizer, UniverseSlot
 from research.d8_genome_diversity_190 import digest
 
 GOLDEN = "0ad8268476bf79f3c9db02a91ebf92dba3250339571fb651913eaf845410b321"
+
+
+DEFAULT16_GOLDEN = "dac756ecd34152d815e430a946fc996a5d2ad94301f6401d4ff6147e8b5de0f0"
+DEFAULT16_INDICES = tuple(i + j for i in (0, 32, 64, 96) for j in range(4))
+
+
+def run_default16() -> dict:
+    """Exploratory original default1024 16-world evaluation, NO selection.
+
+    Source-bound opt-in spawn worker handling under the same parent writer
+    lock; this DOES NOT write a partial journal or run D16 science.
+    """
+    rows = []
+    for worker_count in (1, 2, 4):
+        opt = SteadyStateOptimizer.from_defaults(base_seed=0)
+        with TemporaryDirectory(prefix=f"perf226-default16-{worker_count}-") as tmp:
+            lock_path = Path(tmp) / "journal.writer.lock"
+            with lock_path.open("a+b") as writer:
+                fcntl.flock(writer.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                start = time.perf_counter()
+                if worker_count == 1:
+                    for index in DEFAULT16_INDICES:
+                        opt._evaluate_slot(opt.slots[index])
+                else:
+                    with SpawnEvaluator(
+                        opt.to_snapshot(), workers=worker_count,
+                        budget=ResourceBudget(1536), lock_path=lock_path,
+                    ) as pool:
+                        # Parent authentication and native ordering, no
+                        # partial selection or journal checkpoint yet.
+                        records = pool.evaluate(DEFAULT16_INDICES)
+                        for index in DEFAULT16_INDICES:
+                            previous = opt.slots[index]
+                            candidate = UniverseSlot.from_dict(
+                                records[index], base_config=opt.base_config,
+                            )
+                            if (
+                                candidate.index != index or
+                                candidate.seed != previous.seed or
+                                candidate.category != previous.category or
+                                candidate.genome_key != previous.genome_key
+                            ):
+                                raise AssertionError("default16 worker native identity drift")
+                            opt.slots[index] = candidate
+                elapsed = time.perf_counter() - start
+                fcntl.flock(writer.fileno(), fcntl.LOCK_UN)
+        snapshot_hash = digest(opt.to_snapshot())
+        if snapshot_hash != DEFAULT16_GOLDEN:
+            raise AssertionError("default1024 mixed16 full optimizer state differs")
+        rows.append({
+            "workers": worker_count,
+            "wall_seconds": elapsed,
+            "selected_step_executed": False,
+            "whole_optimizer_digest": snapshot_hash,
+        })
+    return {
+        "type": "default1024_seed0_original_mixed_category_16_worlds",
+        "no_partial_journal_committed": True,
+        "results": rows,
+        "speed_ratios": {
+            "workers2": rows[0]["wall_seconds"] / rows[1]["wall_seconds"],
+            "workers4": rows[0]["wall_seconds"] / rows[2]["wall_seconds"],
+        },
+    }
 
 
 def run() -> dict:
@@ -67,6 +135,7 @@ def run() -> dict:
             "workers4":report[0]["wall_total_including_journal_s"]/
                        report[2]["wall_total_including_journal_s"],
         },
+        "default1024_16slot_under_parent_lock":run_default16(),
         "D16_seed16384_long_science":False,
         "learning_claim":False,
     }
