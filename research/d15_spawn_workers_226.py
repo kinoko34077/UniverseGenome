@@ -23,6 +23,7 @@ from research.d15_sparse_recovery_213 import ResourceBudget, JournalIntegrityErr
 from search.evolution import SteadyStateOptimizer
 
 RESERVE_BYTES = 128 * 1024 * 1024
+PARENT_GROWTH_MARGIN = 256 * 1024 * 1024
 MIN_WORKER_VIRTUAL_BYTES = 192 * 1024 * 1024
 MAX_BATCH_WALL_SECONDS = 180
 MAX_CHILDREN = 4
@@ -146,11 +147,16 @@ class SpawnEvaluator:
             # Even if all workers grew to their OS-enforced per-worker virtual
             # caps, leave space for the current parent and next patch.
             if parent_rss + self.workers*self.virtual_cap + RESERVE_BYTES > self.budget.limit_bytes:
-                raise MemoryError("aggregate worker hard virtual cap exceeds memory budget")
+                raise MemoryError(
+                    "aggregate worker hard virtual cap exceeds memory budget: "
+                    f"parent_rss={parent_rss} worker_virtual_total={self.workers*self.virtual_cap} "
+                    f"reserve={RESERVE_BYTES} limit={self.budget.limit_bytes}"
+                )
 
     def __enter__(self) -> "SpawnEvaluator":
         parent_rss = _proc_bytes(os.getpid())[1]
-        headroom = self.budget.limit_bytes - parent_rss - RESERVE_BYTES
+        headroom = (self.budget.limit_bytes - parent_rss - RESERVE_BYTES
+                    - PARENT_GROWTH_MARGIN)
         self.virtual_cap = headroom // self.workers
         if self.virtual_cap < MIN_WORKER_VIRTUAL_BYTES:
             raise MemoryError("no sufficient virtual memory for even bounded spawn workers")
