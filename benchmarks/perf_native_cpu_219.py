@@ -190,13 +190,31 @@ def main(argv=None):
     report = run(args.physical_generations, not args.without_numba_micro)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, sort_keys=True, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"issue": ISSUE, "source_sha": report["source_sha"],
-                      "physics_wall": {x["name"]: x["wall_seconds"] for x in report["report"]["physical_cases"]},
-                      "native_slot_wall": {str(x["slot"]): x["wall_seconds"] for x in report["report"]["native_evaluate_slots"]},
-                      "evaluation_clone_wall": report["report"]["evaluation_clone"]["wall_seconds"],
-                      "numba_micro_status": report["report"]["active_slot_kernel_microbenchmark"]["status"],
-                      "total_wall": report["measured_total_wall_seconds"]},
-                     sort_keys=True), flush=True)
+    measured = report["report"]
+    examined = [
+        *measured["physical_cases"],
+        measured["training"],
+        measured["evaluation_clone"],
+        *measured["native_evaluate_slots"],
+    ]
+    summary = {
+        "issue": ISSUE, "source_sha": report["source_sha"],
+        "profiles": {
+            row["name"]: {
+                "wall_seconds": row["wall_seconds"],
+                "cpu_seconds": row["cpu_seconds"],
+                "top_self_seconds": sorted(row["top_cumulative"],
+                                           key=lambda item: item["self_seconds"],
+                                           reverse=True)[:8],
+                "top_cumulative_seconds": row["top_cumulative"][:8],
+            }
+            for row in examined
+        },
+        "active_slot_kernel_microbenchmark": measured["active_slot_kernel_microbenchmark"],
+        "total_wall_seconds": report["measured_total_wall_seconds"],
+        "test_only": True,
+    }
+    print(json.dumps(summary, sort_keys=True), flush=True)
 
 
 if __name__ == "__main__":
