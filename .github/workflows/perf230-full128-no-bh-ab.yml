@@ -1,0 +1,69 @@
+name: PERF230 Paired Real Default128 Native BH Fastpath A-B
+
+on:
+  pull_request:
+    paths:
+      - "core/physics.py"
+      - "benchmarks/perf230_full128_no_bh_ab.py"
+      - ".github/workflows/perf230-full128-no-bh-ab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full_original_selected128_same_runner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run genuine native default128 one selected round original vs candidate source
+        run: |
+          mkdir -p reports
+          git worktree add --detach "$RUNNER_TEMP/perf230-real-old" c5451030cec5150d277a7f6e94d396ad2611f15b
+          cp benchmarks/perf230_full128_no_bh_ab.py "$RUNNER_TEMP/perf230-real-old/benchmarks/"
+          (cd "$RUNNER_TEMP/perf230-real-old" && timeout -k 20s 400s \
+            python -m benchmarks.perf230_full128_no_bh_ab --output "$GITHUB_WORKSPACE/reports/old.json")
+          timeout -k 20s 400s python -m benchmarks.perf230_full128_no_bh_ab \
+            --output reports/new.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          old=json.loads(Path('reports/old.json').read_text())
+          new=json.loads(Path('reports/new.json').read_text())
+          digest='725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63'
+          for row in (old,new):
+              if (row['original_native_full_optimizer_digest'] != digest
+                      or row['evaluated_worlds'] != 128
+                      or row['checkpoint_writes'] != 8
+                      or not row['original_selected_once']):
+                  raise AssertionError('original full selected128 source oracle drift')
+          if old['journal_bytes'] != new['journal_bytes']:
+              raise AssertionError('original journal serialization changed')
+          ratio=old['wall_seconds']/new['wall_seconds']
+          report={'source_reference':old['source_sha'],'source_candidate':new['source_sha'],
+                  'original_full_v7_selected_digest':digest,
+                  'same_runner_original_native_default128_seed0_wall':old['wall_seconds'],
+                  'same_runner_candidate_native_default128_seed0_wall':new['wall_seconds'],
+                  'actual_full128_speed_ratio':ratio,'one_sample_each':True,
+                  'D16_seed16384_outcomes':False,'learning_claim':False}
+          Path('reports/comparison.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(report,sort_keys=True),flush=True)
+          if ratio < 1.05:
+              raise AssertionError('predeclared >=5% actual native selected128 improvement not met')
+          PY
+      - name: Archive original vs candidate full selected128 performance and source equality
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-real-full128-no-bh-paired
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7

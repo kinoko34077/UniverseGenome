@@ -1,0 +1,77 @@
+name: PERF230 Physics No-BH Fastpath Native Parity and Paired CPU
+
+on:
+  pull_request:
+    paths:
+      - "core/physics.py"
+      - "tests/test_perf230_no_bh_fastpath.py"
+      - ".github/workflows/perf230-no-bh-fastpath.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native_semantics_and_same_host_ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Original native BH expiry, revival, and default1024 full optimizer golden
+        run: python -m unittest discover -s tests -p 'test_perf230_no_bh_fastpath.py' -v
+      - name: Original selected128 hard crash and journal resume regression
+        run: timeout 180s python -m unittest discover -s tests -p 'test_d15_selected_resume_213.py' -v
+      - name: Original 2/4 spawn workers and parent fatal SIGKILL regression
+        run: timeout 180s python -m unittest discover -s tests -p 'test_d15_spawn_workers_226.py' -v
+      - name: Current accepted main / candidate paired original default1024 CPU A/B
+        run: |
+          mkdir -p reports
+          git worktree add --detach "$RUNNER_TEMP/perf230-old" c5451030cec5150d277a7f6e94d396ad2611f15b
+          (cd "$RUNNER_TEMP/perf230-old" && python -m benchmarks.perf_residual_219 \
+            --physical-generations 32 --output "$GITHUB_WORKSPACE/reports/old1.json")
+          python -m benchmarks.perf_residual_219 \
+            --physical-generations 32 --output reports/new1.json
+          python -m benchmarks.perf_residual_219 \
+            --physical-generations 32 --output reports/new2.json
+          (cd "$RUNNER_TEMP/perf230-old" && python -m benchmarks.perf_residual_219 \
+            --physical-generations 32 --output "$GITHUB_WORKSPACE/reports/old2.json")
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from statistics import median
+          folder=Path('reports')
+          rows={name:json.loads((folder / f'{name}.json').read_text())
+                for name in ('old1','old2','new1','new2')}
+          actual={key:val['native_default_slot0']['uninstrumented_wall_s']
+                  for key,val in rows.items()}
+          gold={val['native_default_slot0']['whole_optimizer_state_sha256']
+                for val in rows.values()}
+          if gold != {'e146bebe695dec14fc978e47d4a1e189d1e30bdaa83f9d6e69eec3c4d201f4c1'}:
+              raise AssertionError('original default1024 native v7 state drift')
+          ratio=median([actual['old1'],actual['old2']]) / median([actual['new1'],actual['new2']])
+          result={'reference': 'c5451030cec5150d277a7f6e94d396ad2611f15b',
+                  'candidate':rows['new1']['source_sha'],
+                  'unprofiled_original_default1024_slot0_seconds': actual,
+                  'same_runner_median_speed_ratio':ratio,
+                  'original_full_optimizer_digest':next(iter(gold)),
+                  'D16_seed16384_outcomes':False,'learning_claim':False}
+          (folder/'paired-summary.json').write_text(json.dumps(result,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(result,sort_keys=True),flush=True)
+          if ratio < 1.05:
+              raise AssertionError('predeclared >=5% true original slot speed gate not met')
+          PY
+      - name: Archive A/B and any partial read-only parity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-no-bh-true-original-paired-ab
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
