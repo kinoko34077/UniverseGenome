@@ -1094,7 +1094,7 @@ def step(
     elapsed = max(time.perf_counter() - started, 1e-12)
     return StepMetrics(
         generation=state.generation,
-        active_cells=len(state.active_slots()),
+        active_cells=state.lifecycle.count(int(Lifecycle.ACTIVE)),
         collision_count=collision_count,
         collision_pair_evaluations=collision_count,
         bond_contact_count=len(compatible_pairs),
