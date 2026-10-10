@@ -93,7 +93,23 @@ class UniverseState:
         self.slow_trace = bytearray(self.max_cells)
 
     def active_slots(self) -> list[int]:
-        return [index for index, state in enumerate(self.lifecycle) if state == Lifecycle.ACTIVE]
+        """Return ACTIVE storage indices using CPython's C-level list search.
+
+        This is identical to scanning lifecycle in ascending slot order; it
+        avoids running a Python comparison for every FREE/BLACK_HOLE entry
+        in our fixed-capacity sparse 1024-slot states. It has no cache and
+        therefore remains correct after all in-place physical transitions.
+        """
+        active = int(Lifecycle.ACTIVE)
+        indices: list[int] = []
+        start = 0
+        while True:
+            try:
+                slot = self.lifecycle.index(active, start)
+            except ValueError:
+                return indices
+            indices.append(slot)
+            start = slot + 1
 
     def spawn(
         self,
