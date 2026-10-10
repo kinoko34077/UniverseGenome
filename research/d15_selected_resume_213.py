@@ -12,6 +12,7 @@ from __future__ import annotations
 import fcntl
 import hashlib
 import json
+import threading
 from pathlib import Path
 from contextlib import nullcontext
 import time
@@ -56,6 +57,8 @@ def execute_selected_round(
     """
     if type(workers) is not int or workers not in (1, 2, 4):
         raise ValueError("D15 workers must be exactly 1, 2 or 4")
+    if workers > 1 and threading.current_thread() is not threading.main_thread():
+        raise ValueError("D15 spawn workers require the original long-lived main thread")
     if not isinstance(source_commit, str) or not source_commit.strip():
         raise ValueError("D15 source_commit is required")
     if base_snapshot is not None and not isinstance(base_snapshot, dict):
