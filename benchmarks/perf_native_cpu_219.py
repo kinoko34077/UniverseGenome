@@ -99,6 +99,27 @@ def active_slots_microbenchmark():
     report = []
     for density in (4, 32, 128):
         state = create_universe(seed=TEST_SEED, config=PhysicsConfig(initial_density=density))
+        def list_index_search():
+            out = []
+            start = 0
+            while True:
+                try:
+                    found = state.lifecycle.index(1, start)
+                except ValueError:
+                    return out
+                out.append(found)
+                start = found + 1
+
+        def byte_find_search():
+            packed = bytes(state.lifecycle)
+            out = []
+            start = 0
+            while True:
+                found = packed.find(b"\\x01", start)
+                if found < 0:
+                    return out
+                out.append(found)
+                start = found + 1
         reference = state.active_slots()
         array = np.asarray(state.lifecycle, dtype=np.uint8)
         compile_at = time.perf_counter()
@@ -118,14 +139,17 @@ def active_slots_microbenchmark():
                "actual_active_cells": len(reference),
                "numba_first_compile_and_call_seconds": compilation_wall_s,
                "python_list_scan": sample(state.active_slots),
+               "python_list_index": sample(list_index_search),
+               "python_bytes_find_with_conversion": sample(byte_find_search),
                "numpy_with_per_call_conversion": sample(
                    lambda: np.flatnonzero(np.asarray(state.lifecycle, dtype=np.uint8) == 1).tolist()),
                "numba_with_per_call_conversion": sample(
                    lambda: list(compiled_active_index(np.asarray(state.lifecycle, dtype=np.uint8)))),
                "numba_persistent_array_kernel_only": sample(lambda: list(compiled_active_index(array)))}
         if not all(row[k]["correct"] for k in
-                   ("python_list_scan", "numpy_with_per_call_conversion",
-                    "numba_with_per_call_conversion", "numba_persistent_array_kernel_only")):
+                   ("python_list_scan", "python_list_index", "python_bytes_find_with_conversion",
+                    "numpy_with_per_call_conversion", "numba_with_per_call_conversion",
+                    "numba_persistent_array_kernel_only")):
             raise AssertionError("active slot microbenchmark parity regression")
         report.append(row)
     return {"status": "MEASURED", "isolated_only": True,
@@ -160,6 +184,16 @@ def run(physical_generations: int, run_micro: bool) -> dict:
         p["category"] = optimizer.slots[index].category
         p["physical_generation"] = optimizer.slots[index].state.generation
         native.append(p)
+    # A single disposable default-timeout evaluation profile to cover the
+    # actual 1024-generation clone-evaluation path, never D16 seed16384/selection.
+    default_optimizer = SteadyStateOptimizer.from_defaults(base_seed=TEST_SEED)
+    full_timeout_slot_profile, _ = profile_call(
+        "single_slot_default_timeout1024",
+        lambda: default_optimizer._evaluate_slot(default_optimizer.slots[0]),
+    )
+    full_timeout_slot_profile["slot"] = 0
+    full_timeout_slot_profile["timeout_generations"] = 1024
+    full_timeout_slot_profile["base_seed"] = TEST_SEED
     return {
         "schema_version": 1, "issue": ISSUE, "kind": "TestOnlyNativeCpuProfiler",
         "source_sha": source_head(), "base_seed": TEST_SEED,
@@ -173,6 +207,7 @@ def run(physical_generations: int, run_micro: bool) -> dict:
         "report": {"physical_cases": cases, "training": training_profile,
                    "evaluation_clone": evaluation_profile,
                    "native_evaluate_slots": native,
+                   "single_default_timeout_slot": full_timeout_slot_profile,
                    "active_slot_kernel_microbenchmark": (
                        active_slots_microbenchmark() if run_micro else {"status": "SKIPPED"})},
         "measured_total_wall_seconds": time.perf_counter() - before,
@@ -196,6 +231,7 @@ def main(argv=None):
         measured["training"],
         measured["evaluation_clone"],
         *measured["native_evaluate_slots"],
+        measured["single_default_timeout_slot"],
     ]
     summary = {
         "issue": ISSUE, "source_sha": report["source_sha"],
