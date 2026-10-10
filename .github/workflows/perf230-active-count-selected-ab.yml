@@ -1,0 +1,71 @@
+name: PERF230 Active Metric Count True Default128 Native A-B
+
+on:
+  pull_request:
+    paths:
+      - "core/physics.py"
+      - "tests/test_perf230_active_metric_count.py"
+      - ".github/workflows/perf230-active-count-selected-ab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  original_native_selected128_same_runner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Original active-count parity and true default1024 single-world golden
+        run: python -m unittest discover -s tests -p 'test_perf230_active_metric_count.py' -v
+      - name: Strict same-host old main vs candidate native full128 original selection
+        run: |
+          mkdir -p reports
+          git worktree add --detach "$RUNNER_TEMP/perf230-active-old" 38ac258948b7b6950ad587bba487d63471223ec0
+          (cd "$RUNNER_TEMP/perf230-active-old" && timeout -k 20s 400s \
+            python -m benchmarks.perf230_full128_no_bh_ab --output "$GITHUB_WORKSPACE/reports/old.json")
+          timeout -k 20s 400s python -m benchmarks.perf230_full128_no_bh_ab \
+            --output reports/new.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          old = json.loads(Path('reports/old.json').read_text())
+          new = json.loads(Path('reports/new.json').read_text())
+          golden = '725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63'
+          assert old['source_sha']=='38ac258948b7b6950ad587bba487d63471223ec0'
+          for row in (old,new):
+              assert row['original_native_full_optimizer_digest']==golden
+              assert row['evaluated_worlds']==128
+              assert row['original_selected_once'] and row['checkpoint_writes']==8
+              assert row['original_default_timeout_generations']==1024
+              assert row['seed']==0 and row['workers']==4
+              assert row['sampled_aggregate_peak_rss_bytes'] <= 1536*1024*1024
+          assert old['journal_bytes']==new['journal_bytes']
+          ratio=old['wall_seconds']/new['wall_seconds']
+          report={'baseline_sha':old['source_sha'],'candidate_sha':new['source_sha'],
+                  'baseline_full_selected128_wall_s':old['wall_seconds'],
+                  'candidate_full_selected128_wall_s':new['wall_seconds'],
+                  'same_host_speed_ratio':ratio,'v7_digest':golden,
+                  'same_journal_bytes':old['journal_bytes'],
+                  'source_science_seed16384_executed':False,'learning_claim':False}
+          Path('reports/comparison.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(report,sort_keys=True),flush=True)
+          if ratio < 1.05:
+              raise AssertionError('P3.3 predeclared >=5pct native selected full128 gain not demonstrated')
+          PY
+      - name: Archive original native full128 same-run A-B resource witnesses
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-active-count-native128-paired
+          path: reports/*.json
+          retention-days: 7
+          if-no-files-found: warn
