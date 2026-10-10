@@ -1,0 +1,38 @@
+name: PERF219 Accepted-Main Residual CPU Profiler
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf_residual_219.py"
+      - "tests/test_perf_residual_219.py"
+      - ".github/workflows/perf-residual-219.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  one_slot_default_cpu_residual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Residual profiler smoke
+        run: python -m unittest discover -s tests -p 'test_perf_residual_219.py' -v
+      - name: Source bound actual default timeout1024 native seed0 CPU hotspot report
+        run: |
+          timeout 240s python -m benchmarks.perf_residual_219 \
+            --physical-generations 96 \
+            --output reports/perf-residual-219.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perf-residual-cpu-219
+          path: reports/perf-residual-219.json
+          if-no-files-found: error
+          retention-days: 7
