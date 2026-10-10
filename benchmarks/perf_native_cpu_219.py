@@ -115,7 +115,7 @@ def active_slots_microbenchmark():
             out = []
             start = 0
             while True:
-                found = packed.find(b"\\x01", start)
+                found = packed.find(b"\x01", start)
                 if found < 0:
                     return out
                 out.append(found)
