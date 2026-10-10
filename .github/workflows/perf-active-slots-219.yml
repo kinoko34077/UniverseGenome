@@ -1,0 +1,60 @@
+name: PERF219 Active-Slot Native Golden and Determinism
+
+on:
+  pull_request:
+    paths:
+      - "core/state.py"
+      - "tests/test_perf_active_slots_219.py"
+      - ".github/workflows/perf-active-slots-219.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact_native_slot_semantics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Reference-equivalence matrix and exact PRE-D14 selected128 source golden
+        run: python -m unittest discover -s tests -p 'test_perf_active_slots_219.py' -v
+      - name: Existing D15 native hard crash/resume parity regression
+        run: python -m unittest discover -s tests -p 'test_d15_selected_resume_213.py' -v
+      - name: Real disposable seed0 default-timeout native one-slot wall evidence
+        run: |
+          timeout 180s python - <<'PY'
+          import json
+          import subprocess
+          import time
+          from research.d8_genome_diversity_190 import digest
+          from search.evolution import SteadyStateOptimizer
+          opt = SteadyStateOptimizer.from_defaults(base_seed=0)
+          start = time.perf_counter()
+          opt._evaluate_slot(opt.slots[0])
+          elapsed = time.perf_counter()-start
+          result = {
+              "issue":219, "source_sha":subprocess.check_output(
+                  ["git","rev-parse","HEAD"], text=True).strip(),
+              "seed":0, "default_timeout_generations":1024,
+              "one_native_slot_wall_seconds":elapsed,
+              "optimizer_snapshot_digest":digest(opt.to_snapshot()),
+              "full128_D16_science":False,
+              "learning_claim":False,
+          }
+          with open("perf-active-slots-219.json","w",encoding="utf-8") as stream:
+              json.dump(result,stream,sort_keys=True)
+          print(json.dumps(result,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perf-active-slots-native-evidence
+          path: perf-active-slots-219.json
+          if-no-files-found: error
+          retention-days: 7
