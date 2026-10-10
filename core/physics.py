@@ -895,7 +895,9 @@ def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) ->
     state.hp[slot] = 0
 
 
-def _local_revival_slots(state: UniverseState) -> tuple[set[int], list[int]]:
+def _local_revival_slots(
+    state: UniverseState, *, black_holes_out: list[int] | None = None,
+) -> set[int]:
     """Permit a nearby active latent/bond signal to revive a black-hole slot."""
     # BLACK_HOLE is usually absent in the long autonomous clone-evaluation
     # path. Scan the fixed-capacity lifecycle in C, and avoid building the
@@ -910,7 +912,9 @@ def _local_revival_slots(state: UniverseState) -> tuple[set[int], list[int]]:
         black_holes.append(slot)
         start = slot + 1
     if not black_holes:
-        return set(), black_holes
+        return set()
+    if black_holes_out is not None:
+        black_holes_out.extend(black_holes)
     active = state.active_slots()
     revived: set[int] = set()
     for black_hole in black_holes:
@@ -926,7 +930,7 @@ def _local_revival_slots(state: UniverseState) -> tuple[set[int], list[int]]:
             if black_hole_footprint.intersection(participant_footprint):
                 revived.add(black_hole)
                 break
-    return revived, black_holes
+    return revived
 
 
 def step(
@@ -944,7 +948,8 @@ def step(
     generation = state.generation
     trace_start = state.slow_trace if _slow_trace_inert(resolved) else bytes(state.slow_trace)
     external_stimulated = set(int(slot) for slot in stimulus_slots)
-    local_revival, black_holes = _local_revival_slots(state)
+    black_holes: list[int] = []
+    local_revival = _local_revival_slots(state, black_holes_out=black_holes)
     stimulated = external_stimulated | local_revival
     recovered_slots: set[int] = set()
     pending_free: set[int] = set()
