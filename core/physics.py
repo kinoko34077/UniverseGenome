@@ -895,9 +895,20 @@ def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) ->
     state.hp[slot] = 0
 
 
-def _local_revival_slots(
-    state: UniverseState, *, black_holes_out: list[int] | None = None,
-) -> set[int]:
+class _RevivalSlots(set[int]):
+    """Set-compatible revival indices plus discovered BHs for in-step reuse.
+
+    Original callers and test monkeypatches still receive/evaluate a set.
+    Only our native producer attaches the already-computed ordered positions.
+    """
+    __slots__ = ("black_hole_indices",)
+
+    def __init__(self, revived: Iterable[int], black_hole_indices: list[int]) -> None:
+        super().__init__(revived)
+        self.black_hole_indices = tuple(black_hole_indices)
+
+
+def _local_revival_slots(state: UniverseState) -> set[int]:
     """Permit a nearby active latent/bond signal to revive a black-hole slot."""
     # BLACK_HOLE is usually absent in the long autonomous clone-evaluation
     # path. Scan the fixed-capacity lifecycle in C, and avoid building the
@@ -912,9 +923,7 @@ def _local_revival_slots(
         black_holes.append(slot)
         start = slot + 1
     if not black_holes:
-        return set()
-    if black_holes_out is not None:
-        black_holes_out.extend(black_holes)
+        return _RevivalSlots((), black_holes)
     active = state.active_slots()
     revived: set[int] = set()
     for black_hole in black_holes:
@@ -930,7 +939,7 @@ def _local_revival_slots(
             if black_hole_footprint.intersection(participant_footprint):
                 revived.add(black_hole)
                 break
-    return revived
+    return _RevivalSlots(revived, black_holes)
 
 
 def step(
@@ -948,8 +957,15 @@ def step(
     generation = state.generation
     trace_start = state.slow_trace if _slow_trace_inert(resolved) else bytes(state.slow_trace)
     external_stimulated = set(int(slot) for slot in stimulus_slots)
-    black_holes: list[int] = []
-    local_revival = _local_revival_slots(state, black_holes_out=black_holes)
+    local_revival = _local_revival_slots(state)
+    # Old source/test monkeypatches return a plain set; preserve their
+    # original full scan for semantic regression comparisons.
+    black_holes = getattr(local_revival, "black_hole_indices", None)
+    if black_holes is None:
+        black_holes = (
+            range(state.max_cells)
+            if int(Lifecycle.BLACK_HOLE) in state.lifecycle else ()
+        )
     stimulated = external_stimulated | local_revival
     recovered_slots: set[int] = set()
     pending_free: set[int] = set()
