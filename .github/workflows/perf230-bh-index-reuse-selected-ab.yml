@@ -1,0 +1,71 @@
+name: PERF230 P3.4 BH Index Reuse True Native128 A-B
+
+on:
+  pull_request:
+    paths:
+      - "core/physics.py"
+      - "tests/test_perf230_bh_index_reuse.py"
+      - ".github/workflows/perf230-bh-index-reuse-selected-ab.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  strict_default128_parity_and_performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Original BH expiry/revival/default-state and short selection golden
+        run: timeout -k 10s 75s python -m unittest discover -s tests -p 'test_perf230_bh_index_reuse.py' -v
+      - name: Compare full original default1024 selected128 single-parent D15 native source
+        run: |
+          mkdir -p reports
+          git worktree add --detach "$RUNNER_TEMP/perf230-bh-index-base" 38ac258948b7b6950ad587bba487d63471223ec0
+          (cd "$RUNNER_TEMP/perf230-bh-index-base" && timeout -k 20s 400s \
+            python -m benchmarks.perf230_full128_no_bh_ab --output "$GITHUB_WORKSPACE/reports/baseline.json")
+          timeout -k 20s 400s python -m benchmarks.perf230_full128_no_bh_ab \
+            --output reports/candidate.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          base=json.loads(Path('reports/baseline.json').read_text())
+          cand=json.loads(Path('reports/candidate.json').read_text())
+          golden='725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63'
+          assert base['source_sha']=='38ac258948b7b6950ad587bba487d63471223ec0'
+          for row in (base,cand):
+              assert row['original_native_full_optimizer_digest']==golden
+              assert row['evaluated_worlds']==128 and row['original_selected_once']
+              assert row['checkpoint_writes']==8
+              assert row['seed']==0 and row['workers']==4
+              assert row['original_default_timeout_generations']==1024
+              assert row['sampled_aggregate_peak_rss_bytes'] <=1536*1024*1024
+          assert base['journal_bytes']==cand['journal_bytes']
+          ratio=base['wall_seconds']/cand['wall_seconds']
+          report={'source':'PERF230 P3.4 predeclared original native selected128',
+                  'baseline_sha':base['source_sha'],'candidate_sha':cand['source_sha'],
+                  'baseline_s':base['wall_seconds'],'candidate_s':cand['wall_seconds'],
+                  'same_host_speedup':ratio,'original_optimizer_digest':golden,
+                  'original_journal_bytes':base['journal_bytes'],
+                  'science_seed16384_executed':False,'learning_claim':False}
+          Path('reports/comparison.json').write_text(json.dumps(report,indent=2,sort_keys=True)+'\n')
+          print(json.dumps(report,sort_keys=True),flush=True)
+          if ratio <1.05:
+              raise AssertionError('PERF230 P3.4 source-frozen >=5% full native128 performance gate NOT MET')
+          PY
+      - name: Preserve before/after source-bound evidence on failure or success
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-p34-bh-index-full128
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7

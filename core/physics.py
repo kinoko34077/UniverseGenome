@@ -895,6 +895,19 @@ def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) ->
     state.hp[slot] = 0
 
 
+class _RevivalSlots(set[int]):
+    """Set-compatible revival indices plus discovered BHs for in-step reuse.
+
+    Original callers and test monkeypatches still receive/evaluate a set.
+    Only our native producer attaches the already-computed ordered positions.
+    """
+    __slots__ = ("black_hole_indices",)
+
+    def __init__(self, revived: Iterable[int], black_hole_indices: list[int]) -> None:
+        super().__init__(revived)
+        self.black_hole_indices = tuple(black_hole_indices)
+
+
 def _local_revival_slots(state: UniverseState) -> set[int]:
     """Permit a nearby active latent/bond signal to revive a black-hole slot."""
     # BLACK_HOLE is usually absent in the long autonomous clone-evaluation
@@ -910,7 +923,7 @@ def _local_revival_slots(state: UniverseState) -> set[int]:
         black_holes.append(slot)
         start = slot + 1
     if not black_holes:
-        return set()
+        return _RevivalSlots((), black_holes)
     active = state.active_slots()
     revived: set[int] = set()
     for black_hole in black_holes:
@@ -926,7 +939,7 @@ def _local_revival_slots(state: UniverseState) -> set[int]:
             if black_hole_footprint.intersection(participant_footprint):
                 revived.add(black_hole)
                 break
-    return revived
+    return _RevivalSlots(revived, black_holes)
 
 
 def step(
@@ -945,16 +958,25 @@ def step(
     trace_start = state.slow_trace if _slow_trace_inert(resolved) else bytes(state.slow_trace)
     external_stimulated = set(int(slot) for slot in stimulus_slots)
     local_revival = _local_revival_slots(state)
+    # Old source/test monkeypatches return a plain set; preserve their
+    # original full scan for semantic regression comparisons.
+    black_holes = getattr(local_revival, "black_hole_indices", None)
+    if black_holes is None:
+        black_holes = (
+            range(state.max_cells)
+            if int(Lifecycle.BLACK_HOLE) in state.lifecycle else ()
+        )
     stimulated = external_stimulated | local_revival
     recovered_slots: set[int] = set()
     pending_free: set[int] = set()
     activity_amounts: dict[int, int] = {}
 
-    # A BH-free generation must not scan 1024 cells in Python solely to
-    # discover that there is no black-hole lifecycle work. Keep the exact
-    # original ascending scan and mutation path whenever any BH is present.
-    if int(Lifecycle.BLACK_HOLE) in state.lifecycle:
-        for slot in range(state.max_cells):
+    # Reuse the ordered BH indices already identified for local revival.
+    # No lifecycle mutations occur between that scan and this loop; for
+    # BH-free states this skips the redundant whole-capacity C membership
+    # scan, while BH expiry/recovery retain their original ascending order.
+    if black_holes:
+        for slot in black_holes:
             if state.lifecycle[slot] != Lifecycle.BLACK_HOLE:
                 continue
             if slot in stimulated:
