@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 from tempfile import TemporaryDirectory
 import unittest
 
@@ -56,21 +57,48 @@ class NativeSpawnD15Tests(unittest.TestCase):
     def test_actual_parent_exit_after_two_patches_resume_only_96(self):
         with TemporaryDirectory() as d:
             root = Path(d) / "journal"
+            children_at_crash = Path(d) / "spawn-child-pids.txt"
             program = (
                 "import os\nfrom pathlib import Path\n"
                 "from core.experiment import ExperimentConfig\n"
                 "from research.d15_selected_resume_213 import execute_selected_round\n"
+                f"child_file = Path({str(children_at_crash)!r})\n"
+                "def kill_after_two_patches(index):\n"
+                "    if index == 32:\n"
+                "        child_file.write_text("
+                "Path(f'/proc/self/task/{os.getpid()}/children').read_text())\n"
+                "        os._exit(86)\n"
                 f"execute_selected_round(Path({str(root)!r}),"
                 f"source_commit={SOURCE!r},base_seed=0,"
                 "experiment=ExperimentConfig(evaluation_timeout_generations=2),"
                 "evaluation_batch_size=16,memory_mib=1536,workers=2,"
-                "on_checkpoint=lambda n: os._exit(86) if n==32 else None)\n"
+                "on_checkpoint=kill_after_two_patches)\n"
             )
             failed = subprocess.run([sys.executable,"-c",program],
                                     stdout=subprocess.DEVNULL,
                                     stderr=subprocess.PIPE,
                                     text=True,timeout=120)
             self.assertEqual(failed.returncode, 86, failed.stderr)
+            # At the crash point the parent still had two worker children
+            # (and possibly Python's resource_tracker). They must not remain
+            # RUNNING after the parent's abrupt death. Zombies count as dead.
+            listed = [int(pid) for pid in children_at_crash.read_text().split()]
+            self.assertGreaterEqual(len(listed), 2)
+            deadline = time.monotonic() + 8
+            while True:
+                running = []
+                for pid in listed:
+                    stat = Path(f"/proc/{pid}/stat")
+                    try:
+                        state = stat.read_text().rsplit(")", 1)[1].split()[0]
+                    except FileNotFoundError:
+                        continue
+                    if state not in ("Z", "X", "x"):
+                        running.append((pid, state))
+                if not running or time.monotonic() >= deadline:
+                    break
+                time.sleep(0.05)
+            self.assertFalse(running, f"orphaned D15 child processes after parent exit: {running}")
             # Neither the parent nor spawned children can retain D15 writer
             # flock after the parent dies.
             lock = root.with_name(root.name+".writer.lock")
