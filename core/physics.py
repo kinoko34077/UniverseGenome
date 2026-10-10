@@ -895,7 +895,7 @@ def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) ->
     state.hp[slot] = 0
 
 
-def _local_revival_slots(state: UniverseState) -> set[int]:
+def _local_revival_slots(state: UniverseState) -> tuple[set[int], list[int]]:
     """Permit a nearby active latent/bond signal to revive a black-hole slot."""
     # BLACK_HOLE is usually absent in the long autonomous clone-evaluation
     # path. Scan the fixed-capacity lifecycle in C, and avoid building the
@@ -910,7 +910,7 @@ def _local_revival_slots(state: UniverseState) -> set[int]:
         black_holes.append(slot)
         start = slot + 1
     if not black_holes:
-        return set()
+        return set(), black_holes
     active = state.active_slots()
     revived: set[int] = set()
     for black_hole in black_holes:
@@ -926,7 +926,7 @@ def _local_revival_slots(state: UniverseState) -> set[int]:
             if black_hole_footprint.intersection(participant_footprint):
                 revived.add(black_hole)
                 break
-    return revived
+    return revived, black_holes
 
 
 def step(
@@ -944,17 +944,18 @@ def step(
     generation = state.generation
     trace_start = state.slow_trace if _slow_trace_inert(resolved) else bytes(state.slow_trace)
     external_stimulated = set(int(slot) for slot in stimulus_slots)
-    local_revival = _local_revival_slots(state)
+    local_revival, black_holes = _local_revival_slots(state)
     stimulated = external_stimulated | local_revival
     recovered_slots: set[int] = set()
     pending_free: set[int] = set()
     activity_amounts: dict[int, int] = {}
 
-    # A BH-free generation must not scan 1024 cells in Python solely to
-    # discover that there is no black-hole lifecycle work. Keep the exact
-    # original ascending scan and mutation path whenever any BH is present.
-    if int(Lifecycle.BLACK_HOLE) in state.lifecycle:
-        for slot in range(state.max_cells):
+    # Reuse the ordered BH indices already identified for local revival.
+    # No lifecycle mutations occur between that scan and this loop; for
+    # BH-free states this skips the redundant whole-capacity C membership
+    # scan, while BH expiry/recovery retain their original ascending order.
+    if black_holes:
+        for slot in black_holes:
             if state.lifecycle[slot] != Lifecycle.BLACK_HOLE:
                 continue
             if slot in stimulated:
