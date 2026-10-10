@@ -16,6 +16,7 @@ from pathlib import Path
 import resource
 import signal
 import sys
+import threading
 import time
 from typing import Any
 
@@ -123,6 +124,8 @@ class SpawnEvaluator:
         self.workers = workers
         self.budget = budget
         self.lock_path = str(lock_path.absolute())
+        # Local trusted child/parent Pipes use multiprocessing pickle IPC.
+        # Untrusted or remote worker payloads are NOT supported.
         self.context = mp.get_context("spawn")
         self.processes = []
         self.pipes = []
@@ -135,7 +138,10 @@ class SpawnEvaluator:
         pids = [proc.pid for proc in self.processes]
         if any(pid is None for pid in pids):
             raise MemoryError("unstarted worker cannot be admitted")
-        child_rss = sum(_proc_bytes(int(pid))[1] for pid in pids)
+        try:
+            child_rss = sum(_proc_bytes(int(pid))[1] for pid in pids)
+        except (FileNotFoundError, ProcessLookupError) as exc:
+            raise JournalIntegrityError("D15 worker exited during aggregate memory admission") from exc
         total = parent_rss + child_rss
         self.peak_aggregate_rss = max(total, self.peak_aggregate_rss)
         self.budget.admit(
@@ -154,6 +160,10 @@ class SpawnEvaluator:
                 )
 
     def __enter__(self) -> "SpawnEvaluator":
+        # PR_SET_PDEATHSIG on Linux is tied to the thread which creates the
+        # worker. A transient non-main thread could kill children early.
+        if threading.current_thread() is not threading.main_thread():
+            raise RuntimeError("D15 spawn workers require the long-lived main thread")
         parent_rss = _proc_bytes(os.getpid())[1]
         headroom = (self.budget.limit_bytes - parent_rss - RESERVE_BYTES
                     - PARENT_GROWTH_MARGIN)
