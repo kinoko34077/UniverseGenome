@@ -5,6 +5,7 @@ on:
     paths:
       - "research/d15_selected_resume_213.py"
       - "research/d15_spawn_workers_226.py"
+      - "benchmarks/perf_d15_spawn_journal_226.py"
       - "tests/test_d15_spawn_workers_226.py"
       - ".github/workflows/perf-d15-spawn-226.yml"
   workflow_dispatch:
@@ -28,3 +29,13 @@ jobs:
         run: timeout 470s python -m unittest discover -s tests -p 'test_d15_spawn_workers_226.py' -v
       - name: Existing serial D15 native128 process-kill and replay gold
         run: timeout 160s python -m unittest discover -s tests -p 'test_d15_selected_resume_213.py' -v
+      - name: Actual source-bound D15 journal writer serial/2/4 native128 selected full gold benchmark
+        run: |
+          timeout 160s python -m benchmarks.perf_d15_spawn_journal_226 \
+            --output reports/perf-d15-spawn-journal-226.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perf226-spawn-journal-actual
+          path: reports/perf-d15-spawn-journal-226.json
+          if-no-files-found: error
+          retention-days: 7
