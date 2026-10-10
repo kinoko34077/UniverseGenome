@@ -1,0 +1,37 @@
+name: PERF226 Writer-Lock Inheritance and Resource P0
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf_d15_worker_safety_226.py"
+      - "tests/test_perf_d15_worker_safety_226.py"
+      - ".github/workflows/perf-d15-worker-safety-226.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux_process_safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: SIGKILL parent writer fork/spawn lock and bounded aggregate RSS tests
+        run: python -m unittest discover -s tests -p 'test_perf_d15_worker_safety_226.py' -v
+      - name: Source-bound fresh process/writer and cgroup observational report
+        run: |
+          timeout 60s python -m benchmarks.perf_d15_worker_safety_226 \
+            --output reports/perf-d15-worker-safety-226.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perf226-fork-spawn-lock-report
+          path: reports/perf-d15-worker-safety-226.json
+          if-no-files-found: error
+          retention-days: 7
