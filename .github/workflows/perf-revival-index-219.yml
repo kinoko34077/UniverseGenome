@@ -1,0 +1,83 @@
+name: PERF219 Black-Hole Revival Native Parity and A-B
+
+on:
+  pull_request:
+    paths:
+      - "core/physics.py"
+      - "tests/test_perf_revival_index_219.py"
+      - ".github/workflows/perf-revival-index-219.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  measured_revival_parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Revival synthetic + real transition parity + PRE-D14 selected128 oracle
+        run: python -m unittest discover -s tests -p 'test_perf_revival_index_219.py' -v
+      - name: Original Phase1 revival regression
+        run: python -m unittest discover -s tests -p 'test_phase1.py' -v
+      - name: D15 selected128 crash-resume parity regression
+        run: python -m unittest discover -s tests -p 'test_d15_selected_resume_213.py' -v
+      - name: Uninstrumented default1024 single native slot same-job original vs optimized
+        run: |
+          timeout 180s python - <<'PY'
+          import json
+          import subprocess
+          import time
+          from unittest.mock import patch
+          import core.physics as physics
+          from research.d8_genome_diversity_190 import digest
+          from search.evolution import SteadyStateOptimizer
+          from runpy import run_path
+          original_revival_slots = run_path("tests/test_perf_revival_index_219.py")["original_revival_slots"]
+
+          original = SteadyStateOptimizer.from_defaults(base_seed=0)
+          started = time.perf_counter()
+          with patch.object(physics, "_local_revival_slots", original_revival_slots):
+              original._evaluate_slot(original.slots[0])
+          reference_seconds = time.perf_counter() - started
+          reference = digest(original.to_snapshot())
+
+          optimized = SteadyStateOptimizer.from_defaults(base_seed=0)
+          started = time.perf_counter()
+          optimized._evaluate_slot(optimized.slots[0])
+          optimized_seconds = time.perf_counter() - started
+          candidate = digest(optimized.to_snapshot())
+          if reference != candidate:
+              raise AssertionError("PERF219 true-default optimized physics diverged")
+          result = {
+              "issue": 219,
+              "source_sha": subprocess.check_output(["git","rev-parse","HEAD"],text=True).strip(),
+              "worlds_evaluated": 1,
+              "base_seed": 0,
+              "experiment_timeout_generations": 1024,
+              "baseline_revival_function": "original_reference",
+              "baseline_wall_seconds": reference_seconds,
+              "optimized_wall_seconds": optimized_seconds,
+              "one_slot_speedup_factor": reference_seconds / optimized_seconds,
+              "authoritative_digest_match": True,
+              "optimizer_snapshot_sha256": candidate,
+              "D16_default_seed_extended_run": False,
+              "learning_claim": False
+          }
+          with open("perf-revival-index-219.json","w",encoding="utf-8") as f:
+              json.dump(result,f,sort_keys=True)
+          print(json.dumps(result,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perf-revival-index-219
+          path: perf-revival-index-219.json
+          retention-days: 7
+          if-no-files-found: error

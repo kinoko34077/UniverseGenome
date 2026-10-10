@@ -897,11 +897,21 @@ def _enter_black_hole(state: UniverseState, slot: int, config: PhysicsConfig) ->
 
 def _local_revival_slots(state: UniverseState) -> set[int]:
     """Permit a nearby active latent/bond signal to revive a black-hole slot."""
+    # BLACK_HOLE is usually absent in the long autonomous clone-evaluation
+    # path. Scan the fixed-capacity lifecycle in C, and avoid building the
+    # active list/footprints entirely when no revival can occur.
+    black_holes: list[int] = []
+    start = 0
+    while True:
+        try:
+            slot = state.lifecycle.index(int(Lifecycle.BLACK_HOLE), start)
+        except ValueError:
+            break
+        black_holes.append(slot)
+        start = slot + 1
+    if not black_holes:
+        return set()
     active = state.active_slots()
-    black_holes = [
-        slot for slot, lifecycle in enumerate(state.lifecycle)
-        if lifecycle == Lifecycle.BLACK_HOLE
-    ]
     revived: set[int] = set()
     for black_hole in black_holes:
         black_hole_footprint = destination_footprint(
