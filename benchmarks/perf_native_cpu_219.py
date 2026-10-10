@@ -21,6 +21,7 @@ from core.experiment import ExperimentConfig, IOExperiment, measure_trained_stat
 from core.physics import PhysicsConfig, create_universe, step
 from research.d8_genome_diversity_190 import digest
 from search.evolution import SteadyStateOptimizer
+from core.state import UniverseState
 
 ISSUE = 219
 TEST_SEED = 0
@@ -194,6 +195,41 @@ def run(physical_generations: int, run_micro: bool) -> dict:
     full_timeout_slot_profile["slot"] = 0
     full_timeout_slot_profile["timeout_generations"] = 1024
     full_timeout_slot_profile["base_seed"] = TEST_SEED
+    legacy_default_digest = digest(default_optimizer.to_snapshot())
+    original_active_slots = UniverseState.active_slots
+
+    def builtin_index_active_slots(self: UniverseState) -> list[int]:
+        out: list[int] = []
+        start = 0
+        while True:
+            try:
+                index = self.lifecycle.index(1, start)
+            except ValueError:
+                return out
+            out.append(index)
+            start = index + 1
+
+    # This patch is a disposable, single-process BENCHMARK ONLY: no production
+    # source/serialization/backend changes and no persistent object mutation.
+    UniverseState.active_slots = builtin_index_active_slots
+    try:
+        alternative_default_optimizer = SteadyStateOptimizer.from_defaults(base_seed=TEST_SEED)
+        alternative_profile, _ = profile_call(
+            "single_slot_default_timeout1024_builtin_index",
+            lambda: alternative_default_optimizer._evaluate_slot(
+                alternative_default_optimizer.slots[0]
+            ),
+        )
+        alternative_digest = digest(alternative_default_optimizer.to_snapshot())
+    finally:
+        UniverseState.active_slots = original_active_slots
+    if alternative_digest != legacy_default_digest:
+        raise AssertionError("default1024 selected-slot immutable reference state divergence")
+    alternative_profile["exact_default_state_digest_match"] = True
+    alternative_profile["test_only_monkeypatch"] = True
+    alternative_profile["full_slot_baseline_to_builtin_index_ratio"] = (
+        full_timeout_slot_profile["wall_seconds"] / alternative_profile["wall_seconds"]
+    )
     return {
         "schema_version": 1, "issue": ISSUE, "kind": "TestOnlyNativeCpuProfiler",
         "source_sha": source_head(), "base_seed": TEST_SEED,
@@ -208,6 +244,8 @@ def run(physical_generations: int, run_micro: bool) -> dict:
                    "evaluation_clone": evaluation_profile,
                    "native_evaluate_slots": native,
                    "single_default_timeout_slot": full_timeout_slot_profile,
+                   "single_default_timeout_slot_builtin_index": alternative_profile,
+                   "default1024_reference_snapshot_digest": legacy_default_digest,
                    "active_slot_kernel_microbenchmark": (
                        active_slots_microbenchmark() if run_micro else {"status": "SKIPPED"})},
         "measured_total_wall_seconds": time.perf_counter() - before,
@@ -232,6 +270,7 @@ def main(argv=None):
         measured["evaluation_clone"],
         *measured["native_evaluate_slots"],
         measured["single_default_timeout_slot"],
+        measured["single_default_timeout_slot_builtin_index"],
     ]
     summary = {
         "issue": ISSUE, "source_sha": report["source_sha"],
@@ -248,6 +287,12 @@ def main(argv=None):
         },
         "active_slot_kernel_microbenchmark": measured["active_slot_kernel_microbenchmark"],
         "total_wall_seconds": report["measured_total_wall_seconds"],
+        "end_to_end_builtin_index_ratio": measured[
+            "single_default_timeout_slot_builtin_index"
+        ]["full_slot_baseline_to_builtin_index_ratio"],
+        "same_authoritative_snapshot": measured[
+            "single_default_timeout_slot_builtin_index"
+        ]["exact_default_state_digest_match"],
         "test_only": True,
     }
     print(json.dumps(summary, sort_keys=True), flush=True)
