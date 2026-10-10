@@ -164,8 +164,17 @@ def main() -> None:
     if args.output is None:
         p.error("--output required for observations")
     results = [witness(m) for m in ("fork", "spawn")]
-    admitted = conservative_admit(os.getpid(), [],
-                                  limit_mib=1536, headroom_mib=64)
+    # GitHub-hosted Ubuntu can expose cgroup-v2 memory.max='max'
+    # (unrestricted runner): do not claim admission based on host RAM.
+    # Report this as a normal BLOCKED feasibility outcome and keep the
+    # underlying actual production-style admission fail-closed.
+    try:
+        admitted = conservative_admit(os.getpid(), [],
+                                      limit_mib=1536, headroom_mib=64)
+    except (RuntimeError, MemoryError) as exc:
+        admitted = {"admitted": False, "status": "BLOCKED_BY_RESOURCE_ADMISSION",
+                    "reason": str(exc), "cgroup": cgroup_v2_memory(),
+                    "parent_rss_bytes": _rss(os.getpid())}
     result = {"kind":"P0_D15_FORK_WRITER_FD_INHERITANCE",
               "source_sha":subprocess.check_output(
                   ["git","rev-parse","HEAD"],text=True,timeout=10).strip(),
