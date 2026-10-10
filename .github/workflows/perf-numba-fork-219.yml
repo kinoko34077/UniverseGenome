@@ -1,0 +1,40 @@
+name: PERF219 Test-Only Numba and Fork Native128 Probe
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf_numba_fork_219.py"
+      - "tests/test_perf_numba_fork_219.py"
+      - ".github/workflows/perf-numba-fork-219.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source_bound_backend_feasibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install fixed-version optional numerical probe dependencies
+        run: python -m pip install --disable-pip-version-check numpy==2.3.5 numba==0.65.1
+      - name: Verify typed scan parity and native child/parent ordering
+        run: python -m unittest discover -s tests -p 'test_perf_numba_fork_219.py' -v
+      - name: Source-bound short selected128 golden and 16 default1024 slots serial vs 2/4 workers
+        run: |
+          timeout 360s python -m benchmarks.perf_numba_fork_219 \
+            --output reports/perf-numba-fork-219.json
+      - name: Archive comparative time/RSS/state witnesses
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-numba-fork-219
+          path: reports/perf-numba-fork-219.json
+          if-no-files-found: error
+          retention-days: 7
