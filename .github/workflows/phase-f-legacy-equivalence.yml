@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "research/outer_search_phase_f_acceptance.py"
+      - "research/d15_selected_resume_213.py"
+      - "research/d15_spawn_workers_226.py"
       - ".github/workflows/phase-f-legacy-equivalence.yml"
       - "search/**"
       - "core/**"
@@ -13,6 +15,8 @@ on:
       - main
     paths:
       - "research/outer_search_phase_f_acceptance.py"
+      - "research/d15_selected_resume_213.py"
+      - "research/d15_spawn_workers_226.py"
       - ".github/workflows/phase-f-legacy-equivalence.yml"
       - "search/**"
       - "core/**"
