@@ -151,6 +151,27 @@ class NativeSpawnD15Tests(unittest.TestCase):
                 self.assertEqual(recovered["final_digest"],GOLDEN)
                 self.assertFalse(self._execute(root,workers=2)["finalization_performed"])
 
+    def test_optin_from_short_lived_thread_fails_before_journal_exists(self):
+        from threading import Thread
+        with TemporaryDirectory() as d:
+            target = Path(d) / "journal"
+            failures = []
+
+            def attempt():
+                try:
+                    self._execute(target, workers=2)
+                except BaseException as exc:
+                    failures.append(exc)
+
+            thread = Thread(target=attempt)
+            thread.start()
+            thread.join(timeout=8)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(len(failures), 1)
+            self.assertIsInstance(failures[0], ValueError)
+            self.assertIn("main thread", str(failures[0]))
+            self.assertFalse(target.exists())
+
     def test_optin_args_reject_wrong_worker_count_before_filesystem(self):
         with TemporaryDirectory() as d:
             for workers in (0,3,5,False,2.0):
