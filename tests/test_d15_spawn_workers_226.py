@@ -106,6 +106,51 @@ class NativeSpawnD15Tests(unittest.TestCase):
             self.assertFalse(replay["finalization_performed"])
             self.assertEqual(replay["final_snapshot"],second)
 
+    def test_worker_sigkill_aborts_without_committing_any_journal_patch(self):
+        from research.d15_spawn_workers_226 import SpawnEvaluator
+        from research.d15_sparse_recovery_213 import ResourceBudget
+        opt = SteadyStateOptimizer.from_defaults(base_seed=0,experiment=_protocol())
+        with TemporaryDirectory() as d:
+            lock = Path(d)/"no-journal.writer.lock"
+            with SpawnEvaluator(opt.to_snapshot(),workers=2,
+                                budget=ResourceBudget(1536),lock_path=lock) as pool:
+                pool.processes[0].kill()
+                pool.processes[0].join(timeout=3)
+                with self.assertRaises((OSError,JournalIntegrityError)):
+                    pool.evaluate((0,1))
+            self.assertFalse(lock.exists())
+            self.assertFalse((Path(d)/"journal").exists())
+
+    def test_crash_before_and_after_atomic_final_preserves_original_single_selection(self):
+        for stage,exit_code,expect_final in (
+            ("before_final_commit",87,False),("after_final_commit",88,True),
+        ):
+            with self.subTest(stage=stage),TemporaryDirectory() as d:
+                root=Path(d)/"journal"
+                program=(
+                    "import os\\nfrom pathlib import Path\\n"
+                    "from core.experiment import ExperimentConfig\\n"
+                    "from research.d15_selected_resume_213 import execute_selected_round\\n"
+                    f"execute_selected_round(Path({str(root)!r}),"
+                    f"source_commit={SOURCE!r},base_seed=0,"
+                    "experiment=ExperimentConfig(evaluation_timeout_generations=2),"
+                    "evaluation_batch_size=16,memory_mib=1536,workers=2,"
+                    f"on_stage=lambda st: os._exit({exit_code}) if st=={stage!r} else None)\\n"
+                )
+                crashed=subprocess.run([sys.executable,"-c",program],
+                                       stdout=subprocess.DEVNULL,
+                                       stderr=subprocess.PIPE,
+                                       text=True,timeout=120)
+                self.assertEqual(crashed.returncode,exit_code,crashed.stderr)
+                view=SparseEvaluationJournal.open(root,source_commit=SOURCE).recover()
+                self.assertEqual(view.next_index,128)
+                self.assertEqual(view.final_committed,expect_final)
+                recovered=self._execute(root,workers=4)
+                self.assertEqual(recovered["new_evaluations"],0)
+                self.assertEqual(recovered["finalization_performed"],not expect_final)
+                self.assertEqual(recovered["final_digest"],GOLDEN)
+                self.assertFalse(self._execute(root,workers=2)["finalization_performed"])
+
     def test_optin_args_reject_wrong_worker_count_before_filesystem(self):
         with TemporaryDirectory() as d:
             for workers in (0,3,5,False,2.0):
