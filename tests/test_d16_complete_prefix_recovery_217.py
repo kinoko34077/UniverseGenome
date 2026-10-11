@@ -112,6 +112,18 @@ class CompletePrefixReplayTests(unittest.TestCase):
         with self.assertRaises(D16BoundaryError):
             self.replay()
 
+    def test_boolean_json_provenance_substitution_rejected(self):
+        receipt=self.write(1)
+        raw=receipt.read_bytes()
+        for key,value in (("seed",False),("ordinal",True),("job",True)):
+            doc=json.loads(raw)
+            doc[key]=value
+            receipt.write_text(json.dumps(doc))
+            with self.subTest(key=key),self.assertRaises(D16BoundaryError):
+                self.replay()
+        receipt.write_bytes(raw)
+        self.assertEqual(self.replay().count,1)
+
     def test_receipt_immutable_and_absolute_clock_bounded(self):
         self.write(1)
         with self.assertRaises(FileExistsError):
