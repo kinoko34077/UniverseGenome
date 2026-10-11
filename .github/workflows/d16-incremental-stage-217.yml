@@ -1,0 +1,28 @@
+name: D16.9 Dormant Incremental Two-Job Selected Stage (No Science)
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_incremental_stage_217.py"
+      - "tests/test_d16_incremental_stage_217.py"
+      - ".github/workflows/d16-incremental-stage-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic_only_source_stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Original fixed 20+20 stage source-only synthetic unit tests
+        run: |
+          python -m py_compile research/d16_incremental_stage_217.py
+          timeout -k 15s 320s python -m unittest tests.test_d16_incremental_stage_217 -v
