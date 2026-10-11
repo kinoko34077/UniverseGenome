@@ -122,6 +122,27 @@ class OfflineBoundaryTests(unittest.TestCase):
                          "GROWTH_AND_REPLACEMENT_COOBSERVED_NO_CAUSAL_CLAIM")
         self.assertFalse(classify(p, tuple(rows))["provenance_authenticated"])
 
+    def test_37_rounds_under1200_is_not_scientific_terminal(self):
+        p = protocol()
+        rows = history(p, 37)
+        report = classify(p, rows)
+        self.assertEqual(report["outcome"], "IN_PROGRESS")
+        self.assertTrue(report["completed_37_rounds_by_1200"])
+        self.assertFalse(report["target_1200_met"])
+        self.assertFalse(report["learning_claim"])
+
+    def test_terminal_coobservation_and_terminal_not_observed(self):
+        p = protocol()
+        rows = list(history(p, 37))
+        rows[-1] = replace(rows[-1], prunable_count=1, replacement_count=1,
+                           completed_growth_nonfailed=1)
+        present = classify(p, tuple(rows))
+        self.assertTrue(present["completed_37_rounds_by_1200"])
+        self.assertTrue(present["target_1200_met"])
+        absent = classify(p, history(p, 40))
+        self.assertEqual(absent["outcome"], "NOT_OBSERVED_WITHIN_FROZEN_HORIZON")
+        self.assertTrue(absent["target_1200_met"])
+
     def test_bound_incomplete_does_not_claim_success(self):
         p = protocol()
         rows = history(p, 12)

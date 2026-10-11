@@ -184,8 +184,18 @@ def classify(protocol: Protocol, rows: tuple[Round, ...],
         "outcome": outcome,
         "rounds": total,
         "global_seconds": elapsed,
-        "target_1200_met": elapsed <= protocol.preferred_seconds and total >= protocol.min_rounds
-            and not budget_bound,
+        # Throughput and terminal research status are distinct: 37 completed
+        # rounds alone do NOT mean the frozen study has reached an endpoint.
+        "completed_37_rounds_by_1200": (
+            total >= protocol.min_rounds
+            and elapsed <= protocol.preferred_seconds and not budget_bound
+        ),
+        "target_1200_met": (
+            outcome in (
+                "GROWTH_AND_REPLACEMENT_COOBSERVED_NO_CAUSAL_CLAIM",
+                "NOT_OBSERVED_WITHIN_FROZEN_HORIZON",
+            ) and elapsed <= protocol.preferred_seconds and not budget_bound
+        ),
         "replacements": sum(x.replacement_count for x in rows),
         "learning_claim": False,
         "provenance_authenticated": False,
