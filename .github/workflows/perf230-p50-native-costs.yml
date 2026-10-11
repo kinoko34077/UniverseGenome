@@ -1,0 +1,43 @@
+name: PERF230 P5.0 Source Native Cost Attribution for 900-Second Target
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf230_p50_current_native_costs.py"
+      - "tests/test_perf230_p50_current_native_costs.py"
+      - ".github/workflows/perf230-p50-native-costs.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_exposed_seed0_native128_cost_profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify frozen original source and no D16 research seed CLI
+        run: |
+          python -m py_compile benchmarks/perf230_p50_current_native_costs.py
+          python -m unittest tests.test_perf230_p50_current_native_costs -v
+      - name: Genuine seed0 source-native128 selected once and read-only observer/checkpoint cost profiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/p50
+          timeout -k 15s 440s python -m benchmarks.perf230_p50_current_native_costs --output reports/p50/cost-attribution.json
+      - name: Preserve verified actual cost breakdown
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-p50-original-native128-cost-isolation
+          path: reports/p50/cost-attribution.json
+          if-no-files-found: warn
+          retention-days: 7
