@@ -1,0 +1,28 @@
+name: D16 Offline Evidence-Ledger Guard Only
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_offline_boundary_217.py"
+      - "tests/test_d16_offline_boundary_217.py"
+      - ".github/workflows/d16-offline-boundary-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic_ledger_validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile and run synthetic-only D16 structural checks (no study seed)
+        run: |
+          python -m py_compile research/d16_offline_boundary_217.py tests/test_d16_offline_boundary_217.py
+          python -m unittest tests.test_d16_offline_boundary_217 -v
