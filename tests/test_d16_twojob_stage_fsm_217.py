@@ -125,6 +125,39 @@ class D16StageFSMTests(unittest.TestCase):
                 local_elapsed_ms=(n-20)*1000)
         self.assertEqual(state.result,"IN_PROGRESS")
 
+    def test_retirement_in_other_immature_category_is_not_positive(self):
+        opt,state=initial()
+        for n in range(1,21):
+            state=state.append(complete=synthetic_case(opt,n),
+                               now_unix_ms=START+n*1000,local_elapsed_ms=n*1000)
+        state=state.accept_second_job(
+            verified_selected20_v7=state.selected_v7_sha256,
+            clock_from_immutable_manifest=GlobalClock(START,20000),
+            now_unix_ms=START+21000)
+        for n in range(21,37):
+            state=state.append(complete=synthetic_case(opt,n),
+                               now_unix_ms=START+n*1000,
+                               local_elapsed_ms=(n-20)*1000)
+        record=synthetic_case(opt,37,retirements=1)
+        cats=dict(record["d15_verified_observer"]["categories"])
+        keys=sorted(cats)
+        # Retirement occurs in keys[0]; growth history is mature only in
+        # keys[1], so the same-category mature event is NOT demonstrated.
+        cats[keys[1]]={**cats[keys[1]],"complete_nonfailure_count":1}
+        record={**record,"d15_verified_observer":{
+            **record["d15_verified_observer"],"categories":cats,
+        }}
+        state=state.append(complete=record,now_unix_ms=START+37000,
+                           local_elapsed_ms=17000)
+        self.assertEqual(state.result,"IN_PROGRESS")
+        self.assertEqual(state.observed_native_retirements,0)
+        state=state.append(complete=synthetic_case(opt,38,mature=True),
+                           now_unix_ms=START+38000,local_elapsed_ms=18000)
+        self.assertEqual(state.result,"IN_PROGRESS")
+        state=state.append(complete=synthetic_case(opt,39,mature=True,retirements=1),
+                           now_unix_ms=START+39000,local_elapsed_ms=19000)
+        self.assertEqual(state.result,"OBSERVED_FINAL")
+
     def test_category_name_spoofing_rejected(self):
         opt,state=initial()
         rec=synthetic_case(opt,1)
