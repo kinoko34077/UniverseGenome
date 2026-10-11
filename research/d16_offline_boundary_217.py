@@ -33,8 +33,8 @@ class Protocol:
     seed: int = 16384
     min_rounds: int = 37
     max_rounds: int = 40
-    max_jobs: int = 4
-    rounds_per_job: int = 10
+    max_jobs: int = 2
+    rounds_per_job: int = 20
     preferred_seconds: int = 1200
     cap_seconds: int = 1800
     max_rss_bytes: int = 1536 * 1024 * 1024
@@ -46,8 +46,8 @@ class Protocol:
         for v in (self.initial_selected_sha, self.experiment_sha, self.physics_sha):
             _require(bool(_SHA.fullmatch(v)), "full digest required")
         _require(self.seed == 16384 and self.min_rounds == 37
-                 and self.max_rounds == 40 and self.max_jobs == 4
-                 and self.rounds_per_job == 10
+                 and self.max_rounds == 40 and self.max_jobs == 2
+                 and self.rounds_per_job == 20
                  and self.preferred_seconds == 1200 and self.cap_seconds == 1800,
                  "frozen D16 scientific protocol changed")
         _require(len(self.category_names) == 4 and len(set(self.category_names)) == 4,
@@ -101,12 +101,16 @@ def validate(protocol: Protocol, rows: tuple[Round, ...]) -> None:
                  "selected rounds not consecutive")
         _require(type(row.job) is int and 1 <= row.job <= protocol.max_jobs,
                  "invalid job")
+        # Prospective immutable 2-job partition avoids post-outcome scheduler edits:
+        # job1 selected rounds 1..20, job2 rounds 21..40.
+        _require(row.job == (1 if row.number <= 20 else 2),
+                 "frozen 20+20 two-job partition drift")
         _require(row.job == (1 if previous is None else row.job)
                  and (previous is None or row.job in
                       (previous.job, previous.job + 1)), "job order discontinuity")
         job_counts[row.job] = job_counts.get(row.job, 0) + 1
         _require(job_counts[row.job] <= protocol.rounds_per_job,
-                 "job did more than 10 rounds")
+                 "job did more than 20 rounds")
         _require(row.source == protocol.source and row.seed == protocol.seed,
                  "source or scientific seed drift")
         _require(row.experiment_sha == protocol.experiment_sha
