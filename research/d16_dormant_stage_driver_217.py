@@ -8,6 +8,7 @@ for the SAME still-authorized job/process replacement and frozen UTC budget.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -80,10 +81,14 @@ def prepare_dormant_state(*, folder: Path, source_sha: str, seed: int,
         actual_source=source_sha,expected_seed=seed,
         expected_selected_round=boundary,now_unix_ms=now_unix_ms,
     )
+    boundary_receipt=json.loads(
+        (Path(folder)/f"selected-receipt-{boundary:02d}.json").read_bytes()
+    )
     need(accepted_clock.study_started_unix_ms == study_started_unix_ms
+         and accepted_clock.study_started_unix_ms ==
+         state.global_clock.study_started_unix_ms
          and accepted_clock.prior_elapsed_ms >=
-         state.last_global_elapsed_ms if state.job == 1 else
-         accepted_clock.study_started_unix_ms == state.global_clock.study_started_unix_ms,
+         boundary_receipt["global_elapsed_ms"],
          "replayed first-host clock/elapsed time was reset")
     if state.job == 1:
         state = state.accept_second_job(
