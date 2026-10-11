@@ -1,0 +1,66 @@
+name: D16.2 Original Native128 Across Jobs v7 Continuation
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_twojob_observer_pilot_217.py"
+      - "tests/test_d16_twojob_observer_pilot_217.py"
+      - ".github/workflows/d16-twojob-observer-pilot-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  selected_round_1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Transfer trust boundary unit checks
+        run: python -m unittest tests.test_d16_twojob_observer_pilot_217
+      - name: Genuine original seed0 default1024 native128 selected round 1
+        run: |
+          mkdir -p reports/d16-twojob/transfer
+          timeout -k 20s 900s python -m research.d16_twojob_observer_pilot_217 --stage first --out reports/d16-twojob/transfer
+      - name: Upload immutable completed v7 only after full accepted selected round
+        uses: actions/upload-artifact@v4
+        with:
+          name: d16-twojob-original-selected-round1
+          path: reports/d16-twojob/transfer/
+          if-no-files-found: error
+          retention-days: 7
+
+  selected_round_2:
+    needs: selected_round_1
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: d16-twojob-original-selected-round1
+          path: reports/d16-twojob/inbound/
+      - name: Validate authentic selected v7 transfer, resume original next selection
+        run: |
+          mkdir -p reports/d16-twojob/results
+          timeout -k 20s 900s python -m research.d16_twojob_observer_pilot_217 --stage second --inbound reports/d16-twojob/inbound --out reports/d16-twojob/results
+      - name: Archive source-bound continuity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d16-twojob-original-native128-two-jobs-verdict
+          path: reports/d16-twojob/results/
+          if-no-files-found: warn
+          retention-days: 7
