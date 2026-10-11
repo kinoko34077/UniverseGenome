@@ -1,0 +1,28 @@
+name: D16 Dormant Same-Job Complete-Selection Driver Test Only
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_dormant_stage_driver_217.py"
+      - "tests/test_d16_dormant_stage_driver_217.py"
+      - ".github/workflows/d16-dormant-stage-driver-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic_d16_stage_fault_injection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test source-bound single complete D15 round progression with crash/recovery
+        run: |
+          python -m py_compile research/d16_dormant_stage_driver_217.py
+          timeout -k 10s 250s python -m unittest tests.test_d16_dormant_stage_driver_217 -v
