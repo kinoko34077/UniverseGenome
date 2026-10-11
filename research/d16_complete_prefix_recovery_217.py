@@ -144,8 +144,10 @@ def replay_completed_prefix(folder: Path, *, source_sha: str, seed: int,
             "actual_d15_observer_sha256","study_started_unix_ms",
             "global_elapsed_ms","local_elapsed_ms","learning_claim",
         } or receipt["schema"]!=SCHEMA or receipt["source_sha"]!=source_sha
-                or receipt["seed"]!=seed or receipt["ordinal"]!=ordinal
-                or receipt["job"]!=current_job
+                or type(receipt["seed"]) is not int or receipt["seed"]!=seed
+                or type(receipt["ordinal"]) is not int or receipt["ordinal"]!=ordinal
+                or type(receipt["job"]) is not int or receipt["job"]!=current_job
+                or type(receipt["study_started_unix_ms"]) is not int
                 or receipt["study_started_unix_ms"]!=study_started_unix_ms
                 or receipt["learning_claim"] is not False):
             raise D16BoundaryError("receipt source/seed/round/job/time anchor drift")
