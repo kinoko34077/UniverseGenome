@@ -149,10 +149,17 @@ def replay_completed_prefix(folder: Path, *, source_sha: str, seed: int,
                 or receipt["study_started_unix_ms"]!=study_started_unix_ms
                 or receipt["learning_claim"] is not False):
             raise D16BoundaryError("receipt source/seed/round/job/time anchor drift")
-        complete=read_completed(filename,source_sha=source_sha,seed=seed,
-                                ordinal=ordinal)
-        if (sha256_file(filename)!=receipt["selected_file_sha256"]
-                or complete["selected_v7_sha256"]!=receipt["selected_v7_sha256"]
+        # Verify the raw immutable file digest BEFORE JSON parsing. A hard
+        # kill or corrupt transport must fail closed, never escape as an
+        # unrelated parser error or promote a partial selected checkpoint.
+        if sha256_file(filename)!=receipt["selected_file_sha256"]:
+            raise D16BoundaryError("source-bound selected file bytes tampered")
+        try:
+            complete=read_completed(filename,source_sha=source_sha,
+                                    seed=seed,ordinal=ordinal)
+        except (ValueError, KeyError, TypeError, UnicodeError) as exc:
+            raise D16BoundaryError("malformed original completed-selected checkpoint") from exc
+        if (complete["selected_v7_sha256"]!=receipt["selected_v7_sha256"]
                 or hash_of(complete["d15_verified_observer"])
                 !=receipt["actual_d15_observer_sha256"]):
             raise D16BoundaryError("source-bound original checkpoint receipt tampered")
