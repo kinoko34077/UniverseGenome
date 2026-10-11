@@ -19,6 +19,13 @@ from research.d8_genome_diversity_190 import digest
 FULL_KIND = "D16_ORIGINAL_COMPLETED_SELECTED128_ROUND_CHECKPOINT_V1"
 
 
+def split_at(seed: int) -> int:
+    """Only exposed benchmark seed0 has a tiny 1+1 test fixture partition."""
+    need(type(seed) is int and seed in (0,16384),
+         "unsupported study seed or test-only benchmark")
+    return 1 if seed == 0 else 20
+
+
 @dataclass(frozen=True)
 class StageState:
     source_sha: str
@@ -56,8 +63,10 @@ class StageState:
                local_elapsed_ms: int) -> "StageState":
         need(self.result == "IN_PROGRESS", "no further selection after terminal/handoff")
         ordinal = self.selected_round + 1
-        need(self.job == plan_for_round(ordinal),
-             "original study crossed 20-round job without validated handoff")
+        boundary = split_at(self.seed)
+        need(ordinal <= (2 if self.seed == 0 else 40)
+             and self.job == (1 if ordinal <= boundary else 2),
+             "frozen original 20+20 or exposed seed0 1+1 partition violated")
         elapsed = self.global_clock.check(now_unix_ms=now_unix_ms,
                                           local_elapsed_ms=local_elapsed_ms)
         need(elapsed >= self.last_global_elapsed_ms,
@@ -109,12 +118,14 @@ class StageState:
         # event: count native retirements only from round37 onwards.
         mature_retiring = retiring if ordinal >= 37 and mature else 0
         total_retirements = self.observed_native_retirements + mature_retiring
-        status = ("HANDOFF_READY" if ordinal == 20 else
-                  classify_stop(ordinal,
-                                mature_categories={name: name in mature
-                                                  for name in categories},
-                                actual_replacements=min(total_retirements,4))
-                  if ordinal >= 37 else "IN_PROGRESS")
+        status = (
+            "HANDOFF_READY" if ordinal == boundary else
+            "FIXTURE_COMPLETE_NO_SCIENCE" if self.seed == 0 and ordinal == 2 else
+            classify_stop(ordinal,
+                          mature_categories={name: name in mature for name in categories},
+                          actual_replacements=min(total_retirements,4))
+            if ordinal >= 37 else "IN_PROGRESS"
+        )
         return replace(self, selected_round=ordinal, selected_v7_sha256=sha,
                        mature_categories=tuple(sorted(mature)),
                        observed_native_retirements=total_retirements,
@@ -123,7 +134,7 @@ class StageState:
     def accept_second_job(self, *, verified_selected20_v7: str,
                           clock_from_immutable_manifest: GlobalClock,
                           now_unix_ms: int) -> "StageState":
-        need(self.job == 1 and self.selected_round == 20
+        need(self.job == 1 and self.selected_round == split_at(self.seed)
              and self.result == "HANDOFF_READY"
              and self.selected_v7_sha256 == verified_selected20_v7,
              "must handoff precisely a complete source-bound original round20")
