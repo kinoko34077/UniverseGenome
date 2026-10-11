@@ -12,7 +12,7 @@ from typing import Any, Mapping
 
 from research.d16_twojob_run_control_217 import (
     D16BoundaryError, GlobalClock, classify_stop, native_state_checked,
-    plan_for_round, need,
+    plan_for_round, need, SOURCE_RE,
 )
 from research.d8_genome_diversity_190 import digest
 
@@ -26,6 +26,7 @@ class StageState:
     job: int
     selected_round: int
     selected_v7_sha256: str
+    category_names: tuple[str, ...]
     global_clock: GlobalClock
     mature_categories: tuple[str, ...]
     observed_native_retirements: int
@@ -36,10 +37,17 @@ class StageState:
     def start(cls, *, source_sha: str, seed: int,
               original_genesis: Mapping[str, Any],
               job1_start_unix_ms: int) -> "StageState":
+        need(isinstance(source_sha,str) and bool(SOURCE_RE.fullmatch(source_sha)),
+             "pinned exact source SHA required")
         digest_v7 = native_state_checked(original_genesis,
                                          expected_seed=seed, expected_generation=0)
+        from search.evolution import SteadyStateOptimizer
+        genesis = SteadyStateOptimizer.from_snapshot(dict(original_genesis))
+        categories = tuple(sorted(set(s.category for s in genesis.slots)))
+        need(len(categories)==4,"native original four category names not established")
         return cls(source_sha=source_sha, seed=seed, job=1, selected_round=0,
                    selected_v7_sha256=digest_v7,
+                   category_names=categories,
                    global_clock=GlobalClock(job1_start_unix_ms),
                    mature_categories=(), observed_native_retirements=0,
                    last_global_elapsed_ms=0)
@@ -79,8 +87,9 @@ class StageState:
              and observer.get("original_selected_once_proven_by_D15_final") is True,
              "missing original D15 verified evaluation/selection provenance")
         categories = observer.get("categories")
-        need(isinstance(categories, Mapping) and len(categories) == 4,
-             "not four original source-native category observations")
+        need(isinstance(categories, Mapping)
+             and tuple(sorted(categories)) == self.category_names,
+             "not original source-native four frozen category observations")
         mature = set(self.mature_categories)
         for category, data in categories.items():
             need(isinstance(category, str) and isinstance(data, Mapping),
@@ -92,9 +101,14 @@ class StageState:
                 need(ordinal >= 37, "four-window maturity claimed before genuine37")
                 mature.add(category)
         retiring = observer.get("actual_native_replacement_count")
-        need(type(retiring) is int and 0 <= retiring <= 4,
-             "actual native retirement invalid")
-        total_retirements = self.observed_native_retirements + retiring
+        need(type(retiring) is int and 0 <= retiring <= 4
+             and retiring == sum(data.get("native_replacement_count", -1)
+                                  for data in categories.values()),
+             "actual native retirement / per-category observer inconsistent")
+        # Early absolute-failure retirements cannot prove a mature-growth
+        # event: count native retirements only from round37 onwards.
+        mature_retiring = retiring if ordinal >= 37 and mature else 0
+        total_retirements = self.observed_native_retirements + mature_retiring
         status = ("HANDOFF_READY" if ordinal == 20 else
                   classify_stop(ordinal,
                                 mature_categories={name: name in mature
