@@ -1,0 +1,28 @@
+name: D16 Genuine Completed Native128 Round Atomic Checkpoint (Seed0 Fixture)
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_complete_round_checkpoint_217.py"
+      - "tests/test_d16_complete_round_checkpoint_217.py"
+      - ".github/workflows/d16-complete-round-checkpoint-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test_only_short_exposed_seed0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate native short seed0 original128 checkpoint, corruption and cap
+        run: |
+          python -m py_compile research/d16_complete_round_checkpoint_217.py
+          timeout -k 10s 330s python -m unittest tests.test_d16_complete_round_checkpoint_217 -v
