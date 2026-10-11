@@ -1,0 +1,41 @@
+name: PERF230 P5.3 Original Native Empty Active Scan Frequency Readonly
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf230_p53_active_scan_distribution.py"
+      - "tests/test_perf230_p53_active_scan_distribution.py"
+      - ".github/workflows/perf230-p53-scan-distribution.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  count_original_native_active_scans_seed0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Exact source and existing seed-only guard
+        run: |
+          python -m py_compile benchmarks/perf230_p53_active_scan_distribution.py
+          python -m unittest tests.test_perf230_p53_active_scan_distribution -v
+      - name: Four actual source native category slots count read-only active-state scan distribution
+        run: |
+          mkdir -p reports/p53
+          timeout -k 10s 240s python -m benchmarks.perf230_p53_active_scan_distribution --output reports/p53/scan_distribution.json
+      - name: Archive source-v7 parity and original activation rates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-p53-original-default1024-native-active-scan
+          path: reports/p53/scan_distribution.json
+          if-no-files-found: warn
+          retention-days: 7
