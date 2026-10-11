@@ -59,7 +59,7 @@ class DormantNativeSelectedStageTests(unittest.TestCase):
             "global_wall_ms":self.now-START-100,"learning_claim":False,
         }
 
-    def run(self,job=1,manifest=None,evaluator=None):
+    def run_step(self,job=1,manifest=None,evaluator=None):
         return advance_one_verified_complete_round(
             folder=self.folder,source_sha=SOURCE,seed=0,
             original_genesis=self.genesis,study_started_unix_ms=START,
@@ -83,27 +83,27 @@ class DormantNativeSelectedStageTests(unittest.TestCase):
         )
 
     def test_true_shape_two_stage_only_1_plus_1_fixture(self):
-        first=self.run()
+        first=self.run_step()
         self.assertEqual(first.stage.result,"HANDOFF_READY")
         self.assertTrue(first.selected_file.exists())
         self.assertTrue(first.receipt_file.exists())
         self.now=START+3000
         self.local=1000
-        second=self.run(job=2,manifest=self.transfer())
+        second=self.run_step(job=2,manifest=self.transfer())
         self.assertEqual(second.stage.result,"FIXTURE_COMPLETE_NO_SCIENCE")
         self.assertEqual(second.stage.selected_round,2)
         self.assertEqual(self.evaluations,[1,2])
         with self.assertRaises(D16BoundaryError):
-            self.run(job=2,manifest=self.transfer())
+            self.run_step(job=2,manifest=self.transfer())
         self.assertEqual(self.evaluations,[1,2])
 
     def test_executor_failure_before_selected_commit_allows_same_stage_retry(self):
         def crash(_n,_p,_c):
             raise RuntimeError("simulated interrupted native D15 source")
         with self.assertRaises(RuntimeError):
-            self.run(evaluator=crash)
+            self.run_step(evaluator=crash)
         self.assertFalse((self.folder/"selected-round-01.json").exists())
-        recovered=self.run()
+        recovered=self.run_step()
         self.assertEqual(recovered.stage.result,"HANDOFF_READY")
         self.assertEqual(self.evaluations,[1])
 
@@ -111,27 +111,27 @@ class DormantNativeSelectedStageTests(unittest.TestCase):
         with patch("research.d16_dormant_stage_driver_217.immutable_receipt",
                    side_effect=RuntimeError("interrupted after full selected")):
             with self.assertRaises(RuntimeError):
-                self.run()
+                self.run_step()
         self.assertTrue((self.folder/"selected-round-01.json").exists())
         self.assertFalse((self.folder/"selected-receipt-01.json").exists())
         with self.assertRaises(D16BoundaryError):
-            self.run()
+            self.run_step()
         self.assertEqual(self.evaluations,[1])  # no double original re-evaluation
 
     def test_second_job_manifest_is_mandatory_and_bound_to_actual_ledger(self):
-        self.run()
+        self.run_step()
         self.now=START+3000
         self.local=1000
         with self.assertRaises(D16BoundaryError):
-            self.run(job=2)
+            self.run_step(job=2)
         bad={**self.transfer(),"observer_ledger_sha256":"f"*64}
         with self.assertRaises(D16BoundaryError):
-            self.run(job=2,manifest=bad)
+            self.run_step(job=2,manifest=bad)
         self.assertEqual(self.evaluations,[1])
 
     def test_first_job_rejects_injected_stage2_manifest(self):
         with self.assertRaises(D16BoundaryError):
-            self.run(job=1,manifest={"ignored":"untrusted"})
+            self.run_step(job=1,manifest={"ignored":"untrusted"})
         self.assertEqual(self.evaluations,[])
 
 
