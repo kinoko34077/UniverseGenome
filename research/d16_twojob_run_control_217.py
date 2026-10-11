@@ -138,6 +138,8 @@ def make_transfer(*, source_sha: str, selected_snapshot: Mapping[str, Any],
     need(seed in (0, D16_SEED) and type(seed) is int, "source seed invalid")
     need(type(selected_round) is int and selected_round in range(1, MAX_ROUNDS + 1),
          "completed original selected round missing")
+    need(selected_round == (FIRST_LAST_ROUND if seed == D16_SEED else 1),
+         "cross-job transfer requires original job1 round20 or test-only seed0 round1")
     need(bool(SHA_RE.fullmatch(observer_selected_digest)), "invalid native observer digest")
     need(bool(SHA_RE.fullmatch(ledger_sha)), "invalid observer ledger digest")
     elapsed = clock.check(now_unix_ms=now_unix_ms,
@@ -187,6 +189,8 @@ def accept_transfer(*, manifest: Mapping[str, Any],
          and type(expected_selected_round) is int
          and manifest["job"] == plan_for_round(expected_selected_round),
          "transfer selected generation/job mismatch")
+    need(expected_selected_round == (FIRST_LAST_ROUND if expected_seed == D16_SEED else 1),
+         "handoff of nonterminal first-job state prohibited")
     need(manifest["learning_claim"] is False
          and manifest["experiment_sha256"] == hash_of(ExperimentConfig().to_dict())
          and manifest["physics_sha256"] == hash_of(PhysicsConfig().to_dict()),
