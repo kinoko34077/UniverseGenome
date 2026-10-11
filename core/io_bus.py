@@ -80,9 +80,16 @@ def read_output_signal(state: Any) -> OutputSignal:
     """Read a byte/NULL signal from ordinary cells adjacent to fixed output organs."""
     from .physics import destination_footprint
 
+    # A truly zero-ACTIVE state has no ordinary cell footprints; original
+    # full-output union is empty regardless of BLACK_HOLE/FREE occupancy.
+    # Avoid fixed-coordinate and occupied-set allocations in this case,
+    # while retaining the original live-slot scan and all nonempty behavior.
+    active_slots = state.active_slots()
+    if not active_slots:
+        return OutputSignal()
     coordinates = FixedOrgans.coordinates()
     occupied: set[tuple[int, int]] = set()
-    for slot in state.active_slots():
+    for slot in active_slots:
         occupied.update(destination_footprint(state.structure[slot], state.x[slot], state.y[slot]))
     value = sum(
         (1 << bit)
