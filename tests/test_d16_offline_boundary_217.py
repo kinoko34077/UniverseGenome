@@ -13,7 +13,7 @@ def protocol():
 
 
 def record(p, n=1, previous=None, *, job=None, sizes=None):
-    group = job if job is not None else (n - 1) // 10 + 1
+    group = job if job is not None else (n - 1) // 20 + 1
     if sizes is None:
         sizes = (16,) * 8
     pos = 0
@@ -30,7 +30,7 @@ def record(p, n=1, previous=None, *, job=None, sizes=None):
         categories={name: 32 for name in p.category_names},
         patches=tuple(patches), journal_bytes=10453787, retained_bytes=11000000,
         peak_sampled_rss_bytes=350000000, global_seconds=float(n * 20),
-        local_seconds=float(((n - 1) % 10 + 1) * 20),
+        local_seconds=float(((n - 1) % 20 + 1) * 20),
         prunable_count=0, replacement_count=0,
         completed_growth_nonfailed=0, absolute_failure_count=0
     )
@@ -87,15 +87,19 @@ class OfflineBoundaryTests(unittest.TestCase):
         with self.assertRaises(EvidenceError):
             validate(p, (replace(candidate, replacement_count=5),))
 
-    def test_job_boundary_max10_and_no_implicit_job_skip(self):
+    def test_frozen_exact_two_job_20_plus_20_partition(self):
         p = protocol()
-        ten = history(p, 10)
-        validate(p, ten)
+        twenty = history(p, 20)
+        validate(p, twenty)
         with self.assertRaises(EvidenceError):
-            validate(p, ten + (record(p, 11, ten[-1], job=1),))
+            validate(p, twenty + (record(p, 21, twenty[-1], job=1),))
         with self.assertRaises(EvidenceError):
-            validate(p, ten + (record(p, 11, ten[-1], job=3),))
-        validate(p, ten + (record(p, 11, ten[-1], job=2),))
+            validate(p, twenty + (record(p, 21, twenty[-1], job=3),))
+        with self.assertRaises(EvidenceError):
+            validate(p, (record(p, 1, job=2),))
+        with self.assertRaises(EvidenceError):
+            validate(p, history(p, 19) + (record(p, 20, history(p, 19)[-1], job=2),))
+        validate(p, twenty + (record(p, 21, twenty[-1], job=2),))
 
     def test_global_and_local_caps_not_reset_by_job(self):
         p = protocol()
@@ -129,6 +133,7 @@ class OfflineBoundaryTests(unittest.TestCase):
     def test_frozen_protocol_rejects_study_parameter_drift(self):
         p = protocol()
         for kw in ({"seed": 0}, {"max_rounds": 36}, {"preferred_seconds": 1800},
+                   {"max_jobs": 4}, {"rounds_per_job": 10},
                    {"category_names": ("nativeA",) * 4}):
             with self.assertRaises(EvidenceError):
                 Protocol(**{**p.__dict__, **kw})
