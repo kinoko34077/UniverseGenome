@@ -39,8 +39,14 @@ class CompletedNativeRoundTests(unittest.TestCase):
             root = Path(temp)
             dest = write_completed_atomic(root, actual)
             original_bytes = dest.read_bytes()
-            self.assertEqual(read_completed(dest, source_sha=SOURCE, seed=0, ordinal=1),
-                             actual)
+            loaded = read_completed(dest, source_sha=SOURCE, seed=0, ordinal=1)
+            # Original native evidence contains tuples. The canonical JSON
+            # serialization stores the same values as arrays; Python object
+            # direct equality is not the persistence format's invariant.
+            from research.d16_twojob_run_control_217 import hash_of
+            self.assertEqual(hash_of(loaded), hash_of(actual))
+            self.assertEqual(loaded["selected_v7_sha256"], SHORT_ORIGINAL_GOLDEN)
+            self.assertEqual(loaded["d15_verified_observer"]["evaluated_native_worlds"], 128)
             self.assertEqual(dest.read_bytes(), original_bytes)
             with self.assertRaises(FileExistsError):
                 write_completed_atomic(root, actual)
