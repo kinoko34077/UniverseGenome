@@ -473,6 +473,10 @@ def _cell_order_key(state: UniverseState, slot: int) -> tuple[int, ...]:
 
 
 def _spawn_noise(state: UniverseState, config: PhysicsConfig, generation: int) -> int:
+    # With zero noise rate, the original unsigned chance comparison can
+    # never admit a spawn. Avoid its otherwise-unused deterministic hash.
+    if config.noise_rate == 0:
+        return 0
     chance_key = event_key(state.seed, generation, 0, EVENT_NOISE, 0)
     if event_u16(chance_key) >= config.noise_rate:
         return 0

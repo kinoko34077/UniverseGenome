@@ -1,0 +1,69 @@
+name: PERF230 P4.6 Zero Noise Fastpath Native128 A-B
+
+on:
+  pull_request:
+    paths:
+      - 'core/physics.py'
+      - 'tests/test_perf230_noise_zero_246.py'
+      - '.github/workflows/perf230-noise-zero-native-ab.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  native128_source_parity_and_speed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Zero-rate no-hash and original positive-rate tests
+        run: python -m unittest tests.test_perf230_noise_zero_246 -v
+      - name: Original selected128 default1024 real D15 journal A-B on one standard runner
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          git worktree add --detach "$RUNNER_TEMP/perf230-noise-zero-baseline" 5b91d6b3ee855f8aee5655efd387336455ba4688
+          (cd "$RUNNER_TEMP/perf230-noise-zero-baseline" && timeout -k 15s 380s \
+            python -m benchmarks.perf230_full128_no_bh_ab --output "$GITHUB_WORKSPACE/reports/base.json")
+          timeout -k 15s 380s python -m benchmarks.perf230_full128_no_bh_ab --output reports/candidate.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path('reports/base.json').read_text())
+          b=json.loads(Path('reports/candidate.json').read_text())
+          golden='725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63'
+          assert a['source_sha']=='5b91d6b3ee855f8aee5655efd387336455ba4688'
+          assert b['source_sha'] != a['source_sha']
+          for x in (a,b):
+              assert x['original_native_full_optimizer_digest']==golden
+              assert x['evaluated_worlds']==128 and x['original_selected_once']
+              assert x['checkpoint_writes']==8 and x['workers']==4
+              assert x['seed']==0 and x['original_default_timeout_generations']==1024
+              assert x['sampled_aggregate_peak_rss_bytes'] <=1536*1024*1024
+          assert a['journal_bytes']==b['journal_bytes']
+          ratio=a['wall_seconds']/b['wall_seconds']
+          result=dict(base_sha=a['source_sha'],candidate_sha=b['source_sha'],
+                      base_seconds=a['wall_seconds'],candidate_seconds=b['wall_seconds'],
+                      same_host_ratio=ratio,full_v7_digest=golden,
+                      actual_original_selected128=True,original_seed16384_executed=False,
+                      learning_claim=False)
+          Path('reports/comparison.json').write_text(json.dumps(result,sort_keys=True,indent=2)+'\n')
+          print(json.dumps(result,sort_keys=True),flush=True)
+          if ratio < 1.05:
+              raise AssertionError('P4.6 candidate did not meet preregistered >=5% real native selected128 wall gain')
+          PY
+      - name: Preserve source-bound evidence (including failure)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-p46-native128-ab
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
