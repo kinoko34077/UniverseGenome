@@ -1,0 +1,71 @@
+name: D16.6 Two Real Hosted Jobs Native128 Completed Checkpoint (Seed0 Only)
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_two_stage_seed0_pilot_217.py"
+      - "tests/test_d16_two_stage_seed0_pilot_217.py"
+      - ".github/workflows/d16-two-stage-seed0-integration-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_seed0_first_selected128:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test tamper guards and prevent reserved science seed CLI
+        run: python -m unittest tests.test_d16_two_stage_seed0_pilot_217 -v
+      - name: Actual original default1024 seed0 full128 selected round1 and atomic checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/d16-seed0/stage1
+          timeout -k 15s 480s python -m research.d16_two_stage_seed0_pilot_217 --stage first --out reports/d16-seed0/stage1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d16-seed0-original128-verified-first-complete
+          path: reports/d16-seed0/stage1/
+          if-no-files-found: error
+          retention-days: 7
+
+  original_seed0_second_selected128:
+    needs: original_seed0_first_selected128
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: d16-seed0-original128-verified-first-complete
+          path: reports/d16-seed0/inbound/
+      - name: Actual original default1024 seed0 full128 selected round2 and verified frozen v7 outcome
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/d16-seed0/stage2
+          timeout -k 15s 480s python -m research.d16_two_stage_seed0_pilot_217 --stage second --inbound reports/d16-seed0/inbound --out reports/d16-seed0/stage2
+      - name: Persist non-science completed evidence and failure trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d16-seed0-two-hosted-jobs-final-verdict
+          path: reports/d16-seed0/stage2/
+          if-no-files-found: warn
+          retention-days: 7
