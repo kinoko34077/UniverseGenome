@@ -106,6 +106,9 @@ class StageState:
             n = data.get("complete_nonfailure_count")
             need(type(n) is int and 0 <= n <= 32,
                  "invalid complete nonfailure evidence count")
+            replacement = data.get("native_replacement_count")
+            need(type(replacement) is int and 0 <= replacement <= 1,
+                 "original native finalizer may retire at most one per category")
             if n:
                 need(ordinal >= 37, "four-window maturity claimed before genuine37")
                 mature.add(category)
@@ -114,9 +117,14 @@ class StageState:
              and retiring == sum(data.get("native_replacement_count", -1)
                                   for data in categories.values()),
              "actual native retirement / per-category observer inconsistent")
-        # Early absolute-failure retirements cannot prove a mature-growth
-        # event: count native retirements only from round37 onwards.
-        mature_retiring = retiring if ordinal >= 37 and mature else 0
+        # A category's early absolute-failure retirement or a retirement in
+        # a DIFFERENT immature category does not prove mature native pruning.
+        # Require an actual source-observed retirement in a category with its
+        # own complete four-window growth history at/after round37.
+        mature_retiring = sum(
+            data["native_replacement_count"] for data in categories.values()
+            if ordinal >= 37 and data["complete_nonfailure_count"] > 0
+        )
         total_retirements = self.observed_native_retirements + mature_retiring
         status = (
             "HANDOFF_READY" if ordinal == boundary else
