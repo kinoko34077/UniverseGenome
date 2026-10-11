@@ -101,6 +101,10 @@ def validate(protocol: Protocol, rows: tuple[Round, ...]) -> None:
                  "selected rounds not consecutive")
         _require(type(row.job) is int and 1 <= row.job <= protocol.max_jobs,
                  "invalid job")
+        # Prospective immutable 2-job partition avoids post-outcome scheduler edits:
+        # job1 selected rounds 1..20, job2 rounds 21..40.
+        _require(row.job == (1 if row.number <= 20 else 2),
+                 "frozen 20+20 two-job partition drift")
         _require(row.job == (1 if previous is None else row.job)
                  and (previous is None or row.job in
                       (previous.job, previous.job + 1)), "job order discontinuity")
