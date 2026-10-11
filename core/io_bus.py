@@ -81,18 +81,35 @@ def read_output_signal(state: Any) -> OutputSignal:
     from .physics import destination_footprint
 
     coordinates = FixedOrgans.coordinates()
-    occupied: set[tuple[int, int]] = set()
+    # Only the ten output organ tiles can affect the read. A coordinate
+    # may intentionally alias another through a custom organ mapping:
+    # combine its bits rather than overwriting them.
+    targets: dict[tuple[int, int], int] = {}
+    for bit in range(OUTPUT_DATA_LINES):
+        tile = coordinates[f"OUT{bit}"]
+        targets[tile] = targets.get(tile, 0) | (1 << bit)
+    valid_bit = 1 << OUTPUT_DATA_LINES
+    null_bit = valid_bit << 1
+    tile = coordinates[FixedOrgans.output_valid]
+    targets[tile] = targets.get(tile, 0) | valid_bit
+    tile = coordinates[FixedOrgans.output_null]
+    targets[tile] = targets.get(tile, 0) | null_bit
+
+    observed = 0
+    full_mask = null_bit | valid_bit | ((1 << OUTPUT_DATA_LINES) - 1)
     for slot in state.active_slots():
-        occupied.update(destination_footprint(state.structure[slot], state.x[slot], state.y[slot]))
-    value = sum(
-        (1 << bit)
-        for bit in range(OUTPUT_DATA_LINES)
-        if coordinates[f"OUT{bit}"] in occupied
-    )
+        # Reuse the original footprint implementation, including wrapping,
+        # shape hierarchy and ACTIVE-only enumeration; only its projection
+        # onto output tiles differs from the old full occupied-set union.
+        for tile in destination_footprint(state.structure[slot], state.x[slot], state.y[slot]):
+            observed |= targets.get(tile, 0)
+        if observed == full_mask:
+            break
+
     return OutputSignal(
-        value=value,
-        valid=coordinates[FixedOrgans.output_valid] in occupied,
-        null=coordinates[FixedOrgans.output_null] in occupied,
+        value=observed & ((1 << OUTPUT_DATA_LINES) - 1),
+        valid=bool(observed & valid_bit),
+        null=bool(observed & null_bit),
     )
 
 
