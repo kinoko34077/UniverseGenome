@@ -1,0 +1,28 @@
+name: D16 Dormant Two-Job Global Clock and Transfer Guard
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_twojob_run_control_217.py"
+      - "tests/test_d16_twojob_run_control_217.py"
+      - ".github/workflows/d16-twojob-run-control-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic_only_no_study_launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test frozen 2x20 plan, UTC cross-job wall and tamper fail-close
+        run: |
+          python -m py_compile research/d16_twojob_run_control_217.py
+          python -m unittest tests.test_d16_twojob_run_control_217 -v
