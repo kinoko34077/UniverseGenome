@@ -126,6 +126,10 @@ class StageState:
                           actual_replacements=min(total_retirements,4))
             if ordinal >= 37 else "IN_PROGRESS"
         )
+        # The frozen terminal predicate's CONTINUE means the FSM remains
+        # IN_PROGRESS and must accept the next complete selected round.
+        if status == "CONTINUE":
+            status = "IN_PROGRESS"
         return replace(self, selected_round=ordinal, selected_v7_sha256=sha,
                        mature_categories=tuple(sorted(mature)),
                        observed_native_retirements=total_retirements,
