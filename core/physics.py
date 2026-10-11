@@ -971,6 +971,25 @@ def step(
             if int(Lifecycle.BLACK_HOLE) in state.lifecycle else ()
         )
     stimulated = external_stimulated | local_revival
+    # The original deterministic transition for a genuinely empty universe
+    # cannot produce an event with zero noise, no stimuli and inert trace.
+    # This is exactly one original physical generation, never a skipped step.
+    if (
+        not black_holes
+        and not stimulated
+        and resolved.noise_rate == 0
+        and _slow_trace_inert(resolved)
+        and state.lifecycle.count(int(Lifecycle.FREE)) == state.max_cells
+    ):
+        state.generation += 1
+        elapsed = max(time.perf_counter() - started, 1e-12)
+        return StepMetrics(
+            generation=state.generation, active_cells=0, collision_count=0,
+            collision_pair_evaluations=0, bond_contact_count=0,
+            latent_transmission_count=0, fusion_count=0,
+            fragmentation_count=0, noise_spawn_count=0,
+            generations_per_second=1.0 / elapsed,
+        )
     recovered_slots: set[int] = set()
     pending_free: set[int] = set()
     activity_amounts: dict[int, int] = {}
