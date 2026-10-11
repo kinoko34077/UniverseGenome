@@ -176,7 +176,14 @@ def write_completed_atomic(folder: Path, checkpoint: Mapping[str, Any]) -> Path:
             fh.write(raw)
             fh.flush()
             os.fsync(fh.fileno())
-        os.replace(temp, target)
+        # Atomic create-without-replace: the preliminary target.exists()
+        # check cannot defend against a concurrent producer's race.
+        os.link(temp, target)
+        folder_fd = os.open(folder, os.O_RDONLY)
+        try:
+            os.fsync(folder_fd)
+        finally:
+            os.close(folder_fd)
     finally:
         temp.unlink(missing_ok=True)
     return target
