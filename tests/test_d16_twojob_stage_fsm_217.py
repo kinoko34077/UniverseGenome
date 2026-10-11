@@ -143,6 +143,47 @@ class D16StageFSMTests(unittest.TestCase):
             state.append(complete=synthetic_case(opt,1),
                          now_unix_ms=START+1800001,local_elapsed_ms=1)
 
+    def test_seed0_has_strict_test_only_one_plus_one_no_science(self):
+        # Performance fixture is intentionally tiny. The original science
+        # remains exact 20+20 and can never use this benchmark-only split.
+        opt=SteadyStateOptimizer.from_defaults(base_seed=0)
+        state=StageState.start(source_sha=SRC,seed=0,
+                               original_genesis=opt.to_snapshot(),
+                               job1_start_unix_ms=START)
+        def fixture(n):
+            opt.generation=n
+            snap=opt.to_snapshot()
+            cats={name:{"complete_nonfailure_count":0,
+                        "native_replacement_count":0}
+                  for name in sorted(set(s.category for s in opt.slots))}
+            return {
+                "kind":FULL_KIND,"source_sha":SRC,"seed":0,"ordinal":n,
+                "selected_snapshot":snap,"selected_v7_sha256":digest(snap),
+                "learning_claim":False,"d15_verified_observer":{
+                    "source_commit":SRC,"base_seed":0,
+                    "before_optimizer_generation":n-1,
+                    "selected_optimizer_generation":n,
+                    "selected_post_v7_sha256":digest(snap),
+                    "evaluated_native_worlds":128,"selected_native_worlds":128,
+                    "d15_journal_chain_verified":True,
+                    "original_selected_once_proven_by_D15_final":True,
+                    "categories":cats,"actual_native_replacement_count":0,
+                },
+            }
+        state=state.append(complete=fixture(1),
+                           now_unix_ms=START+1000,local_elapsed_ms=1000)
+        self.assertEqual(state.result,"HANDOFF_READY")
+        state=state.accept_second_job(
+            verified_selected20_v7=state.selected_v7_sha256,
+            clock_from_immutable_manifest=GlobalClock(START,1000),
+            now_unix_ms=START+2000)
+        state=state.append(complete=fixture(2),
+                           now_unix_ms=START+3000,local_elapsed_ms=1000)
+        self.assertEqual(state.result,"FIXTURE_COMPLETE_NO_SCIENCE")
+        with self.assertRaises(D16BoundaryError):
+            state.append(complete=fixture(3),
+                         now_unix_ms=START+4000,local_elapsed_ms=2000)
+
     def test_reject_stage2_without_exact_selected20_handoff(self):
         opt,state=initial()
         for n in range(1,21):
