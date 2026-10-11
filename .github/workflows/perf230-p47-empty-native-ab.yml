@@ -1,0 +1,70 @@
+name: PERF230 P4.7 Empty-world Fastpath Original Native128 A-B
+
+on:
+  pull_request:
+    paths:
+      - "core/physics.py"
+      - "tests/test_perf230_p47_empty_step.py"
+      - ".github/workflows/perf230-p47-empty-native-ab.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_source_parity_and_wall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Exact empty-step and original physical exclusion tests
+        run: python -m unittest tests.test_perf230_p47_empty_step -v
+      - name: Genuine default1024 selected128 source-frozen seed0 parent D15 comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          git worktree add --detach "$RUNNER_TEMP/p47-original-base" c41abea623d04e21d78504042a16da42ef680b90
+          (cd "$RUNNER_TEMP/p47-original-base" && timeout -k 15s 380s python -m benchmarks.perf230_full128_no_bh_ab --output "$GITHUB_WORKSPACE/reports/base.json")
+          timeout -k 15s 380s python -m benchmarks.perf230_full128_no_bh_ab --output reports/candidate.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          old=json.loads(Path("reports/base.json").read_text())
+          new=json.loads(Path("reports/candidate.json").read_text())
+          old_sha="c41abea623d04e21d78504042a16da42ef680b90"
+          golden="725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63"
+          assert old["source_sha"]==old_sha and new["source_sha"]!=old_sha
+          for r in (old,new):
+              assert r["original_native_full_optimizer_digest"]==golden
+              assert r["seed"]==0 and r["workers"]==4
+              assert r["evaluated_worlds"]==128 and r["original_selected_once"]
+              assert r["checkpoint_writes"]==8
+              assert r["original_default_timeout_generations"]==1024
+              assert r["sampled_aggregate_peak_rss_bytes"]<=1536*1024*1024
+          assert old["journal_bytes"]==new["journal_bytes"]
+          speedup=old["wall_seconds"]/new["wall_seconds"]
+          report=dict(base_sha=old_sha,candidate_sha=new["source_sha"],
+                      base_seconds=old["wall_seconds"],candidate_seconds=new["wall_seconds"],
+                      same_host_speedup=speedup,full_selected_v7_digest=golden,
+                      real_native128=True,original_seed16384_executed=False,
+                      learning_claim=False)
+          Path("reports/comparison.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\\n")
+          print(json.dumps(report,sort_keys=True),flush=True)
+          if speedup < 1.05:
+              raise AssertionError("P4.7 real original native128 same-host performance below predeclared >=5% gain")
+          PY
+      - name: Preserve original source-bound performance evidence on failure too
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-p47-actual-native128
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
