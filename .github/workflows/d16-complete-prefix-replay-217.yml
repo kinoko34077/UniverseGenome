@@ -1,0 +1,28 @@
+name: D16 Offline Immutable Complete-Prefix Crash Replay (No Study)
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_complete_prefix_recovery_217.py"
+      - "tests/test_d16_complete_prefix_recovery_217.py"
+      - ".github/workflows/d16-complete-prefix-replay-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline_synthetic_completed_prefix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate no-overwrite receipt and replay only complete selected evidence
+        run: |
+          python -m py_compile research/d16_complete_prefix_recovery_217.py
+          timeout -k 10s 250s python -m unittest tests.test_d16_complete_prefix_recovery_217 -v
