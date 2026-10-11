@@ -103,9 +103,39 @@ class D16StageFSMTests(unittest.TestCase):
             {**rec,"d15_verified_observer":{**rec["d15_verified_observer"],
                                            "d15_journal_chain_verified":False}},
         ):
-            with self.subTest(kind=variant),self.assertRaises(D16BoundaryError):
+            with self.assertRaises(D16BoundaryError):
                 state.append(complete=variant,
                              now_unix_ms=START+1000,local_elapsed_ms=1000)
+
+    def test_early_retirement_does_not_count_as_mature_science_result(self):
+        opt,state=initial()
+        for n in range(1,21):
+            state=state.append(complete=synthetic_case(
+                opt,n,retirements=1 if n==15 else 0),
+                now_unix_ms=START+n*1000,local_elapsed_ms=n*1000)
+        self.assertEqual(state.observed_native_retirements,0)
+        state=state.accept_second_job(
+            verified_selected20_v7=state.selected_v7_sha256,
+            clock_from_immutable_manifest=GlobalClock(START,20000),
+            now_unix_ms=START+21000)
+        for n in range(21,38):
+            state=state.append(complete=synthetic_case(
+                opt,n,mature=n>=37),
+                now_unix_ms=START+n*1000,
+                local_elapsed_ms=(n-20)*1000)
+        self.assertEqual(state.result,"IN_PROGRESS")
+
+    def test_category_name_spoofing_rejected(self):
+        opt,state=initial()
+        rec=synthetic_case(opt,1)
+        cats=dict(rec["d15_verified_observer"]["categories"])
+        cats["FAKE"]=cats.pop(next(iter(cats)))
+        modified={**rec,"d15_verified_observer":{
+            **rec["d15_verified_observer"],"categories":cats,
+        }}
+        with self.assertRaises(D16BoundaryError):
+            state.append(complete=modified,
+                         now_unix_ms=START+1000,local_elapsed_ms=1000)
 
     def test_reject_global_time_exhaustion(self):
         opt,state=initial()
