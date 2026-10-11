@@ -1,0 +1,28 @@
+name: D16 Authentic D15 Journal Read-only Observation Test
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_native_journal_observer_217.py"
+      - "tests/test_d16_native_journal_observer_217.py"
+      - ".github/workflows/d16-native-readonly-observer-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source_native_seed0_short_only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Real D15 selected128 journal short seed0, observe readonly, reject corruption
+        run: |
+          python -m py_compile research/d16_native_journal_observer_217.py
+          timeout -k 15s 260s python -m unittest tests.test_d16_native_journal_observer_217 -v
