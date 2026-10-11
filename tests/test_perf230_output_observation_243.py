@@ -57,7 +57,7 @@ class OutputObservationP43Tests(unittest.TestCase):
 
     def test_coordinate_override_and_duplicate_output_tiles(self) -> None:
         state = UniverseState(seed=0, max_cells=16)
-        state.spawn(x=192, y=96, structure=SHAPE_SINGLE)
+        state.spawn(x=192, y=104, structure=SHAPE_SINGLE)
         coordinates = FixedOrgans.coordinates()
         coordinates["OUT0"] = coordinates["OUT1"]
         coordinates[FixedOrgans.output_null] = coordinates[FixedOrgans.output_valid]
