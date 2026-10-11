@@ -1,0 +1,38 @@
+name: PERF230 P4.3 Original Native128 Output Observation ABBA
+
+on:
+  pull_request:
+    paths:
+      - "core/io_bus.py"
+      - "tests/test_perf230_output_observation_243.py"
+      - "benchmarks/perf230_output_ab_243.py"
+      - ".github/workflows/perf230-output-ab-243.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  native128_seed0_same_host_abba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Baseline expected RED and candidate GREEN, original 2-round selected128 ABBA
+        run: |
+          mkdir -p reports/perf230-p43
+          timeout -k 20s 900s python -m benchmarks.perf230_output_ab_243 --abba
+      - name: Archive source-bound per-case measurements, journal/v7 SHA and verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-p43-source-native128-abba
+          path: reports/perf230-p43/**
+          if-no-files-found: warn
+          retention-days: 7
