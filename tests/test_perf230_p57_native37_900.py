@@ -1,16 +1,16 @@
-"""PERF230 P4.9 immutable two-job original selected128 performance fixture guards."""
+"""PERF230 P5.7 immutable two-job original selected128 performance fixture guards."""
 import tempfile
 from pathlib import Path
 import unittest
 from unittest.mock import patch
 
-from benchmarks.perf230_p57_native37_twojob_900 import (
+from benchmarks.perf230_p57_postpacked_native37_900 import (
     SEED, SPLIT, FINAL_ROUND, execute, main,
 )
 from research.d16_twojob_run_control_217 import D16BoundaryError
 
 
-class P49RealSeed0NativeSourceBoundary(unittest.TestCase):
+class P57RealSeed0NativeSourceBoundary(unittest.TestCase):
     def test_exact_benchmark_not_reserved_science(self):
         self.assertEqual(SEED,0)
         self.assertEqual(SPLIT,20)
