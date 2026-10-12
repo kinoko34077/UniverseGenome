@@ -103,6 +103,7 @@ def total_bytes(folder: Path) -> int:
 
 D15_FILES = (
     "manifest.json",
+    "base.json",
     *(f"batch-{i:05d}.json" for i in range(8)),
     "final.json",
 )
