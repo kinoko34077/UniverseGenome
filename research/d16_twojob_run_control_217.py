@@ -68,7 +68,10 @@ def classify_stop(number: int, *, mature_categories: Mapping[str, bool],
          "invalid native retirement count")
     if number < MIN_ROUNDS:
         return "CONTINUE"
-    if all(mature_categories.values()) and actual_replacements > 0:
+    # The caller passes only source-verified retirements in their own mature
+    # category. A different, still-immature stratum is not a veto: Issue #217
+    # requires at least ONE genuinely mature same-category native replacement.
+    if any(mature_categories.values()) and actual_replacements > 0:
         return "OBSERVED_FINAL"
     if number == MAX_ROUNDS:
         return "NOT_OBSERVED_FINAL"
