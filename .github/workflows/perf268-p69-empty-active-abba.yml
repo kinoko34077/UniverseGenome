@@ -1,0 +1,106 @@
+name: PERF268 P6.9 Source-matched Zero Active Native Slot0 ABBA
+
+on:
+  pull_request:
+    paths:
+      - "core/state.py"
+      - "tests/test_perf268_p69_empty_active.py"
+      - "benchmarks/perf268_p69_slot0.py"
+      - ".github/workflows/perf268-p69-empty-active-abba.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_native_default1024_seed0_abba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Verify exactly bounded candidate and prepare same-host source worktrees
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor e7f2efd0c9ec49afc53b9265ec4b17e936798160 HEAD
+          git diff --name-only e7f2efd0c9ec49afc53b9265ec4b17e936798160 HEAD > changed.txt
+          printf '%s\n'             '.github/workflows/perf268-p69-empty-active-abba.yml'             'benchmarks/perf268_p69_slot0.py'             'core/state.py'             'tests/test_perf268_p69_empty_active.py' > expected.txt
+          diff -u expected.txt changed.txt
+          git worktree add --detach "$RUNNER_TEMP/p69-old" e7f2efd0c9ec49afc53b9265ec4b17e936798160
+          git worktree add --detach "$RUNNER_TEMP/p69-new" "${{ github.event.pull_request.head.sha }}"
+          cp benchmarks/perf268_p69_slot0.py "$RUNNER_TEMP/p69-old/benchmarks/"
+      - name: Focused original lifecycle/fallback and full-native v7 state tests
+        run: |
+          timeout -k 10s 90s python -m unittest discover -s tests -p 'test_perf268_p69_empty_active.py' -v
+      - name: Measure same host source-locked genuine native one slot0 ABBA ABBA ABBA
+        shell: bash
+        env:
+          CANDIDATE: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          i=0
+          for variant in old new new old old new new old old new new old; do
+            i=$((i+1))
+            if [ "$variant" = old ]; then
+              dir="$RUNNER_TEMP/p69-old"
+              ref=e7f2efd0c9ec49afc53b9265ec4b17e936798160
+            else
+              dir="$RUNNER_TEMP/p69-new"
+              ref="$CANDIDATE"
+            fi
+            (
+              cd "$dir"
+              timeout -k 10s 60s python -m benchmarks.perf268_p69_slot0 \
+                --expected-sha "$ref" \
+                --out "$GITHUB_WORKSPACE/reports/$variant-$(printf '%02d' "$i").json"
+            )
+          done
+      - name: Validate preserved original result and preregistered >=5% whole-native gate
+        env:
+          CANDIDATE: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from statistics import median
+          trials=[json.loads(f.read_text()) for f in sorted(Path("reports").glob("*.json"))]
+          assert len(trials)==12
+          old=[x["wall_seconds"] for x in trials if x["source_sha"]=="e7f2efd0c9ec49afc53b9265ec4b17e936798160"]
+          import os
+          new=[x["wall_seconds"] for x in trials if x["source_sha"]==os.environ["CANDIDATE"]]
+          assert len(old)==len(new)==6
+          oracle="e146bebe695dec14fc978e47d4a1e189d1e30bdaa83f9d6e69eec3c4d201f4c1"
+          for x in trials:
+              assert x["original_full_optimizer_v7"]==oracle and x["seed"]==0
+              assert x["native_slots_evaluated"]==1 and x["native_default1024"]
+              assert x["original_seed16384_executed"] is False
+          a,b=median(old),median(new)
+          ratio=a/b
+          result={
+            "kind":"PERF268_P69_REAL_NATIVE_SLOT0_SOURCE_MATCHED_ABBA",
+            "source_base":"e7f2efd0c9ec49afc53b9265ec4b17e936798160",
+            "source_candidate":os.environ["CANDIDATE"],
+            "old_median_seconds":a,"new_median_seconds":b,
+            "ratio":ratio,"original_v7":oracle,
+            "decision":"CHEAP_GATE_PASS_NEXT_NATIVE128" if ratio>=1.05 else "REJECT_LT5_PERCENT_GAIN",
+            "original_science_seed16384_executed":False,
+            "old_trials":old,"candidate_trials":new,
+          }
+          Path("reports/comparison.json").write_text(json.dumps(result,sort_keys=True,indent=2)+"\n")
+          print(json.dumps(result,sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf268-p69-genuine-native-slot0-source-matched-abba
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
