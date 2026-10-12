@@ -209,7 +209,8 @@ def audit_archive(path: Path) -> dict:
                 totals["actual_replacements"] += entry["native_replacement_count"]
             for retired in obs["native_retirements"]:
                 retirement_reasons[retired["retirement_reason"]] += 1
-            by_round.append({"round": ordinal, "categories": cats})
+            by_round.append({"round": ordinal, "categories": cats,
+                             "native_retirements": obs["native_retirements"]})
             last_snapshot = selected
         # The report is finalized after selected checkpoint publication but
         # before the last immutable receipt becomes authoritative. Its clock
@@ -235,6 +236,7 @@ def audit_archive(path: Path) -> dict:
             "rounds": ORIGINAL_ROUNDS,
             "original_global_elapsed_ms": verdict["global_elapsed_ms"],
             "category_rounds": totals["category_rounds"],
+            "per_round_categories_and_retirements": by_round,
             "absolute_failed_prune_candidates": totals["absolute_failed_candidates"],
             "growth_only_prune_candidates": totals["growth_only_candidates"],
             "native_replacements": totals["actual_replacements"],
