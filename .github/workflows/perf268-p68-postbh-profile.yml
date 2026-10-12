@@ -1,0 +1,65 @@
+name: PERF268 P6.8 Current Accepted Main Native Residual CPU Profile
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/perf268-p68-postbh-profile.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  post_bh_original_native_source_profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Freeze true source and avoid modifying the original science
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --name-only e7f2efd0c9ec49afc53b9265ec4b17e936798160 HEAD > changed.txt
+          printf '%s\n' '.github/workflows/perf268-p68-postbh-profile.yml' > expected.txt
+          diff -u expected.txt changed.txt
+          git worktree add --detach "$RUNNER_TEMP/perf268-p68-source" e7f2efd0c9ec49afc53b9265ec4b17e936798160
+          test "$(git -C "$RUNNER_TEMP/perf268-p68-source" rev-parse HEAD)" = e7f2efd0c9ec49afc53b9265ec4b17e936798160
+      - name: Original profiler smoke tests
+        run: |
+          timeout -k 10s 60s python -m unittest discover -s tests -p 'test_perf_residual_219.py' -v
+      - name: True exact main default1024 one original native slot0 plus density physical profile (seed0 only)
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          cd "$RUNNER_TEMP/perf268-p68-source"
+          timeout -k 10s 240s python -m benchmarks.perf_residual_219 \
+            --physical-generations 96 \
+            --output "$GITHUB_WORKSPACE/reports/p68-original-main-residual.json" \
+            | tee "$GITHUB_WORKSPACE/reports/p68-summary.txt"
+      - name: Assert original source/result and no science
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("reports/p68-original-main-residual.json").read_text())
+          assert a["source_sha"]=="e7f2efd0c9ec49afc53b9265ec4b17e936798160"
+          n=a["native_default_slot0"]
+          assert n["whole_optimizer_state_sha256"]=="e146bebe695dec14fc978e47d4a1e189d1e30bdaa83f9d6e69eec3c4d201f4c1"
+          assert n["slots_evaluated"]==1 and n["seed"]==0
+          assert a["D16_default_seed16384_long_science"] is False
+          assert all(row["generations"]==96 for row in a["raw_physics"])
+          print("PERF268_P68_SOURCE_ONLY_PROFILE_VALID",flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf268-p68-current-main-original-native-profile
+          path: reports/*
+          if-no-files-found: warn
+          retention-days: 7
