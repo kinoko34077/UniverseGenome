@@ -102,6 +102,9 @@ class UniverseState:
         Preserve the old list.index search for non-byte lifecycle payloads.
         """
         active = int(Lifecycle.ACTIVE)
+        # A zero-ACTIVE state does not require a temporary packed copy.
+        if active not in self.lifecycle:
+            return []
         try:
             packed = bytes(self.lifecycle)
         except (TypeError, ValueError, OverflowError):
