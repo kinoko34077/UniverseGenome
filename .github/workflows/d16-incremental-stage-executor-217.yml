@@ -1,0 +1,27 @@
+name: D16.9 Dormant Incremental Two-Job Stage Safety (No Science)
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_incremental_stage_executor_217.py"
+      - "tests/test_d16_incremental_stage_executor_217.py"
+      - ".github/workflows/d16-incremental-stage-executor-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  dormant_stage_safety_only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Synthetic original-shaped source/checkpoint/clock guards ONLY
+        run: python -m unittest tests.test_d16_incremental_stage_executor_217 -v
