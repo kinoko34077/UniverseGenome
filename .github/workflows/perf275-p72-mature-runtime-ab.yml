@@ -1,0 +1,75 @@
+name: PERF275 P7.2 Review Only - Static Preflight Without Native Evaluation
+
+# This review surface deliberately NEVER evaluates native worlds.
+# Original P7.2 mature runner remains platform-safety HOLD in Issue #275.
+# No workflow_dispatch/repository_dispatch/workflow_run trigger is provided.
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf275_p72_mature_runtime_ab.py"
+      - ".github/workflows/perf275-p72-mature-runtime-ab.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  review_only_static_preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Freeze original accepted source and limit changed files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor 65e1d78576026b0214a0184bd6028e01dc3cc7e1 HEAD
+          # Compare against this PR's merge base, not the immutable science source.
+          # The latter would include unrelated D18 files after this branch merges.
+          pr_base="$(git merge-base "${{ github.event.pull_request.base.sha }}" HEAD)"
+          git diff --name-only "$pr_base" HEAD > "$RUNNER_TEMP/p72-changed.txt"
+          test -s "$RUNNER_TEMP/p72-changed.txt"
+          while IFS= read -r changed; do
+            case "$changed" in
+              '.github/workflows/perf275-p72-mature-runtime-ab.yml'|'benchmarks/perf275_p72_mature_runtime_ab.py') ;;
+              *) echo "Unexpected P7.2 PR changed path: $changed" >&2; exit 1 ;;
+            esac
+          done < "$RUNNER_TEMP/p72-changed.txt"
+      - name: Parse-only Python syntax and embedded native child; never execute
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+
+          path = Path("benchmarks/perf275_p72_mature_runtime_ab.py")
+          source = path.read_text(encoding="utf-8")
+          parsed = ast.parse(source, filename=str(path))
+          compile(parsed, str(path), "exec")  # compilation only; NO imports or execution
+          source_sha = None
+          native_child = None
+          for node in parsed.body:
+              if not isinstance(node, ast.Assign):
+                  continue
+              names = {
+                  target.id for target in node.targets
+                  if isinstance(target, ast.Name)
+              }
+              if "SOURCE" in names:
+                  source_sha = ast.literal_eval(node.value)
+              if "NATIVE_CHILD" in names:
+                  native_child = ast.literal_eval(node.value)
+          assert source_sha == "65e1d78576026b0214a0184bd6028e01dc3cc7e1"
+          assert isinstance(native_child, str) and native_child
+          child_ast = ast.parse(native_child, filename="NATIVE_CHILD:static")
+          compile(child_ast, "NATIVE_CHILD:static", "exec")
+          assert "journal_payload_sha256" in source
+          assert "journal_payload_sha256" in native_child
+          assert "512*1024*1024" in source
+          print("P7.2 REVIEW_ONLY_STATIC_SYNTAX_PASS; native computations: 0")
+          PY
