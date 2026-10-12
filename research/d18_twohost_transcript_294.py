@@ -39,9 +39,12 @@ def _shape(row: Mapping[str, Any], source: str, ordinal: int, job: int) -> None:
     _check(isinstance(row.get("selected_post_v7_sha256"),str) and
            bool(DIGEST.fullmatch(row["selected_post_v7_sha256"])),
            "D18 selected source-native optimizer-v7 hash missing")
-    for key in ("E1_count","E2_count"):
-        _check(type(row.get(key)) is int and 0<=row[key]<=4,
-               "D18 invalid actual E1/E2 count")
+    # E1 is the number of ELIGIBLE GROWTH CANDIDATES across native128
+    # worlds. E2 is actual retirement, at most one per four categories.
+    _check(type(row.get("E1_count")) is int and 0<=row["E1_count"]<=128,
+           "D18 invalid original native128 E1 candidate count")
+    _check(type(row.get("E2_count")) is int and 0<=row["E2_count"]<=4,
+           "D18 invalid original at-most-four E2 retirement count")
     _check(row["E2_count"]<=row["E1_count"],
            "D18 source-native E2 cannot occur without E1")
     _check(type(row.get("journal_bytes")) is int and
@@ -102,7 +105,7 @@ class OriginalD18Transcript:
         next_rows=self.rows+(row,)
         if ordinal==FIRST_STAGE_END:
             result="HANDOFF_READY"
-        elif ordinal>=37 and row["E2_count"]>0:
+        elif ordinal>=37 and any(item["E2_count"]>0 for item in next_rows):
             result="OBSERVED_E2_FINAL"
         elif ordinal==LAST_ROUND:
             result="E2_NOT_OBSERVED_FINAL"
