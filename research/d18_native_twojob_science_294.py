@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
+from zipfile import ZIP_DEFLATED, ZipFile, BadZipFile
 import time
 import uuid
 from typing import Any
@@ -97,6 +98,83 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def total_bytes(folder: Path) -> int:
     return sum(p.stat().st_size for p in Path(folder).iterdir() if p.is_file())
+
+
+
+D15_FILES = (
+    "manifest.json",
+    *(f"batch-{i:05d}.json" for i in range(8)),
+    "final.json",
+)
+
+
+def archive_source_d15(journal: Path, archive: Path) -> tuple[str, int]:
+    """Persist the EXACT source-authentic D15 journal, never a summary-only proxy."""
+    journal = Path(journal)
+    archive = Path(archive)
+    entries = {p.name: p for p in journal.iterdir()}
+    need(set(entries) == set(D15_FILES), "not the original 8-patch final D15 journal")
+    raw_size = 0
+    for name in D15_FILES:
+        p = entries[name]
+        need(p.is_file() and not p.is_symlink(),
+             "D18 journal contains nonregular or linked file")
+        raw_size += p.stat().st_size
+        need(raw_size <= MAX_JOURNAL_BYTES, "D18 original D15 raw journal over128MiB")
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(prefix=".d18-native-archive-", dir=archive.parent) as tmp:
+        staged = Path(tmp) / "original-d15.zip"
+        with ZipFile(staged, "x", compression=ZIP_DEFLATED, compresslevel=5) as zf:
+            for name in D15_FILES:
+                zf.write(entries[name], arcname=name)
+        need(0 < staged.stat().st_size <= MAX_JOURNAL_BYTES,
+             "D18 original source journal compressed archive too large")
+        with staged.open("rb") as file:
+            os.fsync(file.fileno())
+        os.link(staged, archive)  # immutable no-replace publication
+        directory = os.open(archive.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    return hashlib.sha256(archive.read_bytes()).hexdigest(), raw_size
+
+
+def extract_source_d15(archive: Path, destination: Path) -> int:
+    """Bounded exact-whitelist extraction, no zip-slip, symlink or bomb path."""
+    archive = Path(archive)
+    destination = Path(destination)
+    need(archive.is_file() and not archive.is_symlink() and
+         0 < archive.stat().st_size <= MAX_JOURNAL_BYTES,
+         "D18 source-journal evidence archive absent/oversized/link")
+    try:
+        with ZipFile(archive, "r") as zf:
+            members = zf.infolist()
+            need(tuple(x.filename for x in members) == D15_FILES,
+                 "D18 archive entries must exactly be original D15 manifest/patches/final")
+            need(all(not x.is_dir() and not (x.flag_bits & 1) for x in members),
+                 "D18 archive must not contain directories/encryption")
+            need(all(x.file_size >= 0 and x.compress_size >= 0 for x in members),
+                 "D18 archive member size invalid")
+            total_expected = sum(x.file_size for x in members)
+            need(0 < total_expected <= MAX_JOURNAL_BYTES,
+                 "D18 raw D15 journal exceeds fixed128MiB extraction limit")
+            destination.mkdir(parents=True, exist_ok=False)
+            total = 0
+            for item in members:
+                output = destination / item.filename
+                with zf.open(item) as stream, output.open("xb") as writer:
+                    while chunk := stream.read(1024 * 1024):
+                        total += len(chunk)
+                        need(total <= MAX_JOURNAL_BYTES,
+                             "D18 source-journal decompressed size over cap")
+                        writer.write(chunk)
+                need(output.stat().st_size == item.file_size,
+                     "D18 original D15 compressed member length drift")
+            need(total == total_expected, "D18 original D15 archive accounting drift")
+            return total
+    except (BadZipFile, OSError, EOFError) as exc:
+        raise D16BoundaryError("D18 malformed original native D15 archive") from exc
 
 
 def validate_saved(
