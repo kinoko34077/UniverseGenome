@@ -127,6 +127,7 @@ def audit_archive(path: Path) -> dict:
         retirement_reasons = Counter()
         by_round = []
         prior_global_ms = 0
+        last_selected_ms = 0
         last_snapshot = None
         for ordinal in range(1, ORIGINAL_ROUNDS + 1):
             filename = f"selected-round-{ordinal:02d}.json"
@@ -169,9 +170,15 @@ def audit_archive(path: Path) -> dict:
                  and receipt.get("learning_claim") is False,
                  "original immutable D15 selected receipt mismatch")
             now = receipt["global_elapsed_ms"]
-            need(type(now) is int and prior_global_ms <= now <= 1800000,
-                 "original global elapsed or host clock drift")
+            selected_ms = payload["global_wall_ms"]
+            # Native completion timestamp precedes immutable-receipt fsync.
+            # Final scientific verdict records the selected-state timestamp,
+            # not the later receipt publication timestamp.
+            need(type(now) is int and type(selected_ms) is int
+                 and prior_global_ms <= selected_ms <= now <= 1800000,
+                 "original selected/receipt cross-host global clock drift")
             prior_global_ms = now
+            last_selected_ms = selected_ms
             need(verdict["rounds"][ordinal - 1] == original_observation(payload),
                  "original scientific report differs from native source-bound observer")
             need(tuple(sorted(obs["categories"])) == CATEGORIES,
@@ -189,7 +196,7 @@ def audit_archive(path: Path) -> dict:
             by_round.append({"round": ordinal, "categories": cats})
             last_snapshot = selected
         need(verdict["original_native_replacements_total"] == totals["actual_replacements"]
-             and verdict["global_elapsed_ms"] >= prior_global_ms
+             and verdict["global_elapsed_ms"] == last_selected_ms
              and totals["actual_replacements"] == sum(retirement_reasons.values()),
              "original terminal native replacement/clock accounting mismatch")
         last = by_round[-1]
