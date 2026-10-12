@@ -1,0 +1,83 @@
+name: PERF268 P6.3 Frozen Main vs BH Candidate Native128
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/perf268-p63-native128-source-paired.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  true_native128_fixed_source_pair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Freeze exact baseline/candidate code independently without changing science
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git worktree add --detach "$RUNNER_TEMP/perf268-original" 91a1a3d712ce34bb0db591225d55f904648aae13
+          git worktree add --detach "$RUNNER_TEMP/perf268-candidate" 118b6be0eb7a53844a20ead009c76658ed1efbfe
+          test "$(git -C "$RUNNER_TEMP/perf268-original" rev-parse HEAD)" = "91a1a3d712ce34bb0db591225d55f904648aae13"
+          test "$(git -C "$RUNNER_TEMP/perf268-candidate" rev-parse HEAD)" = "118b6be0eb7a53844a20ead009c76658ed1efbfe"
+          test "$(git diff --name-only 91a1a3d712ce34bb0db591225d55f904648aae13 HEAD)" = ".github/workflows/perf268-p63-native128-source-paired.yml"
+      - name: Execute identical true native128 default1024 seed0 original selected once in each worktree
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          (cd "$RUNNER_TEMP/perf268-original" &&
+            timeout -k 20s 240s python -m benchmarks.perf230_full128_no_bh_ab --output "$GITHUB_WORKSPACE/reports/accepted-main.json")
+          (cd "$RUNNER_TEMP/perf268-candidate" &&
+            timeout -k 20s 240s python -m benchmarks.perf230_full128_no_bh_ab --output "$GITHUB_WORKSPACE/reports/bh-candidate.json")
+      - name: Exact original selected v7 plus eight-journal patches and source paired CPU verdict
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          old=json.loads(Path("reports/accepted-main.json").read_text())
+          new=json.loads(Path("reports/bh-candidate.json").read_text())
+          expected={"base":"91a1a3d712ce34bb0db591225d55f904648aae13",
+                    "candidate":"118b6be0eb7a53844a20ead009c76658ed1efbfe",
+                    "digest":"725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63"}
+          assert old["source_sha"] == expected["base"] and new["source_sha"] == expected["candidate"]
+          for row in (old,new):
+              assert row["seed"]==0 and row["workers"]==4 and row["world_count"]==128
+              assert row["original_default_timeout_generations"]==1024
+              assert row["original_native_full_optimizer_digest"]==expected["digest"]
+              assert row["evaluated_worlds"]==128 and row["original_selected_once"]
+              assert row["checkpoint_writes"]==8
+              assert row["sampled_aggregate_peak_rss_bytes"]<=1536*1024*1024
+          assert old["journal_bytes"] == new["journal_bytes"], "original parent D15 journal drift"
+          ratio=old["wall_seconds"]/new["wall_seconds"]
+          report={
+              "kind":"PERF268_P63_SOURCE_MATCHED_TRUE_NATIVE128_ONE_SELECTED_ROUND",
+              "baseline_sha":expected["base"],"candidate_sha":expected["candidate"],
+              "original_selected_v7":expected["digest"],
+              "original_journal_bytes":old["journal_bytes"],
+              "baseline_wall_seconds":old["wall_seconds"],
+              "candidate_wall_seconds":new["wall_seconds"],
+              "same_host_speed_ratio":ratio,
+              "classification":"PASS_5_PERCENT_NATIVE_GATE" if ratio>=1.05 else "REJECT_NO_MEASURABLE_5_PERCENT_NATIVE_GAIN",
+              "seed":0,"true_evaluated_original_worlds":128,
+              "real_scientific_seed16384_executed":False,
+              "learning_claim":False,
+          }
+          Path("reports/p63-comparison.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+          print(json.dumps(report,sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf268-p63-true-native128-current-main-vs-candidate
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
