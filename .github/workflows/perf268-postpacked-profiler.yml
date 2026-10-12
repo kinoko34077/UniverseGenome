@@ -1,0 +1,44 @@
+name: PERF268 P6.0 Source Frozen Post-Packed CPU Profile
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/perf268-postpacked-profiler.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  current_source_profile_only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify frozen P5.7 accepted baseline and no original science dispatch
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git rev-parse HEAD^)" = "91a1a3d712ce34bb0db591225d55f904648aae13"
+          test "$(git diff --name-only HEAD^ HEAD)" = ".github/workflows/perf268-postpacked-profiler.yml"
+      - name: Verify native profiler immutable oracle
+        run: |
+          timeout -k 10s 70s python -m unittest discover -s tests -p 'test_perf_residual_219.py' -v
+      - name: Measure actual source default1024 native slot0 and physical density strata
+        run: |
+          timeout -k 10s 280s python -m benchmarks.perf_residual_219 \
+            --physical-generations 96 \
+            --output reports/perf268-postpacked-profile.json | tee reports-summary.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf268-postpacked-current-source-profile
+          path: |
+            reports/perf268-postpacked-profile.json
+            reports-summary.txt
+          if-no-files-found: warn
+          retention-days: 7
