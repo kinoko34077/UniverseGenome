@@ -158,6 +158,32 @@ class D16StageFSMTests(unittest.TestCase):
                            now_unix_ms=START+39000,local_elapsed_ms=19000)
         self.assertEqual(state.result,"OBSERVED_FINAL")
 
+    def test_one_source_mature_category_same_category_retirement_is_positive(self):
+        opt,state=initial()
+        for n in range(1,21):
+            state=state.append(complete=synthetic_case(opt,n),
+                               now_unix_ms=START+n*1000,local_elapsed_ms=n*1000)
+        state=state.accept_second_job(
+            verified_selected20_v7=state.selected_v7_sha256,
+            clock_from_immutable_manifest=GlobalClock(START,20000),
+            now_unix_ms=START+21000)
+        for n in range(21,37):
+            state=state.append(complete=synthetic_case(opt,n),
+                               now_unix_ms=START+n*1000,
+                               local_elapsed_ms=(n-20)*1000)
+        record=synthetic_case(opt,37,retirements=1)
+        categories=dict(record["d15_verified_observer"]["categories"])
+        first=sorted(categories)[0]
+        categories[first]={**categories[first],"complete_nonfailure_count":1}
+        record={**record,"d15_verified_observer":{
+            **record["d15_verified_observer"],"categories":categories,
+        }}
+        state=state.append(complete=record,now_unix_ms=START+37000,
+                           local_elapsed_ms=17000)
+        self.assertEqual(state.observed_native_retirements,1)
+        self.assertEqual(state.mature_categories,(first,))
+        self.assertEqual(state.result,"OBSERVED_FINAL")
+
     def test_category_name_spoofing_rejected(self):
         opt,state=initial()
         rec=synthetic_case(opt,1)
