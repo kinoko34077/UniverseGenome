@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 from research.d16_original_twojob_science_217 import (
     ORIGINAL_SEED, STAGE1_END, MAX_ROUNDS, REPORT_SCHEMA,
-    execute, check_inbound_rows, original_observation,
+    execute, check_inbound_rows, original_observation, isolated_handoff_folder,
 )
 from research.d16_twojob_run_control_217 import D16BoundaryError
 
@@ -49,6 +49,35 @@ class OriginalScienceProgramSourceGuards(unittest.TestCase):
                        side_effect=D16BoundaryError("no pinned checkout")):
                 with self.assertRaisesRegex(D16BoundaryError,"no pinned checkout"):
                     execute(job=1, out=Path(temp))
+
+    def test_complete_host2_evidence_is_copied_without_mutating_inbound(self):
+        with tempfile.TemporaryDirectory() as temp:
+            parent = Path(temp)
+            inbound, out = parent/"inbound", parent/"out"
+            inbound.mkdir()
+            (inbound/"stage1-manifest.json").write_text('{"source_sha":"a"}')
+            (inbound/"partial-report.json").write_text('{"rounds":[]}')
+            (inbound/"selected-round-20.json").write_bytes(b"native-checkpoint")
+            (inbound/"selected-receipt-20.json").write_bytes(b"immutable-receipt")
+            before={p.name:p.read_bytes() for p in inbound.iterdir()}
+            self.assertEqual(isolated_handoff_folder(inbound,out),out)
+            (out/"selected-round-21.json").write_bytes(b"native-second-job")
+            self.assertEqual({p.name:p.read_bytes() for p in inbound.iterdir()},before)
+            self.assertTrue((out/"selected-round-20.json").is_file())
+            self.assertTrue((out/"selected-receipt-20.json").is_file())
+            self.assertTrue((out/"selected-round-21.json").is_file())
+            self.assertFalse((inbound/"selected-round-21.json").exists())
+
+    def test_host2_never_accepts_overlapping_evidence_or_nested_untracked_bytes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            inbound=Path(temp)/"inbound"
+            inbound.mkdir()
+            (inbound/"stage1-manifest.json").write_text("{}")
+            with self.assertRaises(D16BoundaryError):
+                isolated_handoff_folder(inbound,inbound)
+            (inbound/"nested").mkdir()
+            with self.assertRaises(D16BoundaryError):
+                isolated_handoff_folder(inbound,Path(temp)/"out")
 
     def test_scientific_observation_keeps_native_retirement_separate_from_learning(self):
         item={
