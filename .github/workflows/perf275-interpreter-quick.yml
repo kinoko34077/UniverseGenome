@@ -1,0 +1,83 @@
+name: PERF275 Frozen Native Slot0 CPython vs PyPy Quick Test
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf275_interpreter_probe.py"
+      - ".github/workflows/perf275-interpreter-quick.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  same_host_original_native_slot_interpreter_probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Checkout identical frozen P6.5 source for both runtimes
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/frozen-native" f0954171e912bedbe32dbc6ab221bc9da19cf66f
+          test "$(git -C "$RUNNER_TEMP/frozen-native" rev-parse HEAD)" = "f0954171e912bedbe32dbc6ab221bc9da19cf66f"
+          cp benchmarks/perf275_interpreter_probe.py "$RUNNER_TEMP/frozen-native/benchmarks/"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          check-latest: false
+        id: cpy
+      - name: Store exact CPython executable
+        id: cpypath
+        run: echo "exe=$(python -c 'import sys;print(sys.executable)')" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "pypy3.11"
+          check-latest: false
+        id: pypy
+      - name: Store exact PyPy executable
+        id: pypath
+        run: echo "exe=$(python -c 'import sys;print(sys.executable)')" >> "$GITHUB_OUTPUT"
+      - name: Source-frozen old and JIT native default1024 one-slot comparisons, identical actual v7
+        shell: bash
+        env:
+          CPY_EXE: ${{ steps.cpypath.outputs.exe }}
+          PYPY_EXE: ${{ steps.pypath.outputs.exe }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/frozen-native"
+          mkdir -p "$GITHUB_WORKSPACE/reports"
+          timeout -k 10s 100s "$CPY_EXE" -m benchmarks.perf275_interpreter_probe --repeats 6 --out "$GITHUB_WORKSPACE/reports/cpython.json"
+          timeout -k 10s 100s "$PYPY_EXE" -m benchmarks.perf275_interpreter_probe --repeats 6 --out "$GITHUB_WORKSPACE/reports/pypy.json"
+          cd "$GITHUB_WORKSPACE"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          old=json.loads(Path("reports/cpython.json").read_text())
+          new=json.loads(Path("reports/pypy.json").read_text())
+          assert old["source_sha"]==new["source_sha"]=="f0954171e912bedbe32dbc6ab221bc9da19cf66f"
+          assert old["full_v7"]==new["full_v7"] and old["seed"]==new["seed"]==0
+          assert old["interpreter"]=="CPython" and new["interpreter"]=="PyPy"
+          speed=old["warm_last_three_wall_median_seconds"]/new["warm_last_three_wall_median_seconds"]
+          report={"kind":"PERF275_EXPOSED_SEED0_ORIGINAL_SLOT0_ONLY",
+                  "source_sha":old["source_sha"],
+                  "warm_cpython_seconds":old["warm_last_three_wall_median_seconds"],
+                  "warm_pypy_seconds":new["warm_last_three_wall_median_seconds"],
+                  "warm_speed_ratio":speed,
+                  "cpython_peak_rss_kib":old["peak_process_rss_kib"],
+                  "pypy_peak_rss_kib":new["peak_process_rss_kib"],
+                  "potential_next_gate":speed>=1.15 and new["peak_process_rss_kib"]<=320*1024,
+                  "no_original_seed16384":True,"not_scientific_runtime_approved":True}
+          Path("reports/comparison.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+          print(json.dumps(report,sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf275-native-exact-source-cpython-vs-pypy
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
