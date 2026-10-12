@@ -93,20 +93,32 @@ class UniverseState:
         self.slow_trace = bytearray(self.max_cells)
 
     def active_slots(self) -> list[int]:
-        """Return ACTIVE storage indices using CPython's C-level list search.
+        """Return current ACTIVE indices in original ascending storage order.
 
-        This is identical to scanning lifecycle in ascending slot order; it
-        avoids running a Python comparison for every FREE/BLACK_HOLE entry
-        in our fixed-capacity sparse 1024-slot states. It has no cache and
-        therefore remains correct after all in-place physical transitions.
+        Native lifecycle stores small integer FREE/ACTIVE/BLACK_HOLE codes.
+        An ephemeral packed view permits C-level byte search without an
+        exception for a missing next ACTIVE. Never cache between physical
+        transitions; the source lifecycle remains the original mutable list.
+        Preserve the old list.index search for non-byte lifecycle payloads.
         """
         active = int(Lifecycle.ACTIVE)
+        try:
+            packed = bytes(self.lifecycle)
+        except (TypeError, ValueError, OverflowError):
+            indices: list[int] = []
+            start = 0
+            while True:
+                try:
+                    slot = self.lifecycle.index(active, start)
+                except ValueError:
+                    return indices
+                indices.append(slot)
+                start = slot + 1
         indices: list[int] = []
         start = 0
         while True:
-            try:
-                slot = self.lifecycle.index(active, start)
-            except ValueError:
+            slot = packed.find(active, start)
+            if slot < 0:
                 return indices
             indices.append(slot)
             start = slot + 1
