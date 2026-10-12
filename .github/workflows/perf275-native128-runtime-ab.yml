@@ -1,0 +1,96 @@
+name: PERF275 P7.1 Same-Host CPython PyPy True Native128 D15
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf275_native128_runtime_ab.py"
+      - ".github/workflows/perf275-native128-runtime-ab.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source_locked_native128_once_selected_cpu_runtime_parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prepare EXACT integrated original science-independent source
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/p75-native-source" 65e1d78576026b0214a0184bd6028e01dc3cc7e1
+          test "$(git -C "$RUNNER_TEMP/p75-native-source" rev-parse HEAD)" = "65e1d78576026b0214a0184bd6028e01dc3cc7e1"
+          cp benchmarks/perf275_native128_runtime_ab.py "$RUNNER_TEMP/p75-native-source/benchmarks/"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          check-latest: false
+      - name: Save CPython executable
+        id: cpy
+        run: echo "exe=$(python -c 'import sys;print(sys.executable)')" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "pypy3.11"
+          check-latest: false
+      - name: Save PyPy executable
+        id: pypy
+        run: echo "exe=$(python -c 'import sys;print(sys.executable)')" >> "$GITHUB_OUTPUT"
+      - name: Fixed original native128 selected D15 and observer under CPython
+        shell: bash
+        env:
+          CPY: ${{ steps.cpy.outputs.exe }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/reports"
+          cd "$RUNNER_TEMP/p75-native-source"
+          timeout -k 20s 340s "$CPY" -m benchmarks.perf275_native128_runtime_ab --out "$GITHUB_WORKSPACE/reports/cpython-native128.json"
+      - name: Identical fixed original native128 selected D15 and observer under PyPy
+        shell: bash
+        env:
+          PYPY: ${{ steps.pypy.outputs.exe }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/p75-native-source"
+          timeout -k 20s 340s "$PYPY" -m benchmarks.perf275_native128_runtime_ab --out "$GITHUB_WORKSPACE/reports/pypy-native128.json"
+      - name: Classify genuine original full128 runtime, memory and complete journals
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a=json.loads(Path("reports/cpython-native128.json").read_text())
+          b=json.loads(Path("reports/pypy-native128.json").read_text())
+          assert a["interpreter"]=="CPython" and b["interpreter"]=="PyPy"
+          assert a["source_sha"]==b["source_sha"]=="65e1d78576026b0214a0184bd6028e01dc3cc7e1"
+          assert a["original_selected_native_v7_sha256"]==b["original_selected_native_v7_sha256"]=="725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63"
+          assert a["d15_journal_bytes"]==b["d15_journal_bytes"]
+          assert a["evaluated_native_worlds"]==b["evaluated_native_worlds"]==128
+          assert a["workers"]==b["workers"]==4
+          assert a["original_observer_readonly"] is b["original_observer_readonly"] is True
+          for r in (a,b):
+              assert r["sampled_aggregate_peak_rss_bytes"]<=1536*1024*1024
+              assert r["d15_journal_bytes"]<=128*1024*1024
+              assert r["real_d16_science_seed16384_executed"] is False
+          speed=a["selected_wall_seconds"]/b["selected_wall_seconds"]
+          report={"kind":"PERF275_TRUE_NATIVE128_HOSTED_RUNTIME_AB",
+                  "source_sha":a["source_sha"],"cpython_wall_seconds":a["selected_wall_seconds"],
+                  "pypy_wall_seconds":b["selected_wall_seconds"],
+                  "selected128_speed_ratio":speed,
+                  "cpython_peak_rss_bytes":a["sampled_aggregate_peak_rss_bytes"],
+                  "pypy_peak_rss_bytes":b["sampled_aggregate_peak_rss_bytes"],
+                  "d15_original_journal_bytes":a["d15_journal_bytes"],
+                  "candidate_next_gate_1_2x":speed>=1.2,
+                  "scientific_seed16384_untouched":True}
+          Path("reports/compare.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+          print(json.dumps(report,sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf275-p71-hosted-native128-pypy-vs-cpython-source-bound
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
