@@ -6,7 +6,6 @@ selected optimizer-v7 under CPython and PyPy. Never evolves reserved seed16384.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -27,7 +26,7 @@ GOLDEN_MATURE = {
 }
 
 NATIVE_CHILD = r"""
-import json,subprocess,sys,time
+import hashlib,json,subprocess,sys,time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from core.experiment import ExperimentConfig
