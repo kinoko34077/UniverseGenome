@@ -166,7 +166,7 @@ def execute(*, job: int, out: Path, inbound: Path | None = None) -> dict:
         "experiment_sha256":hash_of(ExperimentConfig().to_dict()),
         "physics_sha256":hash_of(PhysicsConfig().to_dict()),
         "learning_claim":False, "independent_generalization_claim":False,
-        "original_seed16384_executed":True, "rounds":rows,
+        "original_completed_selected_seed16384_rounds":len(rows), "rounds":rows,
         "status":"IN_PROGRESS",
     }
     report_path=folder/"partial-report.json"
@@ -182,6 +182,7 @@ def execute(*, job: int, out: Path, inbound: Path | None = None) -> dict:
             raise D16BoundaryError("original selected scientific report ordinal drift")
         rows.append(row)
         report["last_completed_selected_round"]=row["ordinal"]
+        report["original_completed_selected_seed16384_rounds"]=len(rows)
         report["global_elapsed_ms"]=stage.stage.last_global_elapsed_ms
         report["original_native_replacements_total"]=sum(
             r["original_actual_native_replacements"] for r in rows
@@ -208,6 +209,11 @@ def execute(*, job: int, out: Path, inbound: Path | None = None) -> dict:
     )
     report["stretch_900_met"] = (
         report["science_terminal"] and report["global_elapsed_ms"]<=900000
+    )
+    report["timing_classification"] = (
+        "TARGET_1200_MET" if report["science_1200_target_met"] else
+        "TARGET_1200_MISSED" if report["science_terminal"] else
+        "NO_TERMINAL_SCIENCE_RESULT"
     )
     report["retained_bytes"]=retained_bytes(folder)
     if report["retained_bytes"] > MAX_RETAINED_STUDY_BYTES:
