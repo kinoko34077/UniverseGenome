@@ -50,7 +50,7 @@ jobs:
           setup(
               name="universegenome-p8-test-only-physics",
               ext_modules=cythonize(
-                  [ext], compiler_directives={"language_level": 3},
+                  [ext], compiler_directives={"language_level": 3, "annotation_typing": False},
                   build_dir=os.environ["RUNNER_TEMP"]+"/p8-c-source",
                   nthreads=1, quiet=True,
               ),
