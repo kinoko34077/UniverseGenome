@@ -28,12 +28,17 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           git merge-base --is-ancestor 65e1d78576026b0214a0184bd6028e01dc3cc7e1 HEAD
-          git diff --name-only 65e1d78576026b0214a0184bd6028e01dc3cc7e1 HEAD > "$RUNNER_TEMP/p72-changed.txt"
-          printf '%s\n' \
-            '.github/workflows/perf275-p72-mature-runtime-ab.yml' \
-            'benchmarks/perf275_p72_mature_runtime_ab.py' \
-            > "$RUNNER_TEMP/p72-expected.txt"
-          diff -u "$RUNNER_TEMP/p72-expected.txt" "$RUNNER_TEMP/p72-changed.txt"
+          # Compare against this PR's merge base, not the immutable science source.
+          # The latter would include unrelated D18 files after this branch merges.
+          pr_base="$(git merge-base "${{ github.event.pull_request.base.sha }}" HEAD)"
+          git diff --name-only "$pr_base" HEAD > "$RUNNER_TEMP/p72-changed.txt"
+          test -s "$RUNNER_TEMP/p72-changed.txt"
+          while IFS= read -r changed; do
+            case "$changed" in
+              '.github/workflows/perf275-p72-mature-runtime-ab.yml'|'benchmarks/perf275_p72_mature_runtime_ab.py') ;;
+              *) echo "Unexpected P7.2 PR changed path: $changed" >&2; exit 1 ;;
+            esac
+          done < "$RUNNER_TEMP/p72-changed.txt"
       - name: Parse-only Python syntax and embedded native child; never execute
         shell: bash
         run: |
