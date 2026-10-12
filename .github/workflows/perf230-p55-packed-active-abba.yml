@@ -1,0 +1,43 @@
+name: PERF230 P5.5 Packed-Lifecycle-Active Same-Host Native ABBA
+
+on:
+  pull_request:
+    paths:
+      - "core/state.py"
+      - "tests/test_perf230_p55_packed_active.py"
+      - "benchmarks/perf230_p55_packed_active_abba.py"
+      - ".github/workflows/perf230-p55-packed-active-abba.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source_native_seed0_controlled_original:
+    runs-on: ubuntu-latest
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: RED-to-GREEN native empty state exact output/aliases parity
+        run: |
+          python -m py_compile benchmarks/perf230_p55_packed_active_abba.py
+          python -m unittest tests.test_perf230_p55_packed_active -v
+      - name: Original native seed0 source-v7 same-host old/new/new/old hot-slot and conditional full selected128
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout -k 15s 600s python -m benchmarks.perf230_p55_packed_active_abba
+      - name: Preserve predeclared positive or negative native original ratio
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-p55-empty-output-original-native-abba
+          path: reports/p55/*.json
+          if-no-files-found: warn
+          retention-days: 7
