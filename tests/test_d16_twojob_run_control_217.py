@@ -39,8 +39,16 @@ class D16ProspectiveTransferTests(unittest.TestCase):
         immature = {**mature, "C": False}
         self.assertEqual(classify_stop(36, mature_categories=mature,
                                        actual_replacements=2), "CONTINUE")
+        # actual_replacements is already filtered to SAME-category mature
+        # retirements by StageState.append(), so only one mature category
+        # suffices for genuine original D16 positive scientific evidence.
         self.assertEqual(classify_stop(37, mature_categories=immature,
-                                       actual_replacements=2), "CONTINUE")
+                                       actual_replacements=2), "OBSERVED_FINAL")
+        one_mature = {c: c == "A" for c in "ABCD"}
+        self.assertEqual(classify_stop(37, mature_categories=one_mature,
+                                       actual_replacements=1), "OBSERVED_FINAL")
+        self.assertEqual(classify_stop(37, mature_categories=one_mature,
+                                       actual_replacements=0), "CONTINUE")
         self.assertEqual(classify_stop(37, mature_categories=mature,
                                        actual_replacements=0), "CONTINUE")
         self.assertEqual(classify_stop(37, mature_categories=mature,
