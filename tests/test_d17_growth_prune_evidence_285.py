@@ -12,7 +12,7 @@ from research.d16_twojob_run_control_217 import D16BoundaryError
 from research.d17_growth_prune_evidence_285 import (
     ORIGINAL_SOURCE, ORIGINAL_SEED, ORIGINAL_ROUNDS,
     ORIGINAL_ZIP_SHA256, CATEGORIES,
-    category_candidate_counts, growth_thresholds, audit_archive, check_original_selection_clock,
+    category_candidate_counts, growth_thresholds, audit_archive, check_original_selection_clock, check_original_final_clock,
 )
 
 
@@ -74,6 +74,14 @@ class D17OfflineOriginalAuditTests(unittest.TestCase):
             check_original_selection_clock(867800, 908028, 908027)
         with self.assertRaises(D16BoundaryError):
             check_original_selection_clock(908028, 907354, 908027)
+
+    def test_real_terminal_clock_reports_between_selected_and_receipt(self):
+        # Original seed16384 round37 genuinely records three timestamps.
+        check_original_final_clock(907352, 907354, 908027)
+        with self.assertRaises(D16BoundaryError):
+            check_original_final_clock(907352, 907351, 908027)
+        with self.assertRaises(D16BoundaryError):
+            check_original_final_clock(907352, 908028, 908027)
 
     def test_forged_input_zip_rejected_before_json_or_any_physics(self):
         with tempfile.TemporaryDirectory() as tmp:
