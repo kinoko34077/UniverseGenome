@@ -1,0 +1,51 @@
+name: PERF268 P6.2 Native BH Byte Index Parity and Slot0 ABBA
+
+on:
+  pull_request:
+    paths:
+      - "core/physics.py"
+      - "tests/test_perf268_bh_scan.py"
+      - "benchmarks/perf268_bh_scan_ab.py"
+      - ".github/workflows/perf268-bh-native-ab.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  native_source_parity_and_cheap_ab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 10
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify exact accepted P5.7 source base and isolated candidate files
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor 91a1a3d712ce34bb0db591225d55f904648aae13 HEAD
+          git diff --name-only 91a1a3d712ce34bb0db591225d55f904648aae13 HEAD > actual-files.txt
+          printf '%s\n' '.github/workflows/perf268-bh-native-ab.yml' 'benchmarks/perf268_bh_scan_ab.py' 'core/physics.py' 'tests/test_perf268_bh_scan.py' > expected-files.txt
+          diff -u expected-files.txt actual-files.txt
+      - name: Independent native BH, revival, lifecycle and old default slot regressions
+        run: |
+          timeout -k 10s 150s python -m unittest \
+            tests.test_perf268_bh_scan \
+            tests.test_perf_revival_index_219 \
+            tests.test_perf230_no_bh_fastpath \
+            -v
+      - name: Genuine one-native-slot default1024 seed0 ABBA on the SAME hosted CPU
+        run: |
+          timeout -k 10s 180s python -m benchmarks.perf268_bh_scan_ab \
+            --out reports/perf268-bh-index-slot0-abba.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf268-source-bh-scan-original-slot0-abba
+          path: reports/perf268-bh-index-slot0-abba.json
+          if-no-files-found: warn
+          retention-days: 7
