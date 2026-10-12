@@ -1,0 +1,73 @@
+name: D16.10 Authentic Incremental Native128 Two Hosted Jobs (Seed0 Only)
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_incremental_native_seed0_pilot_217.py"
+      - "tests/test_d16_incremental_native_seed0_pilot_217.py"
+      - ".github/workflows/d16-incremental-native-seed0-pilot-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  exposed_seed0_first_original_native128:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Gate original reserved seed and third job
+        run: python -m unittest tests.test_d16_incremental_native_seed0_pilot_217 tests.test_d16_incremental_stage_executor_217 -v
+      - name: One genuine native128 complete selected D15 round, exposed seed0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/d16-incremental/native0-first
+          timeout -k 15s 470s python -m research.d16_incremental_native_seed0_pilot_217 --stage 1 --out reports/d16-incremental/native0-first
+      - name: Preserve immutable source/observer/receipt first-host prefix
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d16-incremental-seed0-original-first-complete
+          path: reports/d16-incremental/native0-first/
+          if-no-files-found: warn
+          retention-days: 7
+
+  exposed_seed0_second_original_native128:
+    needs: exposed_seed0_first_original_native128
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: d16-incremental-seed0-original-first-complete
+          path: reports/d16-incremental/inbound
+      - name: Authenticated cross-host receipt replay and second original native128 selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/d16-incremental/native0-second
+          timeout -k 15s 470s python -m research.d16_incremental_native_seed0_pilot_217 --stage 2 --inbound reports/d16-incremental/inbound --out reports/d16-incremental/native0-second
+      - name: Preserve final seed0 non-science source-bound verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d16-incremental-seed0-original-two-host-verdict
+          path: reports/d16-incremental/native0-second/
+          if-no-files-found: warn
+          retention-days: 7
