@@ -6,6 +6,7 @@ selected optimizer-v7 under CPython and PyPy. Never evolves reserved seed16384.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -58,10 +59,21 @@ with TemporaryDirectory(prefix="perf275-p72-true-d15-") as tmp:
         or observer["original_selected_once_proven_by_D15_final"] is not True
         or observer["read_only"] is not True or observer["learning_claim"] is not False):
         raise AssertionError("D16 original observer drift")
+    original_files = {
+        item.name: hashlib.sha256(item.read_bytes()).hexdigest()
+        for item in sorted(root.glob("*.json"))
+        if item.name != "manifest.json"
+    }
+    expected_files = {"base.json", "final.json"} | {
+        f"batch-{i:05d}.json" for i in range(8)
+    }
+    if set(original_files) != expected_files:
+        raise AssertionError("D15 original base/8 ordered batch/final payload mismatch")
     result={
         "source_sha":source,"seed":0,"ordinal":ordinal,
         "native_wall_s":native_wall,"selected_v7":r["final_digest"],
         "journal_bytes":r["journal_bytes"],"patches":r["checkpoint_writes"],
+        "journal_payload_sha256":original_files,
         "native128_evaluations":128,"default1024":True,
         "sampled_rss_bytes":r.get("peak_aggregate_rss_bytes"),
         "observer_hash":None if observer is None else hash_of(observer),
@@ -87,6 +99,10 @@ def native_step(exe: str, scratch: Path, label: str, ordinal: int,
     if done.returncode:
         raise RuntimeError(f"{label} original native ordinal{ordinal} failed: {done.stderr[-3500:]}")
     result = json.loads(dest.read_bytes())
+    retained_bytes = sum(p.stat().st_size for p in scratch.glob("*.json"))
+    if retained_bytes > 512*1024*1024:
+        raise AssertionError("P7.2 per-host retained report/snapshot cap exceeded")
+    result["retained_scratch_bytes"] = retained_bytes
     if (result["ordinal"] != ordinal or result["source_sha"] != SOURCE
             or result["seed"] != 0 or result["native128_evaluations"] != 128
             or result["patches"] != 8 or result["sampled_rss_bytes"] > 1536*1024*1024):
@@ -133,12 +149,16 @@ def main() -> None:
             p_path,py= native_step(args.pypy,scratch,"pypy",mature,previous,observe=True)
             if (c["selected_v7"]!=py["selected_v7"]
                 or c["journal_bytes"]!=py["journal_bytes"]
+                or c["journal_payload_sha256"]!=py["journal_payload_sha256"]
                 or c["observer_hash"]!=py["observer_hash"]):
                 raise AssertionError("actual original D15/D16 observer/v7 cross-runtime mismatch")
             ratio=c["native_wall_s"]/py["native_wall_s"]
             report["mature"][str(mature)]={
                 "selected_v7":c["selected_v7"],"observer_hash":c["observer_hash"],
-                "journal_bytes":c["journal_bytes"],"cpython_s":c["native_wall_s"],
+                "journal_bytes":c["journal_bytes"],
+                "journal_payload_sha256":c["journal_payload_sha256"],
+                "max_retained_scratch_bytes":max(c["retained_scratch_bytes"], py["retained_scratch_bytes"]),
+                "cpython_s":c["native_wall_s"],
                 "pypy_s":py["native_wall_s"],"speed_ratio":ratio,
                 "cpython_rss_bytes":c["sampled_rss_bytes"],
                 "pypy_rss_bytes":py["sampled_rss_bytes"],
