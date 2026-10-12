@@ -12,7 +12,7 @@ from research.d16_twojob_run_control_217 import D16BoundaryError
 from research.d17_growth_prune_evidence_285 import (
     ORIGINAL_SOURCE, ORIGINAL_SEED, ORIGINAL_ROUNDS,
     ORIGINAL_ZIP_SHA256, CATEGORIES,
-    category_candidate_counts, growth_thresholds, audit_archive,
+    category_candidate_counts, growth_thresholds, audit_archive, check_original_selection_clock,
 )
 
 
@@ -66,6 +66,14 @@ class D17OfflineOriginalAuditTests(unittest.TestCase):
         self.assertEqual(x["median_bitcounts"], [0, 1, 0, 0])
         self.assertEqual(x["native_half_median_thresholds"], [0, 0, 0, 0])
         self.assertEqual(x["underthreshold_selected_healthy_count"], 0)
+
+    def test_real_selected_state_precedes_immutable_receipt_fsync(self):
+        # Actual observed original D16 round37 times: 907354 and 908027ms.
+        check_original_selection_clock(867800, 907354, 908027)
+        with self.assertRaises(D16BoundaryError):
+            check_original_selection_clock(867800, 908028, 908027)
+        with self.assertRaises(D16BoundaryError):
+            check_original_selection_clock(908028, 907354, 908027)
 
     def test_forged_input_zip_rejected_before_json_or_any_physics(self):
         with tempfile.TemporaryDirectory() as tmp:
