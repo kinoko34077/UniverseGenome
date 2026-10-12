@@ -1,0 +1,75 @@
+name: PERF230 P5.7 Original 37 Full Selected128 Seed0 Two Hosted Job Timing
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf230_p57_native37_twojob_900.py"
+      - "tests/test_perf230_p57_native37_twojob_900.py"
+      - ".github/workflows/perf230-p57-native37-900.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_default_seed0_first_20:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Reject reserved science seed option and missing completed handoff
+        run: |
+          python -m py_compile benchmarks/perf230_p57_native37_twojob_900.py
+          python -m unittest tests.test_perf230_p57_native37_900 -v
+      - name: Original full128 default1024 seed0 selected rounds 1 through 20
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/perf230-p57/rounds1-20
+          timeout -k 15s 1030s python -m benchmarks.perf230_p57_native37_twojob_900 --stage 1 --out reports/perf230-p57/rounds1-20
+      - name: Preserve complete-prefix audit artifact even on bounded failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p57-original-seed0-native128-complete-prefix-1-20
+          path: reports/perf230-p57/rounds1-20/
+          if-no-files-found: warn
+          retention-days: 7
+
+  original_default_seed0_remaining_17:
+    needs: original_default_seed0_first_20
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: p57-original-seed0-native128-complete-prefix-1-20
+          path: reports/perf230-p57/inbound/
+      - name: Source-locked completed-v7 handoff and genuine selected rounds 21 through 37
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/perf230-p57/rounds21-37
+          timeout -k 15s 1030s python -m benchmarks.perf230_p57_native37_twojob_900 --stage 2 --inbound reports/perf230-p57/inbound --out reports/perf230-p57/rounds21-37
+      - name: Preserve final measured verdict or complete-prefix failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p57-original-seed0-native128-twojob37-verdict
+          path: reports/perf230-p57/rounds21-37/
+          if-no-files-found: warn
+          retention-days: 7
