@@ -1,0 +1,80 @@
+name: PERF268 P6.6 Source-locked BitLength Slot0 ABBA
+
+on:
+  pull_request:
+    paths:
+      - "core/state.py"
+      - "tests/test_perf268_p66_structure_bitlength.py"
+      - "benchmarks/perf268_p66_slot0.py"
+      - ".github/workflows/perf268-p66-structure-abba.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  exact_source_original_native_slot0_abba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Assert immutable reference and exactly isolated performance-only diff
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor e7f2efd0c9ec49afc53b9265ec4b17e936798160 HEAD
+          git diff --name-only e7f2efd0c9ec49afc53b9265ec4b17e936798160 HEAD > changed.txt
+          printf '%s\n' '.github/workflows/perf268-p66-structure-abba.yml' 'benchmarks/perf268_p66_slot0.py' 'core/state.py' 'tests/test_perf268_p66_structure_bitlength.py' > expected.txt
+          diff -u expected.txt changed.txt
+          git worktree add --detach "$RUNNER_TEMP/p66-old" e7f2efd0c9ec49afc53b9265ec4b17e936798160
+          cp benchmarks/perf268_p66_slot0.py "$RUNNER_TEMP/p66-old/benchmarks/"
+      - name: Exhaustive 65536 values and exact native optimizer original test
+        run: |
+          timeout -k 10s 90s python -m unittest tests.test_perf268_p66_structure_bitlength -v
+      - name: Native default1024 original slot0 CPython same-host old/new/new/old
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          ( cd "$RUNNER_TEMP/p66-old" && timeout -k 10s 50s python -m benchmarks.perf268_p66_slot0 --expected-source e7f2efd0c9ec49afc53b9265ec4b17e936798160 --out "$GITHUB_WORKSPACE/reports/old1.json" )
+          timeout -k 10s 50s python -m benchmarks.perf268_p66_slot0 --expected-source "${{ github.event.pull_request.head.sha }}" --out reports/new1.json
+          timeout -k 10s 50s python -m benchmarks.perf268_p66_slot0 --expected-source "${{ github.event.pull_request.head.sha }}" --out reports/new2.json
+          ( cd "$RUNNER_TEMP/p66-old" && timeout -k 10s 50s python -m benchmarks.perf268_p66_slot0 --expected-source e7f2efd0c9ec49afc53b9265ec4b17e936798160 --out "$GITHUB_WORKSPACE/reports/old2.json" )
+      - name: Preserve native time and predeclared candidate rejection/acceptance
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from statistics import median
+          a=[json.loads(Path(f"reports/old{i}.json").read_text()) for i in (1,2)]
+          b=[json.loads(Path(f"reports/new{i}.json").read_text()) for i in (1,2)]
+          golden="e146bebe695dec14fc978e47d4a1e189d1e30bdaa83f9d6e69eec3c4d201f4c1"
+          for row in a+b:
+              assert row["v7_sha256"]==golden and row["seed"]==0
+              assert row["worlds"]==1 and row["original_default1024"] is True
+              assert row["interpreter"]=="CPython" and row["real_original_seed16384"] is False
+          assert all(row["source_sha"]=="e7f2efd0c9ec49afc53b9265ec4b17e936798160" for row in a)
+          assert all(row["source_sha"]=="${{ github.event.pull_request.head.sha }}" for row in b)
+          old=median(row["wall_seconds"] for row in a)
+          new=median(row["wall_seconds"] for row in b)
+          ratio=old/new
+          result={"candidate":"structure_level bit_length","source_base":a[0]["source_sha"],
+                  "source_candidate":b[0]["source_sha"],"seed":0,"worlds":1,
+                  "old_median_s":old,"new_median_s":new,"ratio":ratio,
+                  "gate":"PASS_NEXT_SELECTED128" if ratio>=1.05 else "REJECT_LOW_REAL_NATIVE_GAIN",
+                  "full_v7":golden,"science_seed16384_executed":False}
+          Path("reports/p66-comparison.json").write_text(json.dumps(result,sort_keys=True,indent=2)+"\n")
+          print(json.dumps(result,sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf268-p66-original-source-structure-level-abba
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
