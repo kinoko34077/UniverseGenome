@@ -1,0 +1,126 @@
+name: PERF291 P9.2 Original Native128 Static Diagonal Worker Scheduling ABBA
+
+on:
+  pull_request:
+    paths:
+      - "research/d15_spawn_workers_226.py"
+      - "tests/test_perf291_p92_diagonal_worker.py"
+      - "benchmarks/perf291_p92_native_abba.py"
+      - ".github/workflows/perf291-p92-diagonal-native128-abba.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_native128_diagonal_source_abba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Freeze true original benchmark and require narrow source diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor a592a284436e02fe820ad2cf73130e7f2062a452 HEAD
+          git diff --name-only a592a284436e02fe820ad2cf73130e7f2062a452 HEAD > changed.txt
+          printf '%s\n' \
+            '.github/workflows/perf291-p92-diagonal-native128-abba.yml' \
+            'benchmarks/perf291_p92_native_abba.py' \
+            'research/d15_spawn_workers_226.py' \
+            'tests/test_perf291_p92_diagonal_worker.py' > expected.txt
+          diff -u expected.txt changed.txt
+          git worktree add --detach "$RUNNER_TEMP/p92-old" a592a284436e02fe820ad2cf73130e7f2062a452
+          git worktree add --detach "$RUNNER_TEMP/p92-new" "${{ github.event.pull_request.head.sha }}"
+          cp benchmarks/perf291_p92_native_abba.py "$RUNNER_TEMP/p92-old/benchmarks/"
+      - name: Verify candidate scheduling assignment, native D15 crash and replay
+        run: |
+          set -euo pipefail
+          timeout -k 10s 40s python -m unittest discover -s tests -p 'test_perf291_p92_diagonal_worker.py' -v
+          timeout -k 10s 110s python -m unittest discover -s tests -p 'test_d15_spawn_workers_226.py' -v
+      - name: Compare real original selected128 standard CPython on same host ABBA
+        env:
+          CANDIDATE: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          i=0
+          for variant in old diagonal diagonal old; do
+            i=$((i+1))
+            if [ "$variant" = old ]; then
+              dir="$RUNNER_TEMP/p92-old"
+              sha=a592a284436e02fe820ad2cf73130e7f2062a452
+            else
+              dir="$RUNNER_TEMP/p92-new"
+              sha="$CANDIDATE"
+            fi
+            (
+              cd "$dir"
+              timeout -k 10s 120s python -m benchmarks.perf291_p92_native_abba \
+                --variant "$variant" --expected-sha "$sha" \
+                --out "$GITHUB_WORKSPACE/reports/$variant-$(printf '%02d' "$i").json"
+            )
+          done
+      - name: Freeze result, predeclared >=5 percent speed and no >3 percent paired regression
+        env:
+          CANDIDATE: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from statistics import median
+          paths=sorted(Path("reports").glob("*.json"))
+          cases=[json.loads(p.read_text()) for p in paths]
+          assert len(cases)==4
+          assert sorted(x["variant"] for x in cases)==["diagonal","diagonal","old","old"]
+          baseline="a592a284436e02fe820ad2cf73130e7f2062a452"
+          original_v7="725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63"
+          for x in cases:
+              assert x["source_sha"]==(baseline if x["variant"]=="old" else os.environ["CANDIDATE"])
+              assert x["original_full_optimizer_v7"]==original_v7
+              assert x["worlds"]==128 and x["workers"]==4 and x["seed"]==0
+              assert x["selected_once"] and x["journal_patches"]==8
+              assert not x["science_seed16384_executed"]
+          baseline_runs=sorted([x for x in cases if x["variant"]=="old"],key=lambda x:x["selected_wall_seconds"])
+          diagonal_runs=sorted([x for x in cases if x["variant"]=="diagonal"],key=lambda x:x["selected_wall_seconds"])
+          assert len({x["journal_bytes"] for x in cases})==1
+          assert all(x["journal_sha256"]==cases[0]["journal_sha256"] for x in cases[1:]),"original D15 immutable journal data changed"
+          # Re-associate measured order by the suffix run number, not sorted speed
+          records={p.stem:json.loads(p.read_text()) for p in paths}
+          old1=records["old-01"]["selected_wall_seconds"]
+          new1=records["diagonal-02"]["selected_wall_seconds"]
+          new2=records["diagonal-03"]["selected_wall_seconds"]
+          old2=records["old-04"]["selected_wall_seconds"]
+          a=median((old1,old2)); b=median((new1,new2))
+          ratio=a/b
+          pairs=(old1/new1,old2/new2)
+          accepted=ratio>=1.05 and min(pairs)>=1/1.03
+          result=dict(
+              kind="PERF291_P92_REAL_NATIVE128_DIAGONAL_ABBA",
+              original_source=baseline,candidate_source=os.environ["CANDIDATE"],
+              original_seed0_selected_v7=original_v7,
+              old_median_s=a,new_median_s=b,ratio=ratio,pair_speed_ratios=pairs,
+              exact_original_journal_parity=True,
+              decision="CHEAP_GATE_PASS_MATURE_REQUIRED" if accepted else "REJECT_NO_REAL_5_PERCENT_GUARANTEED_GAIN",
+              original_science_seed16384_executed=False,
+              all_runs=records,
+          )
+          Path("reports/verdict.json").write_text(json.dumps(result,sort_keys=True,indent=2)+"\n")
+          print(json.dumps({k:v for k,v in result.items() if k!="all_runs"},sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf291-original-native128-p92-diagonal-abba
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
