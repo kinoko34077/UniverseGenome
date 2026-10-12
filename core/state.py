@@ -32,10 +32,9 @@ SHAPE_VERTICAL = 3
 def structure_level(structure: int) -> int:
     """Return the highest non-empty two-bit hierarchy level."""
     value = int(structure) & 0xFFFF
-    for level in range(7, -1, -1):
-        if ((value >> (level * 2)) & 0b11) != SHAPE_EMPTY:
-            return level
-    return 0
+    # The top occupied two-bit group is the highest set bit's pair.
+    # Keep zero at level 0 and the original 16-bit truncation semantics.
+    return (value.bit_length() - 1) // 2 if value else 0
 
 
 def structure_shape(structure: int) -> int:
