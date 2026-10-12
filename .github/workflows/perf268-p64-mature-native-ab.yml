@@ -1,0 +1,64 @@
+name: PERF268 P6.4 Frozen Original Native128 Mature10 and20 Source AB
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf268_p64_mature_native_ab.py"
+      - ".github/workflows/perf268-p64-mature-native-ab.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source_bound_original_mature_rounds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify static source freeze and test-only exact maturities
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git cat-file -e 91a1a3d712ce34bb0db591225d55f904648aae13^{commit}
+          git cat-file -e 118b6be0eb7a53844a20ead009c76658ed1efbfe^{commit}
+          git diff --name-only 91a1a3d712ce34bb0db591225d55f904648aae13 HEAD > actual-files.txt
+          printf '%s\n' '.github/workflows/perf268-p64-mature-native-ab.yml' 'benchmarks/perf268_p64_mature_native_ab.py' > expected-files.txt
+          diff -u expected-files.txt actual-files.txt
+          python -m py_compile benchmarks/perf268_p64_mature_native_ab.py
+      - name: Genuine original seed0 selected rounds1 to20 prefix and A-B maturities10/20
+        run: |
+          timeout -k 20s 1020s python -m benchmarks.perf268_p64_mature_native_ab
+      - name: Verify terminal source full-v7/journal and preregistered mature >=5% conclusion
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          v=json.loads(Path("reports/perf268-p64/comparison.json").read_text())
+          assert v["baseline_sha"] == "91a1a3d712ce34bb0db591225d55f904648aae13"
+          assert v["candidate_sha"] == "118b6be0eb7a53844a20ead009c76658ed1efbfe"
+          assert v["seed"] == 0 and v["source_parity"] is True
+          assert v["last_baseline_prefix_selected_round"] == 19
+          assert set(v["comparison"]) == {"10","20"}
+          for n in ("10","20"):
+              r=v["comparison"][n]
+              assert r["original_journal_bytes"] > 0
+              assert len(r["equal_native_full_selected_v7_sha256"]) == 64
+          assert v["original_science_seed16384_executed"] is False
+          print(json.dumps({"source_matched_maturity_classification":v["status"],
+                            "combined_mature_speed_ratio":v["comparison_sum_ratio"],
+                            "original_science_seed16384_executed":False},sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf268-p64-original-mature10-20-source-ab
+          path: reports/perf268-p64/comparison.json
+          if-no-files-found: warn
+          retention-days: 7
