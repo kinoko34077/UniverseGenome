@@ -94,6 +94,14 @@ def check_original_selection_clock(previous_receipt_ms: int,
          "original selected/receipt cross-host global clock drift")
 
 
+def check_original_final_clock(selected_ms: int, report_ms: int,
+                               receipt_ms: int) -> None:
+    """Verdict follows selected proof but can precede immutable receipt."""
+    need(all(type(x) is int for x in (selected_ms, report_ms, receipt_ms))
+         and 0 <= selected_ms <= report_ms <= receipt_ms <= 1800000,
+         "original terminal native replacement/clock accounting mismatch")
+
+
 def audit_archive(path: Path) -> dict:
     path = Path(path)
     need(path.is_file() and path.stat().st_size <= MAX_ARCHIVE_BYTES,
@@ -206,8 +214,9 @@ def audit_archive(path: Path) -> dict:
         # The report is finalized after selected checkpoint publication but
         # before the last immutable receipt becomes authoritative. Its clock
         # may be a few milliseconds later than the D15 selected snapshot.
+        check_original_final_clock(
+            last_selected_ms, verdict["global_elapsed_ms"], prior_global_ms)
         need(verdict["original_native_replacements_total"] == totals["actual_replacements"]
-             and last_selected_ms <= verdict["global_elapsed_ms"] <= prior_global_ms
              and totals["actual_replacements"] == sum(retirement_reasons.values()),
              "original terminal native replacement/clock accounting mismatch")
         last = by_round[-1]
