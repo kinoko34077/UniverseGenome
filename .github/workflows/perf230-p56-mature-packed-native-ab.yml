@@ -1,0 +1,43 @@
+name: PERF230 P5.6 Genuine Maturity Rounds 10 and 20 Same-Host AB
+
+on:
+  pull_request:
+    paths:
+      - "core/state.py"
+      - "tests/test_perf230_p55_packed_active.py"
+      - "benchmarks/perf230_p56_mature_packed_native_ab.py"
+      - ".github/workflows/perf230-p56-mature-packed-native-ab.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source_authentic_round10_round20_seed0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Original source zero-ACTIVE test and native seed0-only source script syntax
+        run: |
+          python -m py_compile benchmarks/perf230_p56_mature_packed_native_ab.py
+          python -m unittest tests.test_perf230_p55_packed_active -v
+      - name: Genuine original native default1024 seed0 selected1..19, same-host10+20 original A/B
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout -k 15s 1020s python -m benchmarks.perf230_p56_mature_packed_native_ab
+      - name: Preserve mature source-v7 timing/parity even on bounded incomplete
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-p56-source-authentic-maturity10-20-original-ab
+          path: reports/perf230-p56/comparison.json
+          if-no-files-found: warn
+          retention-days: 7
