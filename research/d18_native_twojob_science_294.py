@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
+from zipfile import ZIP_DEFLATED, ZipFile, BadZipFile
 import time
 import uuid
 from typing import Any
@@ -99,6 +100,84 @@ def total_bytes(folder: Path) -> int:
     return sum(p.stat().st_size for p in Path(folder).iterdir() if p.is_file())
 
 
+
+D15_FILES = (
+    "manifest.json",
+    "base.json",
+    *(f"batch-{i:05d}.json" for i in range(8)),
+    "final.json",
+)
+
+
+def archive_source_d15(journal: Path, archive: Path) -> tuple[str, int]:
+    """Persist the EXACT source-authentic D15 journal, never a summary-only proxy."""
+    journal = Path(journal)
+    archive = Path(archive)
+    entries = {p.name: p for p in journal.iterdir()}
+    need(set(entries) == set(D15_FILES), "not the original 8-patch final D15 journal")
+    raw_size = 0
+    for name in D15_FILES:
+        p = entries[name]
+        need(p.is_file() and not p.is_symlink(),
+             "D18 journal contains nonregular or linked file")
+        raw_size += p.stat().st_size
+        need(raw_size <= MAX_JOURNAL_BYTES, "D18 original D15 raw journal over128MiB")
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    with TemporaryDirectory(prefix=".d18-native-archive-", dir=archive.parent) as tmp:
+        staged = Path(tmp) / "original-d15.zip"
+        with ZipFile(staged, "x", compression=ZIP_DEFLATED, compresslevel=5) as zf:
+            for name in D15_FILES:
+                zf.write(entries[name], arcname=name)
+        need(0 < staged.stat().st_size <= MAX_JOURNAL_BYTES,
+             "D18 original source journal compressed archive too large")
+        with staged.open("rb") as file:
+            os.fsync(file.fileno())
+        os.link(staged, archive)  # immutable no-replace publication
+        directory = os.open(archive.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    return hashlib.sha256(archive.read_bytes()).hexdigest(), raw_size
+
+
+def extract_source_d15(archive: Path, destination: Path) -> int:
+    """Bounded exact-whitelist extraction, no zip-slip, symlink or bomb path."""
+    archive = Path(archive)
+    destination = Path(destination)
+    need(archive.is_file() and not archive.is_symlink() and
+         0 < archive.stat().st_size <= MAX_JOURNAL_BYTES,
+         "D18 source-journal evidence archive absent/oversized/link")
+    try:
+        with ZipFile(archive, "r") as zf:
+            members = zf.infolist()
+            need(tuple(x.filename for x in members) == D15_FILES,
+                 "D18 archive entries must exactly be original D15 manifest/patches/final")
+            need(all(not x.is_dir() and not (x.flag_bits & 1) for x in members),
+                 "D18 archive must not contain directories/encryption")
+            need(all(x.file_size >= 0 and x.compress_size >= 0 for x in members),
+                 "D18 archive member size invalid")
+            total_expected = sum(x.file_size for x in members)
+            need(0 < total_expected <= MAX_JOURNAL_BYTES,
+                 "D18 raw D15 journal exceeds fixed128MiB extraction limit")
+            destination.mkdir(parents=True, exist_ok=False)
+            total = 0
+            for item in members:
+                output = destination / item.filename
+                with zf.open(item) as stream, output.open("xb") as writer:
+                    while chunk := stream.read(1024 * 1024):
+                        total += len(chunk)
+                        need(total <= MAX_JOURNAL_BYTES,
+                             "D18 source-journal decompressed size over cap")
+                        writer.write(chunk)
+                need(output.stat().st_size == item.file_size,
+                     "D18 original D15 compressed member length drift")
+            need(total == total_expected, "D18 original D15 archive accounting drift")
+            return total
+    except (BadZipFile, OSError, EOFError) as exc:
+        raise D16BoundaryError("D18 malformed original native D15 archive") from exc
+
+
 def validate_saved(
     folder: Path, *,
     source: str,
@@ -147,6 +226,30 @@ def validate_saved(
          admission.get("E2_count") == witness.get("E2_actual_growth_pruned_count") and
          receipt.get("d18_observer_sha256") == hash_of(witness),
          "D18 original preselection E1/actual E2 witness diverged")
+    archive = folder / f"original-d15-round-{ordinal:02d}.zip"
+    digest_zip = hashlib.sha256(archive.read_bytes()).hexdigest() if (
+        archive.is_file() and not archive.is_symlink()
+        and 0 < archive.stat().st_size <= MAX_JOURNAL_BYTES
+    ) else None
+    need(isinstance(digest_zip, str) and
+         record.get("d15_original_archive_sha256") == digest_zip and
+         receipt.get("d15_original_archive_sha256") == digest_zip,
+         "D18 original D15 compressed journal receipt is missing or corrupt")
+    with TemporaryDirectory(prefix="d18-verified-original-D15-") as tmp:
+        root = Path(tmp) / "original-128"
+        actual_raw_bytes = extract_source_d15(archive, root)
+        need(record.get("d15_original_raw_bytes") == actual_raw_bytes and
+             receipt.get("d15_original_raw_bytes") == actual_raw_bytes,
+             "D18 raw original D15 journal size differs from source receipt")
+        replay = observe_completed_native_round(root, source_commit=source)
+        need(replay == witness and
+             replay.get("source_commit") == source and
+             replay.get("seed") == SEARCH_SEED and
+             replay.get("original_selected_round") == ordinal and
+             replay.get("selected_post_v7_sha256") == observed_digest and
+             replay.get("E1_growth_only_candidate_count") == admission["E1_count"] and
+             replay.get("E2_actual_growth_pruned_count") == admission["E2_count"],
+             "D18 actual original D15 source/physics/E1-E2 replay disagrees")
     return selected, admission
 
 
@@ -191,7 +294,8 @@ def single_original_round(
     study_started_unix_ms: int,
     prior_elapsed_ms: int,
     job_monotonic_start: float,
-) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    archive_out: Path,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], str, int]:
     """ONE exact native D15 original selected128 from unchanged source."""
     need(type(job) is int and job in (1, 2) and
          (1 if ordinal <= STAGE1_LAST else 2) == job,
@@ -234,7 +338,10 @@ def single_original_round(
             now_unix_ms=utc_now_ms(),
             local_elapsed_ms=monotonic_ms(),
         )
-    return selected["final_snapshot"], admission, observer
+        original_d15_sha256, raw_bytes = archive_source_d15(
+            journal, archive_out / f"original-d15-round-{ordinal:02d}.zip"
+        )
+    return selected["final_snapshot"], admission, observer, original_d15_sha256, raw_bytes
 
 
 def run_stage(*, job: int, out: Path, inbound: Path | None = None) -> dict[str, Any]:
@@ -282,10 +389,11 @@ def run_stage(*, job: int, out: Path, inbound: Path | None = None) -> dict[str, 
         ordinal = state.selected_round + 1
         prior_elapsed = state.rows[-1]["global_elapsed_ms"] if state.rows else 0
         prior_sha = digest(previous)
-        snapshot, admission, witness = single_original_round(
+        snapshot, admission, witness, original_d15_sha, original_d15_bytes = single_original_round(
             source=source, ordinal=ordinal, job=job,
             previous=previous, study_started_unix_ms=started,
             prior_elapsed_ms=prior_elapsed, job_monotonic_start=job_monotonic_start,
+            archive_out=out,
         )
         proposed = state.append(admission)
         record = {
@@ -296,6 +404,8 @@ def run_stage(*, job: int, out: Path, inbound: Path | None = None) -> dict[str, 
             "selected_v7_sha256":digest(snapshot),
             "admission":admission,
             "d18_verified_observer":witness,
+            "d15_original_archive_sha256":original_d15_sha,
+            "d15_original_raw_bytes":original_d15_bytes,
             "learning_claim":False,
         }
         saved = durable_json(out / f"selected-round-{ordinal:02d}.json", record)
@@ -305,6 +415,8 @@ def run_stage(*, job: int, out: Path, inbound: Path | None = None) -> dict[str, 
             "selected_v7_sha256":digest(snapshot),
             "selected_file_sha256":hashlib.sha256(saved.read_bytes()).hexdigest(),
             "d18_observer_sha256":hash_of(witness),
+            "d15_original_archive_sha256":original_d15_sha,
+            "d15_original_raw_bytes":original_d15_bytes,
         })
         verified_selected, verified_admission = validate_saved(
             out, source=source, ordinal=ordinal, previous_sha=prior_sha
