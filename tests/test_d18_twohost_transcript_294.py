@@ -75,6 +75,34 @@ class D18TwoHostTranscriptTests(unittest.TestCase):
         self.assertEqual(report["rounds"],37)
         self.assertEqual(report["E2_first_round"],37)
 
+    def test_growth_e1_may_cover_up_to_native128_not_four_retirements(self):
+        state=complete_stage1()
+        state=state.accept_second_host(state.stage1_manifest(),
+                                       copied_rows=state.rows,
+                                       current_global_elapsed_ms=400100)
+        for n in range(21,41):
+            state=state.append(row(n,e1=128 if n==38 else 0))
+        report=state.verdict()
+        self.assertEqual(report["status"],"E2_NOT_OBSERVED_FINAL")
+        self.assertTrue(report["E1_ever_observed"])
+        self.assertEqual(report["E1_first_round"],38)
+        with self.assertRaises(ValueError):
+            OriginalD18Transcript.begin(SOURCE).append(row(1,e1=129))
+
+    def test_historical_real_e2_before37_still_terminal_at37(self):
+        state=complete_stage1()
+        state=state.accept_second_host(state.stage1_manifest(),
+                                       copied_rows=state.rows,
+                                       current_global_elapsed_ms=400100)
+        for n in range(21,38):
+            state=state.append(row(n,e1=int(n==26),e2=int(n==26)))
+        report=state.verdict()
+        self.assertEqual(report["status"],"OBSERVED_E2_FINAL")
+        self.assertEqual(report["rounds"],37)
+        self.assertEqual(report["E2_first_round"],26)
+        with self.assertRaises(ValueError):
+            state.append(row(38))
+
     def test_tampered_handoff_wrong_copy_and_clock_fail(self):
         state=complete_stage1()
         manifest=state.stage1_manifest()
