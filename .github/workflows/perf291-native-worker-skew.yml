@@ -1,0 +1,92 @@
+name: PERF291 Original Native128 D15 Spawn4 Worker CPU Skew Attribution
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf291_worker_skew_d15.py"
+      - ".github/workflows/perf291-native-worker-skew.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  fixed_original_native128_worker_balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Exact source and no production modifications
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --name-only a592a284436e02fe820ad2cf73130e7f2062a452 HEAD > actual.txt
+          printf '%s\n' '.github/workflows/perf291-native-worker-skew.yml' 'benchmarks/perf291_worker_skew_d15.py' > expected.txt
+          diff -u expected.txt actual.txt
+          git worktree add --detach "$RUNNER_TEMP/p9-source" a592a284436e02fe820ad2cf73130e7f2062a452
+          cp benchmarks/perf291_worker_skew_d15.py "$RUNNER_TEMP/p9-source/benchmarks/"
+      - name: One source-frozen original default1024 selected128 normal + parent-only trace
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          cd "$RUNNER_TEMP/p9-source"
+          timeout -k 10s 180s python -m benchmarks.perf291_worker_skew_d15 \
+            --variant baseline --out "$GITHUB_WORKSPACE/reports/normal.json"
+          timeout -k 10s 180s python -m benchmarks.perf291_worker_skew_d15 \
+            --variant observed --out "$GITHUB_WORKSPACE/reports/observed.json"
+      - name: Bound causal load-balancing opportunity; never claim gain from profiler alone
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from statistics import mean
+          old=json.loads(Path("reports/normal.json").read_text())
+          ins=json.loads(Path("reports/observed.json").read_text())
+          assert old["tag"]=="baseline" and ins["tag"]=="observed"
+          oracle="725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63"
+          assert old["source_sha"]==ins["source_sha"]=="a592a284436e02fe820ad2cf73130e7f2062a452"
+          assert old["full_optimizer_v7"]==ins["full_optimizer_v7"]==oracle
+          assert old["journal_bytes"]==ins["journal_bytes"]
+          assert old["journal_file_sha256"]==ins["journal_file_sha256"]
+          assert old["new_evaluations"]==ins["new_evaluations"]==128
+          assert old["checkpoint_writes"]==ins["checkpoint_writes"]==8
+          assert not old["science_seed16384_executed"] and not ins["science_seed16384_executed"]
+          bs=ins["batches"]
+          assert len(bs)==8 and [b["first_index"] for b in bs]==list(range(0,128,16))
+          times=[b["wall_seconds"] for b in bs]
+          skew_batches=[b for b in bs if b["cpu_skew_ratio"] is not None and b["cpu_skew_ratio"]>=1.15]
+          cpu_gap=sum(b["theoretical_max_vs_avg_cpu_seconds"] for b in bs)
+          measured_batch_wall=sum(times)
+          theoretical_imbalance_fraction=cpu_gap/measured_batch_wall if measured_batch_wall else 0.0
+          eligible=(len(skew_batches)>=4 and theoretical_imbalance_fraction>=0.10)
+          outcome={
+              "kind":"PERF291_ORIGINAL_D15_SCHEDULER_SKEW_READ_ONLY",
+              "source_sha":old["source_sha"],"v7":oracle,
+              "raw_selected_baseline_s":old["selected_wall_seconds"],
+              "parent_instrumented_selected_s":ins["selected_wall_seconds"],
+              "native_batches":len(bs),
+              "instrumented_batch_wall_s":measured_batch_wall,
+              "skewed_cpu_batches_ge_15pct":len(skew_batches),
+              "theoretical_cpu_imbalance_fraction_not_achieved_speed":theoretical_imbalance_fraction,
+              "real_speedup_measured":False,
+              "decision":"CONSIDER_SEPARATE_SCHEDULER_TRIAL" if eligible else "STOP_NO_MATERIAL_SKEW_SIGNAL",
+              "original_science_seed16384_executed":False,
+          }
+          Path("reports/verdict.json").write_text(json.dumps(outcome,sort_keys=True,indent=2)+"\n")
+          print(json.dumps(outcome,sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf291-source-original-native128-worker-skew
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
