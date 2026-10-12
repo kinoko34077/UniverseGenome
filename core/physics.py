@@ -919,13 +919,26 @@ def _local_revival_slots(state: UniverseState) -> set[int]:
     # active list/footprints entirely when no revival can occur.
     black_holes: list[int] = []
     start = 0
-    while True:
-        try:
-            slot = state.lifecycle.index(int(Lifecycle.BLACK_HOLE), start)
-        except ValueError:
-            break
-        black_holes.append(slot)
-        start = slot + 1
+    # Native lifecycle is a mutable list[int] of FREE/ACTIVE/BLACK_HOLE.
+    # Materialize only a temporary packed view; never cache or mutate it.
+    # Fall back to the original list.index behavior for nonbyte payloads.
+    try:
+        packed = bytes(state.lifecycle)
+    except (TypeError, ValueError, OverflowError):
+        while True:
+            try:
+                slot = state.lifecycle.index(int(Lifecycle.BLACK_HOLE), start)
+            except ValueError:
+                break
+            black_holes.append(slot)
+            start = slot + 1
+    else:
+        while True:
+            slot = packed.find(int(Lifecycle.BLACK_HOLE), start)
+            if slot < 0:
+                break
+            black_holes.append(slot)
+            start = slot + 1
     if not black_holes:
         return _RevivalSlots((), black_holes)
     active = state.active_slots()
