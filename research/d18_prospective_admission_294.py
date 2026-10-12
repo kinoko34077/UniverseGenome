@@ -71,7 +71,9 @@ def interpret_genuine_e1_e2(round_number: int, authentic: dict[str, Any]) -> str
         return "OBSERVED_E2_FINAL"
     if round_number < MAX_ROUNDS:
         return "CONTINUE"
-    # A single final-round witness cannot decide whether E1 arose in EARLIER\n    # rounds; that requires the authenticated contiguous 1..40 transcript.\n    return "E2_NOT_OBSERVED_FINAL"
+    # A single final-round witness cannot decide whether E1 arose in EARLIER
+    # rounds; that requires the authenticated contiguous 1..40 transcript.
+    return "E2_NOT_OBSERVED_FINAL"
 
 
 def admit_completed_native_journal(
