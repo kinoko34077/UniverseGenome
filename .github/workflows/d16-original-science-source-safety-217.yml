@@ -1,0 +1,29 @@
+name: D16.11 Original Science Source Safety (No Original Study)
+
+on:
+  pull_request:
+    paths:
+      - "research/d16_original_twojob_science_217.py"
+      - "tests/test_d16_original_twojob_science_217.py"
+      - ".github/workflows/d16-original-science-source-safety-217.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_source_safety_no_execution:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile and synthetic-only source/launch guards
+        run: |
+          python -m py_compile research/d16_original_twojob_science_217.py
+          python -m unittest tests.test_d16_original_twojob_science_217 tests.test_d16_incremental_stage_executor_217 -v
