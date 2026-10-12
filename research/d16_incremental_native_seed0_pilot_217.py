@@ -53,6 +53,22 @@ def report_file(path: Path, report: dict) -> None:
     path.write_bytes(canonical_bytes(report) + b"\n")
 
 
+def isolated_handoff_folder(inbound: Path, out: Path) -> Path:
+    """Keep first-host uploaded evidence untouched; emit a complete final bundle."""
+    inbound = Path(inbound)
+    out = Path(out)
+    if inbound.resolve() == out.resolve():
+        raise D16BoundaryError("second-host handoff input/output must differ")
+    if not inbound.is_dir() or not (inbound / "stage1-manifest.json").is_file():
+        raise D16BoundaryError("first-host uploaded source-bound evidence required")
+    if out.exists() and any(out.iterdir()):
+        raise D16BoundaryError("second-host output must start empty")
+    if any(p.is_symlink() or p.is_dir() for p in inbound.iterdir()):
+        raise D16BoundaryError("only flat regular original selected evidence admitted")
+    shutil.copytree(inbound, out, dirs_exist_ok=True)
+    return out
+
+
 def execute(stage_number: int, *, inbound: Path | None, out: Path) -> dict:
     if stage_number not in (1, 2):
         raise D16BoundaryError("fixture has strictly two hosted stages")
@@ -68,7 +84,7 @@ def execute(stage_number: int, *, inbound: Path | None, out: Path) -> dict:
         anchor = utc_now_ms()
         manifest = None
     else:
-        source_folder = Path(inbound)
+        source_folder = isolated_handoff_folder(Path(inbound), out)
         manifest = json.loads((source_folder/"stage1-manifest.json").read_bytes())
         anchor = manifest["first_job_start_unix_ms"]
 
@@ -107,9 +123,6 @@ def execute(stage_number: int, *, inbound: Path | None, out: Path) -> dict:
     else:
         if result.result != "FIXTURE_COMPLETE_NO_SCIENCE":
             raise D16BoundaryError("seed0 native fixture must never report science")
-        for kind in ("round", "receipt"):
-            source_path=source_folder/f"selected-{kind}-02.json"
-            shutil.copyfile(source_path, out/source_path.name)
         status = "EXPOSED_SEED0_2_HOSTED_JOBS_PASS"
     report={
         "status": status, "source_sha":source,
