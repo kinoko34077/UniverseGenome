@@ -1,0 +1,79 @@
+name: PERF275 P7.2 Original Native128 Mature10 20 CPU Interpreter AB
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf275_p72_mature_runtime_ab.py"
+      - ".github/workflows/perf275-p72-mature-runtime-ab.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  bounded_native_selected10_20_performance_seed0_only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Source frozen copy of test-only driver, no research source changes
+        run: |
+          set -euo pipefail
+          git worktree add --detach "$RUNNER_TEMP/perf275-p72-original" 65e1d78576026b0214a0184bd6028e01dc3cc7e1
+          test "$(git -C "$RUNNER_TEMP/perf275-p72-original" rev-parse HEAD)" = "65e1d78576026b0214a0184bd6028e01dc3cc7e1"
+          cp benchmarks/perf275_p72_mature_runtime_ab.py "$RUNNER_TEMP/perf275-p72-original/benchmarks/"
+          python3 -m py_compile "$RUNNER_TEMP/perf275-p72-original/benchmarks/perf275_p72_mature_runtime_ab.py"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          check-latest: false
+      - name: Record CPython executable
+        id: cpy
+        run: echo "exe=$(python -c 'import sys;print(sys.executable)')" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "pypy3.11"
+          check-latest: false
+      - name: Record PyPy executable
+        id: pypy
+        run: echo "exe=$(python -c 'import sys;print(sys.executable)')" >> "$GITHUB_OUTPUT"
+      - name: Genuine original source native128 1-19 prefix with mature10 and20 interpreter AB
+        shell: bash
+        env:
+          CPY: ${{ steps.cpy.outputs.exe }}
+          PYPY: ${{ steps.pypy.outputs.exe }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/perf275-p72-original"
+          timeout -k 20s 960s "$PYPY" -m benchmarks.perf275_p72_mature_runtime_ab \
+            --cpython "$CPY" --pypy "$PYPY" \
+            --out "$GITHUB_WORKSPACE/reports/p72-mature-compare.json"
+      - name: Verify fixed source, complete mature results, memory and decision
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("reports/p72-mature-compare.json")
+          r=json.loads(p.read_text())
+          assert r["source_sha"]=="65e1d78576026b0214a0184bd6028e01dc3cc7e1"
+          assert r["seed"]==0 and r["original_seed16384_executed"] is False
+          assert r["prefix_count"]==19 and set(r["mature"])=={"10","20"}
+          for row in r["mature"].values():
+              assert row["journal_bytes"]>0 and len(row["selected_v7"])==64
+              assert len(row["observer_hash"])==64
+              assert row["cpython_rss_bytes"]<=1536*1024*1024
+              assert row["pypy_rss_bytes"]<=1536*1024*1024
+          print(json.dumps({"status":r["status"],
+                            "combined_mature_ratio":r["combined_speed_ratio"],
+                            "no_science_seed16384":True},sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf275-p72-genuine-native128-mature10-20-interpreter-ab
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
