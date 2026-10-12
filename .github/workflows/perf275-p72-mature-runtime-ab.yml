@@ -64,6 +64,10 @@ jobs:
           for row in r["mature"].values():
               assert row["journal_bytes"]>0 and len(row["selected_v7"])==64
               assert len(row["observer_hash"])==64
+              expected={"base.json","final.json"} | {f"batch-{i:05d}.json" for i in range(8)}
+              assert set(row["journal_payload_sha256"])==expected
+              assert all(len(h)==64 for h in row["journal_payload_sha256"].values())
+              assert row["max_retained_scratch_bytes"]<=512*1024*1024
               assert row["cpython_rss_bytes"]<=1536*1024*1024
               assert row["pypy_rss_bytes"]<=1536*1024*1024
           print(json.dumps({"status":r["status"],
