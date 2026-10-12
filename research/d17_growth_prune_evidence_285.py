@@ -203,8 +203,11 @@ def audit_archive(path: Path) -> dict:
                 retirement_reasons[retired["retirement_reason"]] += 1
             by_round.append({"round": ordinal, "categories": cats})
             last_snapshot = selected
+        # The report is finalized after selected checkpoint publication but
+        # before the last immutable receipt becomes authoritative. Its clock
+        # may be a few milliseconds later than the D15 selected snapshot.
         need(verdict["original_native_replacements_total"] == totals["actual_replacements"]
-             and verdict["global_elapsed_ms"] == last_selected_ms
+             and last_selected_ms <= verdict["global_elapsed_ms"] <= prior_global_ms
              and totals["actual_replacements"] == sum(retirement_reasons.values()),
              "original terminal native replacement/clock accounting mismatch")
         last = by_round[-1]
