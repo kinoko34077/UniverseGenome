@@ -50,7 +50,7 @@ class BalancedNativeWorkerMapping(unittest.TestCase):
                     pool = self._make_pool(workers)
                     original = tuple(range(first, first + count))
                     actual = pool.evaluate(original)
-                    self.assertEqual(list(actual), sorted(original))
+                    self.assertEqual(sorted(actual), list(original))
                     self.assertEqual({i: actual[i] for i in original},
                                      {i: {"index": i} for i in original})
                     assigned = [pipe.requests[0][1] if pipe.requests else ()
