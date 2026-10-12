@@ -96,8 +96,8 @@ class DormantD18RunnerTests(unittest.TestCase):
             )
             # Mutation after the zip means new artifact bytes are rejected.
             with archive.open("r+b") as file:
-                file.seek(-25, 2)
-                file.write(b"\0" * 8)
+                file.seek(0)
+                file.write(b"BAD!")
             with self.assertRaises(D16BoundaryError):
                 extract_source_d15(archive, folder / "corrupt")
 
