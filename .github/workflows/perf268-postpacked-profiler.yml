@@ -17,14 +17,15 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
+          fetch-depth: 10
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - name: Verify frozen P5.7 accepted baseline and no original science dispatch
         run: |
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
-          test "$(git rev-parse HEAD^)" = "91a1a3d712ce34bb0db591225d55f904648aae13"
-          test "$(git diff --name-only HEAD^ HEAD)" = ".github/workflows/perf268-postpacked-profiler.yml"
+          git merge-base --is-ancestor 91a1a3d712ce34bb0db591225d55f904648aae13 HEAD
+          test "$(git diff --name-only 91a1a3d712ce34bb0db591225d55f904648aae13 HEAD)" = ".github/workflows/perf268-postpacked-profiler.yml"
       - name: Verify native profiler immutable oracle
         run: |
           timeout -k 10s 70s python -m unittest discover -s tests -p 'test_perf_residual_219.py' -v
