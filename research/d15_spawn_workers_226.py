@@ -231,9 +231,18 @@ class SpawnEvaluator:
             tuple(sorted(set(indices))) != indices or
             self._processed.intersection(indices)):
             raise JournalIntegrityError("invalid/repeated bounded D15 worker batch")
+        # Distribute each consecutive worker-sized group diagonally, so
+        # expensive slot lanes are not always assigned to the same worker.
+        # Original indices remain unique, ascending within each child, and
+        # the parent still owns original-index journal commit/selection order.
+        assignments: dict[int, list[int]] = {
+            worker: [] for worker in range(self.workers)
+        }
+        for position, index in enumerate(indices):
+            worker = ((position // self.workers) + (position % self.workers)) % self.workers
+            assignments[worker].append(index)
         slices = {
-            worker: tuple(indices[worker::self.workers])
-            for worker in range(self.workers)
+            worker: tuple(assignments[worker]) for worker in range(self.workers)
         }
         participants = {k for k,v in slices.items() if v}
         for worker in sorted(participants):
