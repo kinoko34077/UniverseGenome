@@ -607,17 +607,33 @@ The world population remains 128, CPU worker distribution is
 not automatically enabled, and snapshot-v7/physics/fitness/
 prune/mutation/production defaults are unchanged.
 
-The original evolutionary research next frontier is **D16 #217**:
-frozen outcome-exposed D9/D12 seed16384 under unchanged default
-physics/experiment for at most 40 real selected Outer rounds,
-to observe completed four growth windows and actual native
-prune/replacement events within the declared resource budget.
-D12 #202 observed 0 replacements by generation4 because the
-128-physical-generation growth boundary had not yet been reached.
-D16 cannot start before D15 post-main and Current State acceptance.
-This research tests actual selection exposure, not independent
-heldout behavior, maintained diversity, lack of overfitting,
-teacher-content memory, or autonomous learning.
+D16 original evolutionary research **#217 COMPLETED — native maturity and
+replacement co-occurrence OBSERVED, growth-driven pruning NOT OBSERVED**.
+One genuine fixed seed16384 / unchanged default ExperimentConfig and
+PhysicsConfig study selected 128 original worlds per round, in four 32-world
+category strata, for 37 complete Outer rounds on immutable source
+`e7f2efd0c9ec49afc53b9265ec4b17e936798160`. Two sequential
+GitHub-hosted jobs in [Action38228443939](https://github.com/kinoko34077/UniverseGenome/actions/runs/38228443939)
+passed, with 907.354s whole-global wall (1200 target PASS, 900 stretch
+MISS by 7.354s), 1800 hard ceiling PASS and exact immutable D15 selected
+receipts/source-v7 artifacts validated for all 37 rounds. The full
+outcome-bound report and its artifact digests are on
+[#217](https://github.com/kinoko34077/UniverseGenome/issues/217#issuecomment-6122822855).
+
+At round37 every category had 19 full four-window histories,
+3 complete nonfailure histories, and one actual category-local native
+replacement. The predeclared D16 `OBSERVED_FINAL` *co-occurrence* gate
+therefore passed. Crucially all four round37 retirements had reason
+`persistent_non_response`, not `growth_pruned`; all 56 actual
+retirements throughout 37 rounds were absolute-failure paths.
+No growth-score-driven retirement of a completed nonfailure candidate
+was observed. Per-category unique genotypes went from 8 at baseline to
+10 at round37, but that does not demonstrate maintained diversity,
+overfitting prevention, independent held-out generalization, teacher
+content memory or learning. The original seed16384 cohort is now
+outcome-exposed and must not be re-used as fresh held-out evidence or
+silently extended to rounds38–40. Any causal growth-mediated pruning
+question requires a new separately frozen scientific protocol.
 
 Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
