@@ -1,0 +1,132 @@
+name: PERF287 P8.0 Optional Compiled Physics Same Source Native Slot0 ABBA
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf287_cython_physics.py"
+      - ".github/workflows/perf287-cython-physics-golden-abba.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  optional_cython_original_native_slot0:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Assert exact source and only standalone test harness/workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor d78122f5ef51916b9e0a5d1ea40fd02c38d2021b HEAD
+          git diff --name-only d78122f5ef51916b9e0a5d1ea40fd02c38d2021b HEAD > changed.txt
+          printf '%s\n' '.github/workflows/perf287-cython-physics-golden-abba.yml' 'benchmarks/perf287_cython_physics.py' > expected.txt
+          diff -u expected.txt changed.txt
+          git worktree add --detach "$RUNNER_TEMP/p8-original" d78122f5ef51916b9e0a5d1ea40fd02c38d2021b
+          git worktree add --detach "$RUNNER_TEMP/p8-compiled" d78122f5ef51916b9e0a5d1ea40fd02c38d2021b
+          cp benchmarks/perf287_cython_physics.py "$RUNNER_TEMP/p8-original/benchmarks/"
+          cp benchmarks/perf287_cython_physics.py "$RUNNER_TEMP/p8-compiled/benchmarks/"
+      - name: Build separate optional Cython extension, pinned toolchain (no source changes)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'Cython==3.1.2'
+          (
+            cd "$RUNNER_TEMP/p8-compiled"
+            timeout -k 10s 150s python - <<'PY'
+          import os
+          from setuptools import setup, Extension
+          from Cython.Build import cythonize
+          ext = Extension("core.physics", ["core/physics.py"], extra_compile_args=["-O3"])
+          setup(
+              name="universegenome-p8-test-only-physics",
+              ext_modules=cythonize(
+                  [ext], compiler_directives={"language_level": 3},
+                  build_dir=os.environ["RUNNER_TEMP"]+"/p8-c-source",
+                  nthreads=1, quiet=True,
+              ),
+              script_args=["build_ext", "--inplace"],
+          )
+          PY
+          )
+          test "$(git -C "$RUNNER_TEMP/p8-compiled" rev-parse HEAD)" = d78122f5ef51916b9e0a5d1ea40fd02c38d2021b
+          test "$(git -C "$RUNNER_TEMP/p8-original" rev-parse HEAD)" = d78122f5ef51916b9e0a5d1ea40fd02c38d2021b
+      - name: Optional compiled real physics legacy parity smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd "$RUNNER_TEMP/p8-compiled"
+            timeout -k 10s 90s python -m unittest discover -s tests -p 'test_perf268_bh_clean_parity.py' -v
+            timeout -k 10s 90s python -m unittest discover -s tests -p 'test_phase1.py' -v
+          )
+      - name: Same source actual default1024 seed0 native slot0 ABBA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+          i=0
+          for backend in native compiled compiled native; do
+            i=$((i+1))
+            if [ "$backend" = native ]; then
+              dir="$RUNNER_TEMP/p8-original"
+            else
+              dir="$RUNNER_TEMP/p8-compiled"
+            fi
+            (
+              cd "$dir"
+              timeout -k 10s 90s python -m benchmarks.perf287_cython_physics \
+                --backend "$backend" --output "$GITHUB_WORKSPACE/reports/$backend-$(printf '%02d' "$i").json"
+            )
+          done
+      - name: Calculate predeclared compilation backend performance gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from statistics import median
+          r = [json.loads(p.read_text()) for p in sorted(Path("reports").glob("*.json"))]
+          assert len(r)==4
+          assert {x["backend"] for x in r}=={"native","compiled"}
+          for x in r:
+              assert x["source_sha"]=="d78122f5ef51916b9e0a5d1ea40fd02c38d2021b"
+              assert x["full_optimizer_v7"]=="e146bebe695dec14fc978e47d4a1e189d1e30bdaa83f9d6e69eec3c4d201f4c1"
+              assert x["seed"]==0 and x["original_worlds"]==1
+              assert x["original_seed16384_executed"] is False
+              assert x["implementation"]=="CPython"
+          assert len({x["physics_source_sha256"] for x in r})==1
+          native = [x for x in r if x["backend"]=="native"]
+          compiled = [x for x in r if x["backend"]=="compiled"]
+          assert len(native)==len(compiled)==2
+          a=median(x["warm_last_three_median_s"] for x in native)
+          b=median(x["warm_last_three_median_s"] for x in compiled)
+          rss=median(x["maxrss_kib"] for x in compiled)/median(x["maxrss_kib"] for x in native)
+          ratio=a/b
+          gate= "PASS_NEXT_NATIVE128" if ratio>=1.15 and rss<=1.25 else "REJECT_NO_MATERIAL_GAIN_OR_RAM"
+          summary=dict(
+              kind="PERF287_P80_CYTHON_NATIVE_SOURCE_MATCHED_ABBA",
+              source_sha=r[0]["source_sha"], physics_source_sha256=r[0]["physics_source_sha256"],
+              original_seed0_v7=r[0]["full_optimizer_v7"], original_seed16384_executed=False,
+              native_warm_median_s=a, compiled_warm_median_s=b,
+              ratio=ratio,rss_ratio=rss,decision=gate,
+              underlying_runs=r,
+          )
+          Path("reports/comparison.json").write_text(json.dumps(summary,sort_keys=True,indent=2)+"\n")
+          print(json.dumps({k:v for k,v in summary.items() if k!="underlying_runs"},sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf287-source-frozen-cython-physics-optional-slot0
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
