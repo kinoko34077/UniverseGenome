@@ -50,9 +50,9 @@ class D18ProspectiveStudyGateTests(unittest.TestCase):
         self.assertEqual(interpret_genuine_e1_e2(37, synthetic(37, e1=True)),
                          "CONTINUE")
         self.assertEqual(interpret_genuine_e1_e2(40, synthetic(40, e1=True)),
-                         "E1_ONLY_FINAL")
+                         "E2_NOT_OBSERVED_FINAL")
         self.assertEqual(interpret_genuine_e1_e2(40, synthetic(40)),
-                         "NO_E1_FINAL")
+                         "E2_NOT_OBSERVED_FINAL")
 
     def test_genuine_source_e2_only_when_source_retired_e1(self):
         self.assertEqual(interpret_genuine_e1_e2(37, synthetic(37, e1=True, e2=True)),
@@ -75,6 +75,11 @@ class D18ProspectiveStudyGateTests(unittest.TestCase):
         c["categories"]["masked_copy"]["native_predicted_target_index"] = 0
         with self.assertRaises(ValueError):
             interpret_genuine_e1_e2(37, c)
+        d = synthetic(37, e1=True, e2=True)
+        d["categories"]["masked_copy"]["authentic_growth_pruned_E2"] = False
+        d["E2_actual_growth_pruned_count"] = 0
+        with self.assertRaises(ValueError):
+            interpret_genuine_e1_e2(37, d)
 
     def test_outcome_requires_exact_role_and_original_four_categories(self):
         for change in ({"seed": 16384}, {"seed": 0}, {"original_selected_round": 36},
