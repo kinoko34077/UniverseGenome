@@ -1,0 +1,98 @@
+name: PERF268 P6.7 Standard CPython Version Native Slot0 Comparison
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf268_p67_cpython_versions.py"
+      - ".github/workflows/perf268-p67-cpython-versions.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cpython_version_3_12_3_13_3_14_one_host:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Assert exact source and only isolated performance test files
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --name-only e7f2efd0c9ec49afc53b9265ec4b17e936798160 HEAD > changed.txt
+          printf '%s\n' '.github/workflows/perf268-p67-cpython-versions.yml' 'benchmarks/perf268_p67_cpython_versions.py' > expected.txt
+          diff -u expected.txt changed.txt
+          git worktree add --detach "$RUNNER_TEMP/p67-native" e7f2efd0c9ec49afc53b9265ec4b17e936798160
+          cp benchmarks/perf268_p67_cpython_versions.py "$RUNNER_TEMP/p67-native/benchmarks/"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          check-latest: false
+      - name: CPython 3.12 exact binary
+        id: py312
+        run: echo "exe=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          check-latest: false
+      - name: CPython 3.13 exact binary
+        id: py313
+        run: echo "exe=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          check-latest: false
+      - name: CPython 3.14 exact binary
+        id: py314
+        run: echo "exe=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_OUTPUT"
+      - name: Compare same source original default1024 native slot0 all three runtimes
+        shell: bash
+        env:
+          CPY312: ${{ steps.py312.outputs.exe }}
+          CPY313: ${{ steps.py313.outputs.exe }}
+          CPY314: ${{ steps.py314.outputs.exe }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/p67-native"
+          timeout -k 10s 90s "$CPY312" -m benchmarks.perf268_p67_cpython_versions --out "$GITHUB_WORKSPACE/reports/cpython312.json"
+          timeout -k 10s 90s "$CPY313" -m benchmarks.perf268_p67_cpython_versions --out "$GITHUB_WORKSPACE/reports/cpython313.json"
+          timeout -k 10s 90s "$CPY314" -m benchmarks.perf268_p67_cpython_versions --out "$GITHUB_WORKSPACE/reports/cpython314.json"
+      - name: Evaluate exactly preregistered speed memory and full-v7 gates
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          a={k:json.loads(Path(f"reports/cpython{k}.json").read_text()) for k in ("312","313","314")}
+          for k,r in a.items():
+              assert r["source_sha"]=="e7f2efd0c9ec49afc53b9265ec4b17e936798160"
+              assert r["implementation"]=="CPython"
+              assert r["python_version"].startswith(f"3.{int(k[1:])}.")
+              assert r["seed"]==0 and r["worlds"]==1
+              assert r["original_full_optimizer_v7"]=="e146bebe695dec14fc978e47d4a1e189d1e30bdaa83f9d6e69eec3c4d201f4c1"
+              assert r["original_science_seed16384_executed"] is False
+          base=a["312"]
+          entries={}
+          for k in ("313","314"):
+              other=a[k]
+              ratio=base["last_three_wall_median_seconds"]/other["last_three_wall_median_seconds"]
+              rssratio=other["maxrss_kib"]/base["maxrss_kib"]
+              entries[k]={"speed_ratio_vs_312":ratio,"rss_ratio_vs_312":rssratio,
+                          "gate":"PASS_NEXT_NATIVE128" if ratio>=1.10 and rssratio<=1.30 else "REJECT_NO_MATERIAL_GAIN_OR_RSS"}
+          report={"kind":"PERF268_P67_CPYTHON_VERSIONS_SOURCE_LOCKED",
+                  "source_sha":base["source_sha"],
+                  "baseline_312_median_s":base["last_three_wall_median_seconds"],
+                  "comparison":entries,"seed":0,"science_seed16384_executed":False}
+          Path("reports/p67-comparison.json").write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
+          print(json.dumps(report,sort_keys=True),flush=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: perf268-p67-cpython312-313-314-one-host-source-v7
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
