@@ -1,10 +1,8 @@
 """D18 #294 synthetic two-host boundary tests. No native worlds evaluated."""
-from dataclasses import replace
 import unittest
 
 from research.d18_twohost_stage_294 import (
-    D18TwoHostState, SEARCH_SEED, SEED, FIRST_LAST, GENESIS_CHAIN,
-    hash_receipt,
+    D18TwoHostState, SEED, FIRST_LAST, GENESIS_CHAIN,
 )
 
 SOURCE = "a" * 40
