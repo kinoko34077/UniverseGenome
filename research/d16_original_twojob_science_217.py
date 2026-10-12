@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import time
@@ -69,6 +70,22 @@ def persist_json(path: Path, value: dict[str, Any]) -> None:
         os.replace(temp, path)
     finally:
         temp.unlink(missing_ok=True)
+
+
+def isolated_handoff_folder(inbound: Path, out: Path) -> Path:
+    """Stage2 uses a complete independent copy; never mutate source artifact."""
+    inbound = Path(inbound)
+    out = Path(out)
+    if inbound.resolve() == out.resolve():
+        raise D16BoundaryError("source and destination of original evidence must differ")
+    if not inbound.is_dir() or not (inbound / "stage1-manifest.json").is_file():
+        raise D16BoundaryError("missing complete source-authenticated first-host artifact")
+    if out.exists() and any(out.iterdir()):
+        raise D16BoundaryError("original second-host evidence destination must be empty")
+    if any(p.is_symlink() or p.is_dir() for p in inbound.iterdir()):
+        raise D16BoundaryError("original complete-round artifact must contain flat regular files")
+    shutil.copytree(inbound, out, dirs_exist_ok=True)
+    return out
 
 
 def original_observation(complete: dict[str, Any]) -> dict[str, Any]:
@@ -130,11 +147,12 @@ def execute(*, job: int, out: Path, inbound: Path | None = None) -> dict:
         manifest=None
         rows=[]
     else:
-        folder=Path(inbound)
+        folder=isolated_handoff_folder(Path(inbound), out)
         manifest=json.loads((folder/"stage1-manifest.json").read_bytes())
         started=manifest["first_job_start_unix_ms"]
         previous=json.loads((folder/"partial-report.json").read_bytes())
         check_inbound_rows(folder, source=source, report=previous)
+        shutil.copyfile(folder/"partial-report.json", folder/"stage1-partial-report.json")
         rows=list(previous["rounds"])
 
     def actual_native_selected(ordinal, previous, clock):
