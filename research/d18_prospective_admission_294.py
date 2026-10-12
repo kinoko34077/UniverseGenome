@@ -11,6 +11,7 @@ import re
 from typing import Any
 
 from core.experiment import ExperimentConfig
+from core.population import CATEGORY_OPERATORS
 from core.physics import PhysicsConfig
 from research.d15_sparse_recovery_213 import JournalIntegrityError, SparseEvaluationJournal
 from research.d16_twojob_run_control_217 import GlobalClock
@@ -47,7 +48,7 @@ def interpret_genuine_e1_e2(round_number: int, authentic: dict[str, Any]) -> str
             or authentic.get("learning_claim") is not False):
         raise ValueError("D18 outcome lacks exact original source journal provenance")
     categories = authentic.get("categories")
-    if not isinstance(categories, dict) or len(categories) != 4:
+    if not isinstance(categories, dict) or set(categories) != set(CATEGORY_OPERATORS):
         raise ValueError("D18 requires all original four categories")
     e1 = sum(len(row["growth_only_candidate_indices_E1"]) for row in categories.values())
     e2 = sum(1 for row in categories.values() if row["authentic_growth_pruned_E2"] is True)
@@ -55,6 +56,9 @@ def interpret_genuine_e1_e2(round_number: int, authentic: dict[str, Any]) -> str
             or authentic.get("E2_actual_growth_pruned_count") != e2):
         raise ValueError("D18 E1/E2 aggregate does not match native category counts")
     for row in categories.values():
+        evt = row.get("actual_native_retirement_E2")
+        if bool(isinstance(evt, dict) and evt.get("retirement_reason") == "growth_pruned") != (row["authentic_growth_pruned_E2"] is True):
+            raise ValueError("D18 E2 flag disagrees with actual native retirement provenance")
         if row["authentic_growth_pruned_E2"] is True:
             evt = row.get("actual_native_retirement_E2")
             if (not isinstance(evt, dict) or evt.get("retirement_reason") != "growth_pruned"
@@ -67,7 +71,7 @@ def interpret_genuine_e1_e2(round_number: int, authentic: dict[str, Any]) -> str
         return "OBSERVED_E2_FINAL"
     if round_number < MAX_ROUNDS:
         return "CONTINUE"
-    return "E1_ONLY_FINAL" if e1 else "NO_E1_FINAL"
+    # A single final-round witness cannot decide whether E1 arose in EARLIER\n    # rounds; that requires the authenticated contiguous 1..40 transcript.\n    return "E2_NOT_OBSERVED_FINAL"
 
 
 def admit_completed_native_journal(
