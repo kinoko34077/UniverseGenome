@@ -225,6 +225,30 @@ def validate_saved(
          admission.get("E2_count") == witness.get("E2_actual_growth_pruned_count") and
          receipt.get("d18_observer_sha256") == hash_of(witness),
          "D18 original preselection E1/actual E2 witness diverged")
+    archive = folder / f"original-d15-round-{ordinal:02d}.zip"
+    digest_zip = hashlib.sha256(archive.read_bytes()).hexdigest() if (
+        archive.is_file() and not archive.is_symlink()
+        and 0 < archive.stat().st_size <= MAX_JOURNAL_BYTES
+    ) else None
+    need(isinstance(digest_zip, str) and
+         record.get("d15_original_archive_sha256") == digest_zip and
+         receipt.get("d15_original_archive_sha256") == digest_zip,
+         "D18 original D15 compressed journal receipt is missing or corrupt")
+    with TemporaryDirectory(prefix="d18-verified-original-D15-") as tmp:
+        root = Path(tmp) / "original-128"
+        actual_raw_bytes = extract_source_d15(archive, root)
+        need(record.get("d15_original_raw_bytes") == actual_raw_bytes and
+             receipt.get("d15_original_raw_bytes") == actual_raw_bytes,
+             "D18 raw original D15 journal size differs from source receipt")
+        replay = observe_completed_native_round(root, source_commit=source)
+        need(replay == witness and
+             replay.get("source_commit") == source and
+             replay.get("seed") == SEARCH_SEED and
+             replay.get("original_selected_round") == ordinal and
+             replay.get("selected_post_v7_sha256") == observed_digest and
+             replay.get("E1_growth_only_candidate_count") == admission["E1_count"] and
+             replay.get("E2_actual_growth_pruned_count") == admission["E2_count"],
+             "D18 actual original D15 source/physics/E1-E2 replay disagrees")
     return selected, admission
 
 
@@ -269,7 +293,8 @@ def single_original_round(
     study_started_unix_ms: int,
     prior_elapsed_ms: int,
     job_monotonic_start: float,
-) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    archive_out: Path,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], str, int]:
     """ONE exact native D15 original selected128 from unchanged source."""
     need(type(job) is int and job in (1, 2) and
          (1 if ordinal <= STAGE1_LAST else 2) == job,
@@ -312,7 +337,10 @@ def single_original_round(
             now_unix_ms=utc_now_ms(),
             local_elapsed_ms=monotonic_ms(),
         )
-    return selected["final_snapshot"], admission, observer
+        original_d15_sha256, raw_bytes = archive_source_d15(
+            journal, archive_out / f"original-d15-round-{ordinal:02d}.zip"
+        )
+    return selected["final_snapshot"], admission, observer, original_d15_sha256, raw_bytes
 
 
 def run_stage(*, job: int, out: Path, inbound: Path | None = None) -> dict[str, Any]:
@@ -360,10 +388,11 @@ def run_stage(*, job: int, out: Path, inbound: Path | None = None) -> dict[str, 
         ordinal = state.selected_round + 1
         prior_elapsed = state.rows[-1]["global_elapsed_ms"] if state.rows else 0
         prior_sha = digest(previous)
-        snapshot, admission, witness = single_original_round(
+        snapshot, admission, witness, original_d15_sha, original_d15_bytes = single_original_round(
             source=source, ordinal=ordinal, job=job,
             previous=previous, study_started_unix_ms=started,
             prior_elapsed_ms=prior_elapsed, job_monotonic_start=job_monotonic_start,
+            archive_out=out,
         )
         proposed = state.append(admission)
         record = {
@@ -374,6 +403,8 @@ def run_stage(*, job: int, out: Path, inbound: Path | None = None) -> dict[str, 
             "selected_v7_sha256":digest(snapshot),
             "admission":admission,
             "d18_verified_observer":witness,
+            "d15_original_archive_sha256":original_d15_sha,
+            "d15_original_raw_bytes":original_d15_bytes,
             "learning_claim":False,
         }
         saved = durable_json(out / f"selected-round-{ordinal:02d}.json", record)
@@ -383,6 +414,8 @@ def run_stage(*, job: int, out: Path, inbound: Path | None = None) -> dict[str, 
             "selected_v7_sha256":digest(snapshot),
             "selected_file_sha256":hashlib.sha256(saved.read_bytes()).hexdigest(),
             "d18_observer_sha256":hash_of(witness),
+            "d15_original_archive_sha256":original_d15_sha,
+            "d15_original_raw_bytes":original_d15_bytes,
         })
         verified_selected, verified_admission = validate_saved(
             out, source=source, ordinal=ordinal, previous_sha=prior_sha
