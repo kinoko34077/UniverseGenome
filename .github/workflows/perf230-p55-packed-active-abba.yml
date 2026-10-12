@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: RED-to-GREEN native empty state exact output/aliases parity
+      - name: Native source lifecycle packed active slots exact-order and fallback parity
         run: |
           python -m py_compile benchmarks/perf230_p55_packed_active_abba.py
           python -m unittest tests.test_perf230_p55_packed_active -v
