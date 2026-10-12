@@ -34,7 +34,8 @@ jobs:
         run: python -m unittest tests.test_d16_original_one_shot_workflow_217 -v
 
   original_seed16384_host1_rounds01_to20:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'research(D16.12): launch original seed16384 bounded once')
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'research(D16.12): launch original seed16384 bounded once')
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
