@@ -84,6 +84,16 @@ def growth_thresholds(selected_snapshot: dict, category: str) -> dict:
     }
 
 
+
+def check_original_selection_clock(previous_receipt_ms: int,
+                                   selected_ms: int, receipt_ms: int) -> None:
+    """The accepted selection precedes its separately published receipt."""
+    need(all(type(v) is int for v in
+             (previous_receipt_ms, selected_ms, receipt_ms))
+         and 0 <= previous_receipt_ms <= selected_ms <= receipt_ms <= 1800000,
+         "original selected/receipt cross-host global clock drift")
+
+
 def audit_archive(path: Path) -> dict:
     path = Path(path)
     need(path.is_file() and path.stat().st_size <= MAX_ARCHIVE_BYTES,
@@ -174,9 +184,7 @@ def audit_archive(path: Path) -> dict:
             # Native completion timestamp precedes immutable-receipt fsync.
             # Final scientific verdict records the selected-state timestamp,
             # not the later receipt publication timestamp.
-            need(type(now) is int and type(selected_ms) is int
-                 and prior_global_ms <= selected_ms <= now <= 1800000,
-                 "original selected/receipt cross-host global clock drift")
+            check_original_selection_clock(prior_global_ms, selected_ms, now)
             prior_global_ms = now
             last_selected_ms = selected_ms
             need(verdict["rounds"][ordinal - 1] == original_observation(payload),
