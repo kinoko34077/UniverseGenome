@@ -15,16 +15,16 @@ from search.evolution import SteadyStateOptimizer
 
 GOLDEN = "e146bebe695dec14fc978e47d4a1e189d1e30bdaa83f9d6e69eec3c4d201f4c1"
 BASE = "e7f2efd0c9ec49afc53b9265ec4b17e936798160"
-CAND = "11479a97b8b5319e35f6d3cc28b7c546cc1f443d"
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--out", type=Path, required=True)
+    p.add_argument("--expected-source", required=True)
     args = p.parse_args()
     source = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
-    if source not in (BASE, CAND):
-        raise AssertionError("original source SHA not preregistered")
+    if source != args.expected_source or len(source) != 40:
+        raise AssertionError("run original exact caller-frozen source, no drift")
     t = time.perf_counter()
     opt = SteadyStateOptimizer.from_defaults(base_seed=0)
     opt._evaluate_slot(opt.slots[0])
