@@ -1,0 +1,105 @@
+name: D16 Original Science 16384 Two Jobs (One Shot #217)
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/d16-original-science-one-shot-217.yml"
+      - "tests/test_d16_original_one_shot_workflow_217.py"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/d16-original-science-one-shot-217.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: d16-original-16384-bound-science
+  cancel-in-progress: false
+
+jobs:
+  source_only_launch_contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Static workflow safety (no original study on pull requests)
+        run: python -m unittest tests.test_d16_original_one_shot_workflow_217 -v
+
+  original_seed16384_host1_rounds01_to20:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'research(D16.12): launch original seed16384 bounded once')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Freeze code and fail closed on unsupported science contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python -m unittest tests.test_d16_original_twojob_science_217 tests.test_d16_twojob_stage_fsm_217 tests.test_d16_twojob_run_control_217 -v
+      - name: Original full128 native seed16384 selected rounds 1-20
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/d16-original-16384/host1
+          timeout -k 15s 960s python -u -m research.d16_original_twojob_science_217 --job 1 --out reports/d16-original-16384/host1
+      - name: Preserve genuine immutable round1-20 evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d16-original-16384-first-complete
+          path: reports/d16-original-16384/host1/
+          if-no-files-found: warn
+          retention-days: 7
+
+  original_seed16384_host2_rounds21_to40:
+    needs: original_seed16384_host1_rounds01_to20
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Freeze exact same source for independent second hosted job
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/download-artifact@v4
+        with:
+          name: d16-original-16384-first-complete
+          path: reports/d16-original-16384/inbound
+      - name: Authenticate entire source-bound 20-round prefix and evaluate original21-37/40
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/d16-original-16384/host2
+          timeout -k 15s 960s python -u -m research.d16_original_twojob_science_217 --job 2 --inbound reports/d16-original-16384/inbound --out reports/d16-original-16384/host2
+      - name: Preserve full two-host source-native science/INCOMPLETE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d16-original-16384-full-final-or-incomplete
+          path: reports/d16-original-16384/host2/
+          if-no-files-found: warn
+          retention-days: 7
