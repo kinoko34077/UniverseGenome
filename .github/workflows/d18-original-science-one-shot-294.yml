@@ -1,0 +1,104 @@
+name: D18 Original New-Seed49152 Genuine Native E1-E2 Two Hosts (#294)
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/d18-original-science-one-shot-294.yml"
+      - "tests/test_d18_original_one_shot_workflow_294.py"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/d18-original-science-one-shot-294.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: d18-original-49152-native-science-once
+  cancel-in-progress: false
+
+jobs:
+  source_only_launch_contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check exact source-only two-host launch contract (NO science on PR)
+        run: python -m unittest tests.test_d18_original_one_shot_workflow_294 -v
+
+  d18_newseed49152_host1_original_rounds01_to20:
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && startsWith(github.event.head_commit.message, 'research(D18.1): launch frozen new seed49152 original native two-host science once')
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify exact fixed head and test-only original science safety contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python -m unittest tests.test_d18_original_one_shot_workflow_294 tests.test_d18_native_twojob_science_294 tests.test_d18_twohost_transcript_294 -v
+      - name: Genuine original default128 seed49152 selected rounds 1 through 20 only
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout -k 15s 960s python -u -m research.d18_native_twojob_science_294 --job 1 --out reports/d18-native49152/host1
+      - name: Preserve genuine first20 immutable evidence or INCOMPLETE
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d18-original-native49152-complete-first20
+          path: reports/d18-native49152/host1/
+          if-no-files-found: warn
+          retention-days: 7
+
+  d18_newseed49152_host2_original_rounds21_to40:
+    needs: d18_newseed49152_host1_original_rounds01_to20
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Preserve SAME exact source for independent second host
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - uses: actions/download-artifact@v4
+        with:
+          name: d18-original-native49152-complete-first20
+          path: reports/d18-native49152/inbound
+      - name: Authenticate complete original first20 and evaluate exactly21 until genuine E2 or round40
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout -k 15s 960s python -u -m research.d18_native_twojob_science_294 --job 2 --inbound reports/d18-native49152/inbound --out reports/d18-native49152/host2
+      - name: Preserve actual original complete native E1-E2 or INCOMPLETE
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: d18-original-native49152-full-final-or-incomplete
+          path: reports/d18-native49152/host2/
+          if-no-files-found: warn
+          retention-days: 7
