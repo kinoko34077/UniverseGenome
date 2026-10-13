@@ -639,3 +639,61 @@ Do not reopen R2 thresholds or touch R3/old Phase-H held-out.
 No R3, new accepted profile, learning or autonomous behavior justified.
 `learning_claim=false`, inert production defaults, P6.10+ freeze,
 L4 separation and #93 separation remain authoritative.
+
+## D17/D18 — Native growth-prune reachability and E1/E2 separation
+
+D17 **#285 / PR #286** is a read-only analysis of the immutable D16
+selected-round archive. It did not evaluate new worlds or alter native
+physics, fitness, selection, or performance source. Across the 37 selected
+rounds and four category strata (**148 category-round observations**), all
+56 native retirements were absolute-failure-derived and **0** were
+growth-only. The round-37 median growth-bitcount vectors were
+`(0,1,0,0)`, `(0,1,0,1)`, and `(1,0,1,0)` for the observed category
+fixtures; the native half-median thresholds were therefore `(0,0,0,0)`.
+This is an outcome-exposed diagnostic, not a universal impossibility result.
+
+D18.0 **#289/#290** established the source-native distinction between:
+
+- **E1:** an authentic native growth-only candidate is present in
+  preselection;
+- **E2:** the original native selection actually retires that candidate with
+  `retirement_reason=growth_pruned`.
+
+The synthetic source-native witness proves only that the abstract E1
+predicate can be reached when all four median thresholds are positive. It
+does not establish physical reachability or any learning claim.
+
+D18.1 **#294/#296 / PR #297** completed one independently source-frozen
+search-only cohort on source
+`f855a5da9e848088c4acc8c0397149b9c97cb69e`, seed `49152`, with 40 complete
+rounds and 4 categories (**160 category-round observations**). Both hosted
+jobs and all source-bound D15 replays passed. There were 83 native
+retirements (67 `all_active_cells_gone`, 16 `persistent_non_response`),
+`E1_count=0` and `E2_count=0` in every round, and no `growth_pruned`
+retirement. The formal terminal result is
+`E2_NOT_OBSERVED_FINAL`, not `INCOMPLETE`.
+
+The combined D16+D18.1 descriptive record is **308 category-round
+observations, 139 absolute-failure retirements, and 0 growth-only/E2
+events**. This must not be promoted to a universal impossibility theorem,
+statistical generalization, or learning result: D16 is outcome-exposed
+historical evidence and D18.1 is one independent cohort.
+
+### Post-D18 research gate
+
+The canonical E1 predicate requires an unprotected record whose four
+growth-window bitcounts are each strictly below the corresponding
+half-median threshold. Since bitcounts are non-negative, any zero threshold
+makes E1 impossible. In the D18.1 archive, 144 of 160 category-round rows
+had no complete mature nonfailure comparison set; the remaining 16 all had
+median bitcounts `(0,0.5,0.5,0.5)` and thresholds `(0,0,0,0)`.
+
+Therefore the next step is a **read-only static reachability audit**, not a
+third physical cohort. If the audit finds only the current zero-threshold
+gate, close the present D18 causal question for this regime and prioritize
+the manuscript/reproducibility package. If it identifies a physically
+meaningful reachable branch, design a new protocol separately with a new
+owner, disjoint seed/source role, unchanged physical/selection semantics
+unless explicitly hypothesized otherwise, and a separately frozen budget.
+No D16/D18.1 seed reuse, threshold rescue, physics change, PyPy reroute, or
+automatic D18.2 launch is authorized by this record.
