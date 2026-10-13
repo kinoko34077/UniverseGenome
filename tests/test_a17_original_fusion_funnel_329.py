@@ -3,7 +3,7 @@ import unittest
 
 from research.a17_original_fusion_funnel_329 import (
     PERIODS, STAGES, SEEDS, EXPECTED, empty_count_record,
-    count_one, period_of, run_original_branch, report,
+    count_one, period_of, native_measurement_period, run_original_branch, report,
 )
 from research.a16_fusion_eligibility_funnel_326 import native_fusion_eligibility_funnel
 from research.r2_write_rules_175 import load_frozen
@@ -51,6 +51,13 @@ class A17OldR2SourceContract(unittest.TestCase):
         for k in (0,1001):
             with self.assertRaises(ValueError):
                 period_of(k)
+        for gen in (0, 1, 11, 12):
+            self.assertIsNone(native_measurement_period(gen))
+        self.assertEqual(native_measurement_period(13),"1-100")
+        self.assertEqual(native_measurement_period(1012),"501-1000")
+        with self.assertRaises(ValueError):
+            native_measurement_period(1013)
+
         with self.assertRaises(ValueError):
             run_original_branch(16384,"b",{},0.0)
         with self.assertRaises(ValueError):
