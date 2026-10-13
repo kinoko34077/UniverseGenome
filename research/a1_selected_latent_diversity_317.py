@@ -79,7 +79,7 @@ def run_observed_branch(seed,label,frozen,start):
         raise ValueError("only frozen old R2 teacher roles allowed")
     snapshots=h0_branches(seed)
     base=int(snapshots[label]["generation"])
-    if base!=12:
+    if base!=13:
         raise ValueError("original h0 generation unexpected")
     original=pilot.IOExperiment
     stage={k:Counter() for k in ("1-100","101-250","251-500","501-1000")}
@@ -145,7 +145,7 @@ def run_study(frozen,start):
         source_b=b["selected_native_contacts"]["counts"]
         source_h=h["selected_native_contacts"]["counts"]
         original_comparison=classify_bit_support(
-            b["_original_events"],h["_original_events"],h0_generation=12,
+            b["_original_events"],h["_original_events"],h0_generation=13,
         )
         cc=original_comparison["counts"]
         if (cc.get("matched",0),cc.get("trace_diff",0),cc.get("changed_mask",0))!=EXPECTED_COUNTS[seed]:
