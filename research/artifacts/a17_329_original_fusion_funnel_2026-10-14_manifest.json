@@ -1,0 +1,163 @@
+{
+  "schema": "UG_A17_ORIGINAL_R2_FUSION_ELIGIBILITY_GIT_ARCHIVE_V1",
+  "date_jst": "2026-10-14",
+  "issue": 329,
+  "original_scientific_trajectory": "already_outcome_exposed_original_R2_not_independent",
+  "owner_source_reviewed_pr": 330,
+  "source_pr_head_sha": "e5bd5bd431e596b3e7ab2de987690a2d5a8acd8e",
+  "original_engine_source_sha": "af568ac1558f2f3f86e51341208f5b51557b7a39",
+  "original_r2_manifest_sha256": "3087009065925887d9db770d3d9bc216db1ff2deba0bc730a2bbdf0a8d9ba543",
+  "conditions": {
+    "positive_seed": 544,
+    "negative_seed": 545,
+    "original_h0_generation": 13,
+    "teacher_values_BH": [
+      66,
+      8
+    ],
+    "research_only_writer": "unit_add",
+    "trace_rate": 256,
+    "steps_after_h0": 1000,
+    "original_checkpoints": [
+      1,
+      10,
+      100,
+      250,
+      500,
+      1000
+    ],
+    "fusion_bond_threshold": 32,
+    "fusion_velocity_threshold": 8,
+    "physics_operator": "masked_copy",
+    "original_physics_source_unchanged": true,
+    "seed_roster_frozen_before_observation": true,
+    "learning_claim": false,
+    "independent_confirmation": false
+  },
+  "retained_original_bytes": {
+    "encoding": "gzip-compressed USTAR tar of three unmodified Action JSON payloads, base64 text",
+    "path": "research/artifacts/a17_329_original_r2_fusion_reports.tar.gz.b64",
+    "decoded_gzip_sha256": "e9f924d9d2cca583ae51d65bd933d7b4decb3af7dfd3e73e3005f32db657c7c2",
+    "decoded_gzip_bytes": 3027,
+    "contained_json_exact_sha256": {
+      "original-3.12.json": "1c74e4310f7898054a09263db1d8fc94e0391f3fa2be08ca281f475a16b84583",
+      "original-pypy3.11.json": "3bd6ddce485498eeca520b046f38be549d2af57c9fb68e4ab15fdeb64ae5bc51",
+      "a17-comparator.json": "273c90030ccd016f49c94fccb550b99327318361ce8ac19adc2a526bb80c4cfd"
+    }
+  },
+  "hosted_original_action": {
+    "run_id": 38430782348,
+    "hosted_japan_local_date": "2026-10-14",
+    "cpython": {
+      "version": "3.12.15",
+      "wall_seconds": 11.857,
+      "max_rss_mib": 29.75390625,
+      "artifact_id": 11831455049,
+      "original_zip_sha256": "e085cf01e83d6e97fd23d5c3bfb98c614ee28f25dab6cd1b911bca17f1d7bc7f"
+    },
+    "pypy": {
+      "version": "3.11.16",
+      "wall_seconds": 5.127,
+      "max_rss_mib": 111.28515625,
+      "artifact_id": 11831380215,
+      "original_zip_sha256": "a90d49cdb865a36cea4d6c0049fdf5f2eb5f9cb310898965f03cd19ce9835078"
+    },
+    "comparator": {
+      "artifact_id": 11831165660,
+      "original_zip_sha256": "75c014d298968b32ea1bd81e15df958b8b2ce951fc3e07e6ccd6260eb6d08440"
+    },
+    "expires_utc": "2026-10-27T16:28:44Z"
+  },
+  "summary_per_branch": {
+    "544": {
+      "native_steps": 1000,
+      "directed_native_selected_events": 764,
+      "trace_difference": 95,
+      "selected_mask_difference": 36,
+      "enumerated_groups": 5843,
+      "inside_region": 5843,
+      "nonoverlap": 3973,
+      "exact_complete_2x2_cover": 0,
+      "same_level": 0,
+      "sufficient_bond": 0,
+      "compatible_velocity": 0,
+      "fused": 0,
+      "any_enumerated_steps": 807,
+      "any_nonoverlap_steps": 769,
+      "by_original_period_enumerated_nonoverlap_exact": {
+        "1-100": [
+          1178,
+          907,
+          0
+        ],
+        "101-250": [
+          1330,
+          1033,
+          0
+        ],
+        "251-500": [
+          1659,
+          1119,
+          0
+        ],
+        "501-1000": [
+          1676,
+          914,
+          0
+        ]
+      }
+    },
+    "545": {
+      "native_steps": 1000,
+      "directed_native_selected_events": 966,
+      "trace_difference": 0,
+      "selected_mask_difference": 0,
+      "enumerated_groups": 6397,
+      "inside_region": 6397,
+      "nonoverlap": 4325,
+      "exact_complete_2x2_cover": 0,
+      "same_level": 0,
+      "sufficient_bond": 0,
+      "compatible_velocity": 0,
+      "fused": 0,
+      "any_enumerated_steps": 971,
+      "any_nonoverlap_steps": 920,
+      "by_original_period_enumerated_nonoverlap_exact": {
+        "1-100": [
+          977,
+          703,
+          0
+        ],
+        "101-250": [
+          1317,
+          935,
+          0
+        ],
+        "251-500": [
+          2054,
+          1424,
+          0
+        ],
+        "501-1000": [
+          2049,
+          1263,
+          0
+        ]
+      }
+    }
+  },
+  "interpretation": "B and H are identical within each seed for fusion gate counts, verified in full raw reports. First necessary zero stage is exact complete 2x2 cover of valid local footprints, not independently measured bond or velocity failures. Enumerated group counts may count overlapping candidate combinations and are NOT independent cells/worlds. Only old outcome-exposed R2 conditions: no universal impossibility or autonomous learning inference.",
+  "early_invalid_observer_attempt": {
+    "source_first_head": "33fd22ccb2a18128c95618179d8dbb763e228acf",
+    "run_id": 38430560888,
+    "reason": "pre-h0 qualification incorrectly counted as post-h0; invalid before outcome; corrected without any seed or physics changes"
+  },
+  "source_native_replay_contract": {
+    "same_h0_sha": true,
+    "six_golden_state_sha_per_BH": true,
+    "original_selected_event_sha": true,
+    "deterministic_repeat": true,
+    "cpython_pypy_studies_exact_equal": true,
+    "negative_sentinel_equal": true
+  }
+}

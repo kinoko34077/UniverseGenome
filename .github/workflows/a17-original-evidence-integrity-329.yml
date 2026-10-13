@@ -1,0 +1,37 @@
+name: A1.7 Git archived original JSON integrity #329
+
+on:
+  pull_request:
+    paths:
+      - "research/artifacts/a17_329_original_fusion_funnel_2026-10-14_manifest.json"
+      - "research/artifacts/a17_329_original_r2_fusion_reports.tar.gz.b64"
+      - "tests/test_a17_original_fusion_archive_329.py"
+      - ".github/workflows/a17-original-evidence-integrity-329.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verified_original_bytes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Attest actual runtime and exact source original JSON evidence
+        run: |
+          python - <<'PY'
+          import sys
+          expected = "pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name == expected
+          print(sys.version)
+          PY
+          python -m unittest tests.test_a17_original_fusion_archive_329 -v
