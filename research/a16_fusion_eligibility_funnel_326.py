@@ -17,7 +17,7 @@ from core.physics import (
     relative_velocity,
 )
 from core.state import UniverseState, structure_level
-from core.world import LOGICAL_SIZE
+from core.geometry import LOGICAL_SIZE
 
 
 STAGES = (
