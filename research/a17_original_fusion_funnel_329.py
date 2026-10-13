@@ -157,8 +157,12 @@ def report(*,source_sha:str) -> dict:
     frozen=load_frozen()
     if frozen["digest"]!=pilot.R2_FROZEN_DIGEST:
         raise ValueError("original R2 manifest SHA mismatch")
-    if profile(RATE).latent_operator!="masked_copy":
-        raise ValueError("original R2 native physical operator changed")
+    original_config=profile(RATE)
+    if (original_config.latent_operator!="masked_copy"
+            or not original_config.fusion_enabled
+            or original_config.fusion_bond_threshold!=32
+            or original_config.fusion_velocity_threshold!=8):
+        raise ValueError("original R2 source/native fusion physics conditions changed")
     started=time.perf_counter()
     first=original_study(frozen,started)
     second=original_study(frozen,started)
