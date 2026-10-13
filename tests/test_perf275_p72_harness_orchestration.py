@@ -19,7 +19,7 @@ from benchmarks import perf275_p72_mature_runtime_ab as p72
 
 
 class P72MatureOrchestrationContractTests(unittest.TestCase):
-    def _execute(self, *, pypy_wall=5.0, corrupt=None, source_ok=True):
+    def _execute(self, *, pypy_wall=5.0, corrupt=None, source_ok=True, bad_runtime=False):
         calls = []
 
         def fake_native_step(exe, scratch, label, ordinal, prior, *, observe, deadline):
@@ -61,6 +61,19 @@ class P72MatureOrchestrationContractTests(unittest.TestCase):
             }
             return scratch / f"{label}-{ordinal:02d}.json", fake
 
+        def fake_runtime_probe(argv, **kwargs):
+            exe = argv[0]
+            self.assertEqual(argv[1:], ["-c", p72.RUNTIME_PROBE])
+            identity = {
+                "implementation": "cpython" if exe == "/fake/cpython" else "pypy",
+                "python_version": [3, 12] if exe == "/fake/cpython" else [3, 11],
+                "executable": exe,
+                "version": "fake original-runtime version",
+            }
+            if bad_runtime and exe == "/fake/pypy":
+                identity["implementation"] = "cpython"
+            return json.dumps(identity)
+
         with TemporaryDirectory(prefix="p72-fake-control-only-") as td:
             target = Path(td) / "result.json"
             argv = [
@@ -69,6 +82,7 @@ class P72MatureOrchestrationContractTests(unittest.TestCase):
             ]
             with (patch.object(p72, "git_source", return_value=(
                     p72.SOURCE if source_ok else "0" * 40)),
+                  patch.object(p72.subprocess, "check_output", side_effect=fake_runtime_probe),
                   patch.object(p72, "native_step", side_effect=fake_native_step),
                   patch.object(sys, "argv", argv),
                   redirect_stdout(io.StringIO())):
@@ -98,6 +112,8 @@ class P72MatureOrchestrationContractTests(unittest.TestCase):
         self.assertEqual(report["prefix_count"], 19)
         self.assertEqual(set(report["mature"]), {"10", "20"})
         self.assertEqual(report["combined_speed_ratio"], 2.0)
+        self.assertEqual(report["interpreter_preflight"]["cpython"]["implementation"], "cpython")
+        self.assertEqual(report["interpreter_preflight"]["pypy"]["implementation"], "pypy")
         self.assertEqual(report["status"], "PASS_MATURE_20_PYPY_RUNTIME_CANDIDATE_ONLY")
         self.assertFalse(report["original_seed16384_executed"])
         self.assertFalse(report["learning_claim"])
@@ -155,6 +171,27 @@ class P72MatureOrchestrationContractTests(unittest.TestCase):
             popen.assert_called_once()
             self.assertEqual(proc.communicate.call_count, 2)
             killpg.assert_called_once_with(42424, p72.signal.SIGKILL)
+
+    def test_wrong_interpreter_fails_before_any_native_call(self):
+        calls, report, failure = self._execute(bad_runtime=True)
+        self.assertIsInstance(failure, AssertionError)
+        self.assertIn("not the declared pypy 3.11", str(failure))
+        self.assertEqual(calls, [])
+        self.assertEqual(report["status"], "INCOMPLETE")
+
+    def test_interpreter_identity_rejects_wrong_version_and_label(self):
+        valid = {
+            "implementation": "cpython",
+            "python_version": [3, 12],
+            "executable": "/fake/cpython",
+        }
+        p72.validate_runtime_identity("cpython", valid)
+        with self.assertRaisesRegex(AssertionError, "cpython 3.12"):
+            p72.validate_runtime_identity("cpython", {**valid, "python_version": [3, 11]})
+        with self.assertRaisesRegex(AssertionError, "pypy 3.11"):
+            p72.validate_runtime_identity("pypy", valid)
+        with self.assertRaisesRegex(AssertionError, "unknown interpreter"):
+            p72.validate_runtime_identity("unexpected-label", valid)
 
     def test_wrong_source_fails_before_any_native_call(self):
         calls, report, failure = self._execute(source_ok=False)
