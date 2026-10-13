@@ -26,6 +26,9 @@ EXPECTED_FIELD_NAMES = (
 def original_contact_counterfactual() -> dict:
     source=json.loads(ARCHIVE.read_text(encoding="utf-8"))
     if (source["schema"] != "UG_A1_317_FROZEN_BIT_SUPPORT_COMPACT_V1"
+            or source["source_pr_head_sha"] != "ad8384967cbe740729e636d1724ecfe0fa0a30e3"
+            or source["old_r2_source_sha"] != "af568ac1558f2f3f86e51341208f5b51557b7a39"
+            or source["frozen_manifest_digest"] != "3087009065925887d9db770d3d9bc216db1ff2deba0bc730a2bbdf0a8d9ba543"
             or source["original_changed_mask_rows_fields"] != list(EXPECTED_FIELD_NAMES)
             or len(source["original_changed_mask_rows"]) != 36
             or source["conditions"]["seed_roles"] != {
@@ -67,7 +70,7 @@ def original_contact_counterfactual() -> dict:
         raise ValueError("retrospective operator witness frozen invariants changed")
     return {
         "schema":"UG_A19_EXPOSED_CONTACT_SINGLE_STEP_COUNTERFACTUAL_V1",
-        "source_original_a14_event_rows_sha":source["source_pr_head_sha"],
+        "original_a14_source_pr_head_sha":source["source_pr_head_sha"],
         "original_r2_source_sha":source["old_r2_source_sha"],
         "positive_outcome_exposed_seed":544,
         "negative_exposed_seed":545,
