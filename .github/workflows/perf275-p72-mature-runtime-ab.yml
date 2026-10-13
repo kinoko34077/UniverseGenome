@@ -35,7 +35,7 @@ jobs:
           test -s "$RUNNER_TEMP/p72-changed.txt"
           while IFS= read -r changed; do
             case "$changed" in
-              '.github/workflows/perf275-p72-mature-runtime-ab.yml'|'benchmarks/perf275_p72_mature_runtime_ab.py') ;;
+              '.github/workflows/perf275-p72-mature-runtime-ab.yml'|'benchmarks/perf275_p72_mature_runtime_ab.py'|'tests/test_perf275_p72_harness_orchestration.py') ;;
               *) echo "Unexpected P7.2 PR changed path: $changed" >&2; exit 1 ;;
             esac
           done < "$RUNNER_TEMP/p72-changed.txt"
