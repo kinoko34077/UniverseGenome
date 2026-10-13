@@ -1,0 +1,100 @@
+name: A1.5 original selected latent diversity #317
+
+on:
+  pull_request:
+    paths:
+      - "research/a1_selected_latent_diversity_317.py"
+      - "tests/test_a1_selected_latent_diversity_317.py"
+      - ".github/workflows/a1-selected-latent-diversity-317.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  old_source_native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Attest native interpreter
+        run: |
+          python - <<'PY'
+          import sys
+          expected="pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name==expected
+          print(sys.version)
+          PY
+      - name: Original physical support fixtures
+        run: |
+          python -m compileall -q research/a1_selected_latent_diversity_317.py
+          python -m unittest tests.test_a1_selected_latent_diversity_317 -v
+      - name: Original previously outcome-exposed R2 native 544/545 (read-only)
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m research.a1_selected_latent_diversity_317 \
+            --source-sha "$SOURCE_SHA" \
+            --output "a1/a15-${{ matrix.python }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a1-317-diversity-${{ matrix.python }}
+          path: a1/a15-${{ matrix.python }}.json
+          retention-days: 14
+          if-no-files-found: error
+
+  source_parity:
+    needs: old_source_native
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: a1-317-diversity-*
+          merge-multiple: true
+          path: a1
+      - name: Strict original selected and population CPython PyPy parity
+        run: |
+          python - <<'PY'
+          import pathlib,json,hashlib
+          d=pathlib.Path("a1")
+          a=json.loads((d/"a15-3.12.json").read_text())
+          b=json.loads((d/"a15-pypy3.11.json").read_text())
+          assert a["environment"]["python"]=="cpython"
+          assert b["environment"]["python"]=="pypy"
+          assert a["source_sha"]==b["source_sha"]
+          assert a["studies"]==b["studies"],"physical native observations diverged"
+          assert a["conditions"]==b["conditions"]
+          assert a["native_replay_parity"] and b["native_replay_parity"]
+          assert not a["learning_claim"] and not b["learning_claim"]
+          assert a["studies"]["544"]["b"]["selected_native_contacts"]["counts"]["selected_source_events"]==764
+          assert a["studies"]["545"]["b"]["selected_native_contacts"]["counts"]["selected_source_events"]==966
+          out={"status":"PASS_RETROSPECTIVE_NATIVE_SELECTED_DIVERSITY_PARITY",
+               "source_sha":a["source_sha"],"per_seed":{
+                 seed:{t:{
+                   "selected":v["selected_native_contacts"]["counts"],
+                   "metrics":v["metrics_native_totals"],
+                   "h0_and_six_checkpoints":v["population_latent_at_frozen_checkpoints"]
+                 } for t,v in study.items() if t in ("b","h")}
+                 for seed,study in a["studies"].items()},
+               "original_json_sha256":{
+                 name:hashlib.sha256((d/name).read_bytes()).hexdigest()
+                 for name in ("a15-3.12.json","a15-pypy3.11.json")},
+               "independent_confirmation":False,"learning_claim":False}
+          (d/"a15-comparator.json").write_text(json.dumps(out,sort_keys=True)+"\n")
+          print(json.dumps(out,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a1-317-diversity-cross-runtime
+          path: a1/a15-comparator.json
+          retention-days: 14
+          if-no-files-found: error
