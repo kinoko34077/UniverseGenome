@@ -18,6 +18,20 @@ import time
 SOURCE = "65e1d78576026b0214a0184bd6028e01dc3cc7e1"
 # Bound an eventually admitted performance run to the prior 18-minute hosted envelope.
 MAX_TOTAL_WALL_S = 18 * 60
+EXPECTED_RUNTIME = {
+    "cpython": ("cpython", 3, 12),
+    "pypy": ("pypy", 3, 11),
+    "prefix": ("pypy", 3, 11),
+}
+RUNTIME_PROBE = (
+    "import json,sys;"
+    "print(json.dumps({"
+    "'implementation':sys.implementation.name,"
+    "'python_version':list(sys.version_info[:2]),"
+    "'executable':sys.executable,"
+    "'version':sys.version"
+    "},sort_keys=True))"
+)
 GOLDEN_FIRST4 = (
     "725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63",
     "abe281245d5a45e78dcce3eab9e9f787b6260f365fa868da5ef13c2db3262112",
@@ -73,6 +87,12 @@ with TemporaryDirectory(prefix="perf275-p72-true-d15-") as tmp:
     if set(original_files) != expected_files:
         raise AssertionError("D15 original base/8 ordered batch/final payload mismatch")
     result={
+        "runtime_identity": {
+            "implementation": sys.implementation.name,
+            "python_version": list(sys.version_info[:2]),
+            "executable": sys.executable,
+            "version": sys.version,
+        },
         "source_sha":source,"seed":0,"ordinal":ordinal,
         "native_wall_s":native_wall,"selected_v7":r["final_digest"],
         "journal_bytes":r["journal_bytes"],"patches":r["checkpoint_writes"],
@@ -98,6 +118,30 @@ def remaining_timeout(deadline: float) -> float:
     if remaining <= 0:
         raise TimeoutError("P7.2 aggregate 18-minute wall budget exhausted")
     return min(180.0, remaining)
+
+
+def validate_runtime_identity(label: str, identity: dict) -> None:
+    """Reject mistagged CPython/PyPy paths before accepting performance evidence."""
+    expected = EXPECTED_RUNTIME.get(label)
+    if expected is None or not isinstance(identity, dict):
+        raise AssertionError("P7.2 unknown interpreter label or missing identity")
+    implementation, major, minor = expected
+    if (identity.get("implementation") != implementation
+            or identity.get("python_version") != [major, minor]
+            or not isinstance(identity.get("executable"), str)
+            or not identity["executable"]):
+        raise AssertionError(
+            f"P7.2 {label} is not the declared {implementation} {major}.{minor} interpreter"
+        )
+
+
+def preflight_runtime(exe: str, label: str) -> dict:
+    """Verify both interpreter binaries before any physical selected128 work."""
+    identity = json.loads(
+        subprocess.check_output([exe, "-c", RUNTIME_PROBE], text=True, timeout=10)
+    )
+    validate_runtime_identity(label, identity)
+    return identity
 
 
 def native_step(exe: str, scratch: Path, label: str, ordinal: int,
@@ -130,6 +174,7 @@ def native_step(exe: str, scratch: Path, label: str, ordinal: int,
             pass
         raise RuntimeError(f"{label} original native ordinal{ordinal} failed: {stderr[-3500:]}")
     result = json.loads(dest.read_bytes())
+    validate_runtime_identity(label, result.get("runtime_identity"))
     retained_bytes = sum(p.stat().st_size for p in scratch.glob("*.json"))
     if retained_bytes > 512*1024*1024:
         raise AssertionError("P7.2 per-host retained report/snapshot cap exceeded")
@@ -168,6 +213,11 @@ def main() -> None:
         args.out.parent.mkdir(parents=True,exist_ok=True)
         args.out.write_text(json.dumps(report,indent=2,sort_keys=True)+"\n")
 
+    save()
+    report["interpreter_preflight"] = {
+        "cpython": preflight_runtime(args.cpython, "cpython"),
+        "pypy": preflight_runtime(args.pypy, "pypy"),
+    }
     save()
     with TemporaryDirectory(prefix="perf275-p72-same-host-") as t:
         scratch=Path(t)
