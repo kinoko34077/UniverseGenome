@@ -1,0 +1,104 @@
+name: A1.7 original exposed R2 fusion eligibility #329
+
+on:
+  pull_request:
+    paths:
+      - "research/a17_original_fusion_funnel_329.py"
+      - "tests/test_a17_original_fusion_funnel_329.py"
+      - ".github/workflows/a17-original-fusion-funnel-329.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_exposed_native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Assert exact original intended interpreter and synthetic guard tests
+        run: |
+          python - <<'PY'
+          import sys
+          expected="pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name==expected
+          print(sys.version)
+          PY
+          python -m compileall -q research/a17_original_fusion_funnel_329.py tests/test_a17_original_fusion_funnel_329.py
+          python -m unittest tests.test_a16_fusion_eligibility_funnel_326 tests.test_a17_original_fusion_funnel_329 -v
+      - name: Original historical h0 native fusion eligibility observer read-only
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m research.a17_original_fusion_funnel_329 \
+            --source-sha "$SOURCE_SHA" \
+            --output "a17/original-${{ matrix.python }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a17-329-original-${{ matrix.python }}
+          path: a17/original-${{ matrix.python }}.json
+          retention-days: 14
+          if-no-files-found: error
+
+  compare_original:
+    runs-on: ubuntu-24.04
+    needs: original_exposed_native
+    timeout-minutes: 4
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: a17-329-original-*
+          path: a17
+          merge-multiple: true
+      - name: Source-original CPython PyPy fusion stage and original state parity
+        run: |
+          python - <<'PY'
+          import json,hashlib,pathlib
+          root=pathlib.Path("a17")
+          cp=json.loads((root/"original-3.12.json").read_text())
+          pp=json.loads((root/"original-pypy3.11.json").read_text())
+          assert cp["environment"]["python"]=="cpython"
+          assert pp["environment"]["python"]=="pypy"
+          assert cp["source_sha"]==pp["source_sha"]
+          assert cp["conditions"]==pp["conditions"]
+          assert cp["studies"]==pp["studies"],"original host physical eligibility diverged"
+          assert cp["identical_replay"] and pp["identical_replay"]
+          assert cp["independent_confirmation"] is False
+          assert pp["independent_confirmation"] is False
+          assert cp["learning_claim"] is pp["learning_claim"] is False
+          for seed,expected in (("544",(764,95,36)),("545",(966,0,0))):
+              case=cp["studies"][seed]
+              c=case["original_paired_reader_counts"]
+              assert (c["matched"],c["trace_diff"],c["changed_mask"])==expected
+              for role in ("b","h"):
+                  data=case[role]["funnel_whole_horizon"]
+                  assert data["native_steps"]==1000
+                  assert data["actual_fusions"]==0
+          result={"status":"PASS_SOURCE_FROZEN_EXPOSED_FUSION_STAGE_PARITY",
+                  "source_sha":cp["source_sha"],
+                  "results":{seed:{
+                    role:case[role]["funnel_whole_horizon"]
+                    for role in ("b","h")}
+                    for seed,case in cp["studies"].items()},
+                  "original_report_sha256":{
+                    name:hashlib.sha256((root/name).read_bytes()).hexdigest()
+                    for name in ("original-3.12.json","original-pypy3.11.json")},
+                  "independent_confirmation":False,"learning_claim":False}
+          (root/"a17-comparator.json").write_text(json.dumps(result,sort_keys=True)+"\n")
+          print(json.dumps(result,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a17-329-original-cross-runtime
+          path: a17/a17-comparator.json
+          retention-days: 14
+          if-no-files-found: error
