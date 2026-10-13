@@ -1,0 +1,93 @@
+name: A1.2 actual native B-H reader provenance #317
+
+on:
+  pull_request:
+    paths:
+      - "research/a1_exposed_reader_pilot_317.py"
+      - "tests/test_a1_exposed_reader_pilot_317.py"
+      - ".github/workflows/a1-exposed-reader-pilot-317.yml"
+      - "research/a1_reader_provenance_317.py"
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 19
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Assert actual interpreter
+        run: |
+          python - <<'PY'
+          import sys
+          expected = "pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name == expected
+          print(sys.implementation.name, sys.version)
+          PY
+      - name: Compile and validate read-only fixed original evidence contract
+        run: |
+          python -m compileall -q research/a1_exposed_reader_pilot_317.py tests/test_a1_exposed_reader_pilot_317.py
+          python -m unittest tests.test_a1_reader_provenance_317 tests.test_a1_exposed_reader_pilot_317 -v
+      - name: Exact previously exposed R2 seeds544/545 authentic step-selected reader pilot
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m research.a1_exposed_reader_pilot_317 \
+            --source-sha "$SOURCE_SHA" \
+            --output "a1/a1-${{ matrix.python }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a1-317-original-reader-${{ matrix.python }}
+          path: a1/a1-${{ matrix.python }}.json
+          retention-days: 14
+          if-no-files-found: error
+
+  source_parity:
+    needs: pilot
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: a1-317-original-reader-*
+          merge-multiple: true
+          path: a1
+      - name: Verify PyPy and CPython original selected event and checkpoint parity
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib
+          a, b = (json.loads((pathlib.Path("a1") / filename).read_text())
+                  for filename in ("a1-3.12.json", "a1-pypy3.11.json"))
+          assert a["environment"]["implementation"] == "cpython"
+          assert b["environment"]["implementation"] == "pypy"
+          assert a["status"] == b["status"] == "VALIDATED_RETROSPECTIVE_EXPLORATORY_ONLY"
+          assert a["studies"] == b["studies"], "PyPy diverged in authentic selected read contacts"
+          assert a["protocol"] == b["protocol"], "source roles/protocol differ"
+          assert a["original_case_sha_parity"] and b["original_case_sha_parity"]
+          assert a["instrumented_deterministic_repeat"] and b["instrumented_deterministic_repeat"]
+          out = {"status": "PASS_ORIGINAL_SELECTED_EVENT_PARITY",
+                 "source_sha": a["protocol"]["source_sha"],
+                 "seeds": [544, 545], "independent_confirmation": False,
+                 "learning_claim": False,
+                 "host_json_sha256": {
+                   name: hashlib.sha256((pathlib.Path("a1") / name).read_bytes()).hexdigest()
+                   for name in ("a1-3.12.json", "a1-pypy3.11.json")}}
+          pathlib.Path("a1/comparator.json").write_text(json.dumps(out, sort_keys=True))
+          print(json.dumps(out, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a1-317-cpython-pypy-parity
+          path: a1/comparator.json
+          retention-days: 14
+          if-no-files-found: error
