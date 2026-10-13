@@ -1,0 +1,90 @@
+name: A1.3 source-native mask-noop algebra #317
+
+on:
+  pull_request:
+    paths:
+      - "research/a1_native_mask_noop_317.py"
+      - "tests/test_a1_native_mask_noop_317.py"
+      - ".github/workflows/a1-native-mask-noop-317.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_case_observer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Verify actual runtime and native algebra fixture
+        run: |
+          python - <<'PY'
+          import sys
+          expected = "pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name == expected
+          print(sys.version)
+          PY
+          python -m unittest tests.test_a1_native_mask_noop_317 -v
+      - name: Observe exact old R2 selected masks and native masked_copy effect
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m research.a1_native_mask_noop_317 \
+            --source-sha "$SOURCE_SHA" \
+            --output "a1/mask-${{ matrix.python }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a1-317-mask-original-${{ matrix.python }}
+          path: a1/mask-${{ matrix.python }}.json
+          retention-days: 14
+          if-no-files-found: error
+
+  compare_native:
+    needs: original_case_observer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: a1-317-mask-original-*
+          merge-multiple: true
+          path: a1
+      - name: Require CPython PyPy original bitwise native counts and hash parity
+        run: |
+          python - <<'PY'
+          import json, pathlib, hashlib
+          root = pathlib.Path('a1')
+          cp = json.loads((root/"mask-3.12.json").read_text())
+          pp = json.loads((root/"mask-pypy3.11.json").read_text())
+          assert cp["environment"]["implementation"]=="cpython"
+          assert pp["environment"]["implementation"]=="pypy"
+          assert cp["source_sha"]==pp["source_sha"]
+          assert cp["original_frozen_r2_manifest_digest"]==pp["original_frozen_r2_manifest_digest"]
+          assert cp["observed"]==pp["observed"], "native mask algebra and recipient state mismatched"
+          assert cp["operator"]==pp["operator"]=="masked_copy"
+          assert cp["learning_claim"] is pp["learning_claim"] is False
+          out={"status":"PASS_ORIGINAL_NATIVE_MASK_ALGEBRA_PARITY",
+               "observed_counts": {k:v["counts"] for k,v in cp["observed"].items()},
+               "original_source": cp["source_sha"],
+               "zip_input_json_sha256": {
+                 name: hashlib.sha256((root/name).read_bytes()).hexdigest()
+                 for name in ("mask-3.12.json","mask-pypy3.11.json")},
+               "learning_claim": False}
+          (root/"mask-comparator.json").write_text(json.dumps(out,sort_keys=True))
+          print(json.dumps(out,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a1-317-mask-parity
+          path: a1/mask-comparator.json
+          retention-days: 14
+          if-no-files-found: error
