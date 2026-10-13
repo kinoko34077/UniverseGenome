@@ -1,0 +1,38 @@
+name: A1.9 original masked-contact one-step operator analysis #326
+
+on:
+  pull_request:
+    paths:
+      - "research/a19_exposed_operator_counterfactual_326.py"
+      - "tests/test_a19_exposed_operator_counterfactual_326.py"
+      - "research/designs/a19_operator_counterfactual_326.md"
+      - ".github/workflows/a19-original-contact-operators-326.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source_only_algebra:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Source interpreter and full original fixed-contact bit comparator
+        run: |
+          python - <<'PY'
+          import sys
+          expected="pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name==expected
+          print(sys.version)
+          PY
+          python -m unittest tests.test_a19_exposed_operator_counterfactual_326 -v
+          python -m research.a19_exposed_operator_counterfactual_326
