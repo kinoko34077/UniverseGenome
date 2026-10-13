@@ -1,0 +1,37 @@
+name: A1.6 native latent feasibility #326
+
+on:
+  pull_request:
+    paths:
+      - "tests/test_a16_native_latent_diversity_feasibility_326.py"
+      - "research/designs/a16_native_diversity_feasibility_326.md"
+      - ".github/workflows/a16-native-diversity-fixture-326.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source_only_fixture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Assert exact interpreter and synthetic original physics fixture
+        run: |
+          python - <<'PY'
+          import sys
+          expected = "pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name == expected, (sys.implementation.name, expected)
+          print(sys.version)
+          PY
+          python -m compileall -q tests/test_a16_native_latent_diversity_feasibility_326.py
+          python -m unittest tests.test_a16_native_latent_diversity_feasibility_326 -v
