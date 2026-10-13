@@ -41,6 +41,13 @@ def period_of(relative: int) -> str:
     raise ValueError("A1.7 native event outside original post-h0 1000 steps")
 
 
+def native_measurement_period(actual_generation: int) -> str | None:
+    """Never alter original h0/pre-teacher native setup; only observe post-h0."""
+    if actual_generation < H0_GENERATION:
+        return None
+    return period_of(actual_generation - H0_GENERATION + 1)
+
+
 def empty_count_record():
     return {"native_steps": 0, "candidate_groups": 0, "actual_fusions": 0,
             "gate_counts": {k:0 for k in STAGES},
@@ -71,8 +78,11 @@ def run_original_branch(seed:int, label:str, frozen:dict, started:float) -> dict
     report_steps=[0]
 
     def native_hook(state, occupancy, config):
-        rel=int(state.generation)-H0_GENERATION+1
-        window=period_of(rel)
+        window=native_measurement_period(int(state.generation))
+        if window is None:
+            # pilot.run_branch regenerates h0 within this patch scope.
+            # Preserve every original pre-h0 native physics operation.
+            return originals(state,occupancy,config)
         result=native_fusion_eligibility_funnel(state,occupancy,config)
         if not result["fuse_flag_enabled"]:
             raise ValueError("original R2 unexpectedly disabled fusion")
