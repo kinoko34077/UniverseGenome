@@ -140,10 +140,12 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: perf275-p73-host1-cpython
           path: reports/p73/host1-cpython
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: perf275-p73-host2-pypy
           path: reports/p73/host2-pypy
