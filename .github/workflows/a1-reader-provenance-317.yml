@@ -1,0 +1,40 @@
+name: A1 selected-reader provenance #317
+
+on:
+  pull_request:
+    paths:
+      - "research/a1_reader_provenance_317.py"
+      - "tests/test_a1_reader_provenance_317.py"
+      - ".github/workflows/a1-reader-provenance-317.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  native_observer_parity:
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Attest interpreter identity
+        run: |
+          python - <<'PY'
+          import sys
+          requested = "${{ matrix.python }}"
+          expected = "pypy" if requested.startswith("pypy") else "cpython"
+          assert sys.implementation.name == expected, (sys.implementation.name, expected)
+          print(sys.version)
+          PY
+      - name: Compile read-only observer
+        run: python -m compileall -q research/a1_reader_provenance_317.py tests/test_a1_reader_provenance_317.py
+      - name: Native source-selected synthetic read-only probe and negative tests
+        run: python -m unittest tests.test_a1_reader_provenance_317 -v
