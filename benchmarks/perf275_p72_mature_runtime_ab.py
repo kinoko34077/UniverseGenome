@@ -7,6 +7,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -14,6 +16,8 @@ from tempfile import TemporaryDirectory
 import time
 
 SOURCE = "65e1d78576026b0214a0184bd6028e01dc3cc7e1"
+# Bound an eventually admitted performance run to the prior 18-minute hosted envelope.
+MAX_TOTAL_WALL_S = 18 * 60
 GOLDEN_FIRST4 = (
     "725d6481e0e1044848fbf38ff31a58657f977d4128b78e90b809ef3820d9ee63",
     "abe281245d5a45e78dcce3eab9e9f787b6260f365fa868da5ef13c2db3262112",
@@ -88,15 +92,43 @@ def git_source() -> str:
     return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True, timeout=10).strip()
 
 
+def remaining_timeout(deadline: float) -> float:
+    """Bound each child to the smaller of its 180s step cap and total 18m cap."""
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("P7.2 aggregate 18-minute wall budget exhausted")
+    return min(180.0, remaining)
+
+
 def native_step(exe: str, scratch: Path, label: str, ordinal: int,
-                prior: Path | None, *, observe: bool) -> tuple[Path, dict]:
+                prior: Path | None, *, observe: bool, deadline: float) -> tuple[Path, dict]:
     dest = scratch / f"{label}-{ordinal:02d}.json"
     args = [exe, "-c", NATIVE_CHILD, str(ordinal), "NONE" if prior is None else str(prior),
             str(dest), "1" if observe else "0"]
-    done = subprocess.run(args, check=False, timeout=180, text=True,
-                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if done.returncode:
-        raise RuntimeError(f"{label} original native ordinal{ordinal} failed: {done.stderr[-3500:]}")
+    # Refuse when no budget remains; re-check after process startup as well.
+    remaining_timeout(deadline)
+    proc = subprocess.Popen(
+        args, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        start_new_session=True,  # Linux: child and D15 workers share one process group.
+    )
+    try:
+        _, stderr = proc.communicate(timeout=remaining_timeout(deadline))
+    except (subprocess.TimeoutExpired, TimeoutError) as exc:
+        # subprocess.run(timeout=...) kills only the parent, not spawn workers.
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.communicate()
+        raise TimeoutError(
+            f"P7.2 {label} ordinal{ordinal} exceeded step/aggregate wall budget"
+        ) from exc
+    if proc.returncode:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        raise RuntimeError(f"{label} original native ordinal{ordinal} failed: {stderr[-3500:]}")
     result = json.loads(dest.read_bytes())
     retained_bytes = sum(p.stat().st_size for p in scratch.glob("*.json"))
     if retained_bytes > 512*1024*1024:
@@ -125,6 +157,7 @@ def main() -> None:
     args = p.parse_args()
     if git_source() != SOURCE:
         raise AssertionError("original source checkout changed")
+    deadline = time.monotonic() + MAX_TOTAL_WALL_S
     report = {
         "kind":"PERF275_P72_TRUE_DEFAULT1024_NATIVE128_MATURE_RUNTIME_AB",
         "source_sha":SOURCE,"seed":0,"status":"INCOMPLETE",
@@ -140,12 +173,12 @@ def main() -> None:
         scratch=Path(t)
         previous=None
         for ordinal in range(1,10):
-            previous,_=native_step(args.pypy,scratch,"prefix",ordinal,previous,observe=False)
+            previous,_=native_step(args.pypy,scratch,"prefix",ordinal,previous,observe=False,deadline=deadline)
             report["prefix_count"]=ordinal
             save()
         for mature in (10,20):
-            c_path,c= native_step(args.cpython,scratch,"cpython",mature,previous,observe=True)
-            p_path,py= native_step(args.pypy,scratch,"pypy",mature,previous,observe=True)
+            c_path,c= native_step(args.cpython,scratch,"cpython",mature,previous,observe=True,deadline=deadline)
+            p_path,py= native_step(args.pypy,scratch,"pypy",mature,previous,observe=True,deadline=deadline)
             if (c["selected_v7"]!=py["selected_v7"]
                 or c["journal_bytes"]!=py["journal_bytes"]
                 or c["journal_payload_sha256"]!=py["journal_payload_sha256"]
@@ -166,7 +199,7 @@ def main() -> None:
             previous=p_path
             if mature==10:
                 for ordinal in range(11,20):
-                    previous,_=native_step(args.pypy,scratch,"prefix",ordinal,previous,observe=False)
+                    previous,_=native_step(args.pypy,scratch,"prefix",ordinal,previous,observe=False,deadline=deadline)
                     report["prefix_count"]=ordinal
                     save()
         old=sum(v["cpython_s"] for v in report["mature"].values())
