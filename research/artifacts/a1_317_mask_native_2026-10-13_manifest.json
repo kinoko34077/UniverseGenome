@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "record_kind": "immutable_original_research_result_manifest",
+  "study": "A1.3 matched original native masked-copy no-op",
+  "issue": 317,
+  "code_pr": 320,
+  "research_plan_reference": "research/decisions/2026-10-13-asymmetric-learning-priority.md",
+  "scientific_role": "RETROSPECTIVE_OUTCOME_EXPOSED_EXPLORATORY_ONLY",
+  "original_source_sha": "af568ac1558f2f3f86e51341208f5b51557b7a39",
+  "observer_source_head_sha": "63ca219f807e184408e0a42640c5a7496938dd4c",
+  "merged_observer_main_sha": "cf9785295ddabd017b897988f619ba2b4abca4f0",
+  "original_r2_manifest_digest": "3087009065925887d9db770d3d9bc216db1ff2deba0bc730a2bbdf0a8d9ba543",
+  "original_r2_actions_run": 37950076024,
+  "observer_actions_run": 38395344531,
+  "experimental_conditions": {
+    "seed_roles": {
+      "544": "exposed_h0_positive",
+      "545": "exposed_h0_negative"
+    },
+    "teacher_values": {
+      "B": 66,
+      "H": 8
+    },
+    "operator": "original_masked_copy",
+    "write_candidate": "research_only_unit_add",
+    "trace_decay_rate": 256,
+    "horizon": 1000,
+    "checkpoints": [
+      1,
+      10,
+      100,
+      250,
+      500,
+      1000
+    ],
+    "original_native_step_selected_contacts": true,
+    "source_authoritative_checkpoint_sha_parity": true,
+    "deterministic_repeat": true,
+    "all_normal_physics_and_selection_defaults_unmodified": true
+  },
+  "resource_limits": {
+    "rss_mib": 1536,
+    "wall_seconds": 900,
+    "original_report_size_bytes": 131072
+  },
+  "original_artifacts": [
+    {
+      "path": "research/artifacts/a1_317_mask_original_cpython_seed544_545.zip",
+      "zip_member": "mask-3.12.json",
+      "runtime": "CPython 3.12.15",
+      "max_rss_mib": 30.0703125,
+      "elapsed_seconds": 3.445,
+      "bytes": 1962,
+      "sha256": "913f1b945227e85db75992b643866b076124ae1048b666c97f3562c7b92daa09",
+      "git_blob_sha": "98972499bf740c5734b06dec5e945019af6f0a26",
+      "actions_artifact_id": 11811946561,
+      "json_digest": "9bb9ec3aa7c22119e577aa05c0248e7076ebe0e6753a448271aabe20d5082b04"
+    },
+    {
+      "path": "research/artifacts/a1_317_mask_original_pypy_seed544_545.zip",
+      "zip_member": "mask-pypy3.11.json",
+      "runtime": "PyPy 3.11.16",
+      "max_rss_mib": 125.796875,
+      "elapsed_seconds": 1.54,
+      "bytes": 1967,
+      "sha256": "ab7a004b675b3a2ca7966aa575dba77fd96148a573cbd72cbe1b515bbb0f4103",
+      "git_blob_sha": "14d6a886cfa9f37d5a3e4b2af2370f84175e8fd0",
+      "actions_artifact_id": 11811346244,
+      "json_digest": "103ce9ed9f64b9612209369628c21192974295b8692997d281b95a544af9f5dc"
+    },
+    {
+      "path": "research/artifacts/a1_317_mask_original_parity_seed544_545.zip",
+      "zip_member": "mask-comparator.json",
+      "runtime": "cross-host original report comparator",
+      "bytes": 635,
+      "sha256": "a9060b57044c9f44e18e5097ecbe13d84b21b34939d76c842eacad12d1e0b828",
+      "git_blob_sha": "86bf333b3e71e19800a203dcd26921607a43c03a",
+      "actions_artifact_id": 11811805955
+    }
+  ],
+  "observed_counts": {
+    "544": {
+      "matched_selected_events": 764,
+      "teacher_specific_trace_differences": 95,
+      "identical_mask_from_quantization": 59,
+      "changed_native_mask": 36,
+      "native_mask_changes_algebraically_inert": 36,
+      "recipient_postlatent_differences": 0
+    },
+    "545": {
+      "matched_selected_events": 966,
+      "teacher_specific_trace_differences": 0,
+      "changed_native_mask": 0,
+      "recipient_postlatent_differences": 0
+    }
+  },
+  "scientific_interpretation": "Native masked-copy changed-mask bits all coincided with equal source and destination pre-latent values at these selected, matched contacts; a real selected mask-width opportunity did not change receiver latent. Existing exposed cases cannot confirm causality/generalization/autonomous learning.",
+  "self_contained_reconstruction": "Original ZIP bytes are committed under original_artifacts[].path. Unzip the corresponding exact JSON, verify outer ZIP SHA256, each report's internal digest and original 6-step checkpoint SHA, and compare the two reports' observed objects (runtime metadata intentionally differs). Source / recipe: research/a1_native_mask_noop_317.py",
+  "independent_confirmation": false,
+  "learning_claim": false
+}
