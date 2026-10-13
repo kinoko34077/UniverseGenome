@@ -122,6 +122,7 @@ def run_observed_branch(seed,label,frozen,start):
         "native_metrics_by_frozen_period":{k:dict(sorted(v.items())) for k,v in stage.items()},
         "population_latent_at_frozen_checkpoints":checkpoint,
         "selected_native_contacts":selected,
+        "_original_events":source["events"],
         "physical_steps":steps[0],
     }
 
@@ -143,6 +144,18 @@ def run_study(frozen,start):
         # Existing A1.4 authoritative observations, not learned from this test.
         source_b=b["selected_native_contacts"]["counts"]
         source_h=h["selected_native_contacts"]["counts"]
+        original_comparison=classify_bit_support(
+            b["_original_events"],h["_original_events"],h0_generation=12,
+        )
+        cc=original_comparison["counts"]
+        if (cc.get("matched",0),cc.get("trace_diff",0),cc.get("changed_mask",0))!=EXPECTED_COUNTS[seed]:
+            raise ValueError("A1.5 original A1.4 764/95/36 or 966/0/0 did not reproduce")
+        if cc.get("confounded_nontrace",0) or cc.get("unmatched_topology",0):
+            raise ValueError("A1.5 matched original native reader topology drift")
+        if seed==544 and cc.get("H1_equal_source_recipient_latent",0)!=36:
+            raise ValueError("original 36 real selected no-op results not reproduced")
+        b.pop("_original_events")
+        h.pop("_original_events")
         expected=EXPECTED_COUNTS[seed][0]
         if source_b.get("selected_source_events",0)!=expected or source_h.get("selected_source_events",0)!=expected:
             raise ValueError("original accepted selected-event denominator drift")
