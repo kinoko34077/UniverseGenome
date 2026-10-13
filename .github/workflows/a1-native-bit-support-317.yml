@@ -1,0 +1,101 @@
+name: A1.4 original native latent-bit support #317
+
+on:
+  pull_request:
+    paths:
+      - "research/a1_native_bit_support_317.py"
+      - "tests/test_a1_native_bit_support_317.py"
+      - ".github/workflows/a1-native-bit-support-317.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  original_exposed_reader:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Verify interpreter and source-only contract tests
+        run: |
+          python - <<'PY'
+          import sys
+          expected = "pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name == expected
+          print(sys.implementation.name, sys.version)
+          PY
+          python -m unittest tests.test_a1_native_bit_support_317 -v
+      - name: Reconstruct original R2 events and classify native bit-support
+        env:
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python -m research.a1_native_bit_support_317 \
+            --source-sha "$SOURCE_SHA" \
+            --output "a1/bit-support-${{ matrix.python }}.json"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a1-317-bit-support-${{ matrix.python }}
+          path: a1/bit-support-${{ matrix.python }}.json
+          retention-days: 14
+          if-no-files-found: error
+
+  actual_source_parity:
+    needs: original_exposed_reader
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: a1-317-bit-support-*
+          merge-multiple: true
+          path: a1
+      - name: Require original CPython PyPy event and evidence equality
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib
+          base=pathlib.Path("a1")
+          cp=json.loads((base/"bit-support-3.12.json").read_text())
+          pp=json.loads((base/"bit-support-pypy3.11.json").read_text())
+          assert cp["environment"]["runtime"] == "cpython"
+          assert pp["environment"]["runtime"] == "pypy"
+          assert cp["source_sha"] == pp["source_sha"]
+          assert cp["observed"] == pp["observed"], "bit support or frozen evidence differs"
+          assert cp["learning_claim"] is pp["learning_claim"] is False
+          positive = cp["observed"]["544"]["counts"]
+          negative = cp["observed"]["545"]["counts"]
+          assert positive["matched"] == 764
+          assert positive["changed_mask"] == 36
+          assert positive["trace_diff"] == 95
+          assert sum(positive.get(k,0) for k in (
+            "H1_equal_source_recipient_latent",
+            "H2_differing_latent_bits_unselected",
+            "H3_nonzero_overlap_real_native_effect")) == 36
+          assert negative["matched"] == 966
+          assert negative.get("changed_mask",0) == negative.get("trace_diff",0) == 0
+          result = {
+            "status":"PASS_ORIGINAL_EXPOSED_SELECTED_BIT_SUPPORT",
+            "source_sha":cp["source_sha"],
+            "observed_counts":{k:v["counts"] for k,v in cp["observed"].items()},
+            "environment_report_sha256":{
+              s: hashlib.sha256((base/("bit-support-"+s+".json")).read_bytes()).hexdigest()
+              for s in ("3.12","pypy3.11")},
+            "independent_confirmation":False,"learning_claim":False
+          }
+          (base/"bit-support-comparator.json").write_text(json.dumps(result,sort_keys=True)+"\n")
+          print(json.dumps(result,sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: a1-317-bit-support-comparator
+          path: a1/bit-support-comparator.json
+          retention-days: 14
+          if-no-files-found: error
