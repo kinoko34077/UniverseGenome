@@ -1,0 +1,202 @@
+{
+  "schema": "UG_A1_5_NATIVE_SELECTED_LATENT_DIVERSITY_COMPACT_V1",
+  "record_kind": "compact_completed_outcome_exposed_original_research_result",
+  "date_jst": "2026-10-13",
+  "issue": 317,
+  "source_pr": 324,
+  "observer_sha": "7666619a73b22eea0a8cf34dee1a6931629832dc",
+  "original_source_sha": "af568ac1558f2f3f86e51341208f5b51557b7a39",
+  "original_r2_manifest_digest": "3087009065925887d9db770d3d9bc216db1ff2deba0bc730a2bbdf0a8d9ba543",
+  "original_r2_engine_sha": "b7cdaee56a2c1fdfa750790f53463abdb706ddb41660447bf69cb0a73048f8b9",
+  "original_r2_qualify_snapshot_sha_by_seed": {
+    "544": {
+      "b_digest": "7f2df3c0858aac69931acfb8aa59744b3c9a65a903bb43eff894e9e556d1c9c9",
+      "control_digest": "1afd9f77b827fa1dbf07ddd0d59754b2cf7dc7de043bd8f40300e0985400e60b",
+      "h0_global_equal": false,
+      "h0_trace_distinct": true,
+      "h_digest": "1afd9f77b827fa1dbf07ddd0d59754b2cf7dc7de043bd8f40300e0985400e60b",
+      "role": "positive"
+    },
+    "545": {
+      "b_digest": "975f5facba43c1fbeb0da1cd11dd4a751f1c76dca7ed51510fe13ff9270651b1",
+      "control_digest": "2d19a6d65f6a41d084e383b0521901b508717f2ebd6361e04c3b07e1f63f158f",
+      "h0_global_equal": true,
+      "h0_trace_distinct": false,
+      "h_digest": "975f5facba43c1fbeb0da1cd11dd4a751f1c76dca7ed51510fe13ff9270651b1",
+      "role": "negative"
+    }
+  },
+  "original_case_shard_zip_sha_by_seed": {
+    "544": "682aa608a31d1ad1d30905ee85e9a94b5691f63889ca228d9c87f43b0c1a2165",
+    "545": "8944bd0d21b4db05ed63f1d99eff47e4fbb8ab4bde3627398ac2b8d91668df1e"
+  },
+  "conditions": {
+    "seeds": {
+      "544": "previously_exposed_positive",
+      "545": "previously_exposed_negative"
+    },
+    "teacher_values": {
+      "b": 66,
+      "h": 8
+    },
+    "h0_state_generation": 13,
+    "source_native_event_generation_first": 13,
+    "research_only_write": "unit_add",
+    "trace_decay_rate": 256,
+    "operator": "original_masked_copy",
+    "horizon_after_h0": 1000,
+    "original_checkpoints": [
+      1,
+      10,
+      100,
+      250,
+      500,
+      1000
+    ],
+    "max_process_rss_mib": 1536,
+    "wall_cap_seconds": 900,
+    "source_event_bound_per_branch": 200000,
+    "output_bound_bytes": 131072,
+    "source_selected_contacts_only": true,
+    "core_search_world_untouched": true,
+    "independent_confirmation": false,
+    "learning_claim": false
+  },
+  "originals": {
+    "544": {
+      "b": {
+        "h0": "7f2df3c0858aac69931acfb8aa59744b3c9a65a903bb43eff894e9e556d1c9c9",
+        "events": "1d349142cab7a0ecd0ed818cc22923d0f4a1aa24e4c437a6f6f4e8a84e90dd02"
+      },
+      "h": {
+        "h0": "1afd9f77b827fa1dbf07ddd0d59754b2cf7dc7de043bd8f40300e0985400e60b",
+        "events": "4a9f860a2e5bef9ddbb3dda4ac7e9da0a3f2d5b257dad81a52e554e5e25d451d"
+      }
+    },
+    "545": {
+      "b": {
+        "h0": "975f5facba43c1fbeb0da1cd11dd4a751f1c76dca7ed51510fe13ff9270651b1",
+        "events": "467dffac88acd7c281136e8103ea5a2a71662b15f22e7025c7a7a8389ebf8e4e"
+      },
+      "h": {
+        "h0": "975f5facba43c1fbeb0da1cd11dd4a751f1c76dca7ed51510fe13ff9270651b1",
+        "events": "467dffac88acd7c281136e8103ea5a2a71662b15f22e7025c7a7a8389ebf8e4e"
+      }
+    }
+  },
+  "experimental_observations": {
+    "544": {
+      "matched_directed_selected_reads": 764,
+      "different_teacher_source_trace": 95,
+      "different_selected_mask": 36,
+      "selected_source_word_hist": {
+        "1": 764
+      },
+      "selected_destination_word_hist": {
+        "1": 764
+      },
+      "collisions": 382,
+      "selected_pair_transmissions": 382,
+      "fusions": 0,
+      "fragmentations": 0,
+      "noise_spawns": 0,
+      "step_active_ever_not_one": false,
+      "step_active_multivalue": false,
+      "active_at_h0_and_checkpoints": {
+        "0": 32,
+        "1": 32,
+        "10": 32,
+        "100": 32,
+        "250": 27,
+        "500": 22,
+        "1000": 11
+      }
+    },
+    "545": {
+      "matched_directed_selected_reads": 966,
+      "different_teacher_source_trace": 0,
+      "different_selected_mask": 0,
+      "selected_source_word_hist": {
+        "1": 966
+      },
+      "selected_destination_word_hist": {
+        "1": 966
+      },
+      "collisions": 483,
+      "selected_pair_transmissions": 483,
+      "fusions": 0,
+      "fragmentations": 0,
+      "noise_spawns": 0,
+      "step_active_ever_not_one": false,
+      "step_active_multivalue": false,
+      "active_at_h0_and_checkpoints": {
+        "0": 32,
+        "1": 32,
+        "10": 32,
+        "100": 32,
+        "250": 31,
+        "500": 23,
+        "1000": 13
+      }
+    }
+  },
+  "all_h0_and_checkpoint_active_words": {
+    "1": "all_active_cells_at_h0_and_6_original_checkpoints",
+    "other": 0
+  },
+  "original_native_event_hashes": {
+    "544": {
+      "b": {
+        "h0": "7f2df3c0858aac69931acfb8aa59744b3c9a65a903bb43eff894e9e556d1c9c9",
+        "events": "1d349142cab7a0ecd0ed818cc22923d0f4a1aa24e4c437a6f6f4e8a84e90dd02"
+      },
+      "h": {
+        "h0": "1afd9f77b827fa1dbf07ddd0d59754b2cf7dc7de043bd8f40300e0985400e60b",
+        "events": "4a9f860a2e5bef9ddbb3dda4ac7e9da0a3f2d5b257dad81a52e554e5e25d451d"
+      }
+    },
+    "545": {
+      "b": {
+        "h0": "975f5facba43c1fbeb0da1cd11dd4a751f1c76dca7ed51510fe13ff9270651b1",
+        "events": "467dffac88acd7c281136e8103ea5a2a71662b15f22e7025c7a7a8389ebf8e4e"
+      },
+      "h": {
+        "h0": "975f5facba43c1fbeb0da1cd11dd4a751f1c76dca7ed51510fe13ff9270651b1",
+        "events": "467dffac88acd7c281136e8103ea5a2a71662b15f22e7025c7a7a8389ebf8e4e"
+      }
+    }
+  },
+  "hosted_linux_github_actions_run": 38404537393,
+  "hosted_runtime_original_artifact_sha": {
+    "cpython": {
+      "zip": "dbb06dba31381c0e401704d08e37ec96a4162efbd852548107c2624a6cc8da9d",
+      "size": 2311,
+      "run_artifact": 11819195079,
+      "version": "3.12.15",
+      "wall_seconds": 3.949,
+      "rss_mib": 30.13671875,
+      "report_digest": "10061d56375b2b0af6fbb3b21f4a7f46d91329cb3b27e549a3a6e694dcee093a",
+      "raw_json_sha256": "969d437110353f775c03e42c9f5fe7f32ffffc913382299024da362505ff0975"
+    },
+    "pypy": {
+      "zip": "758124b38c9da9bab5118d636e7b8c6fe509768758764fc73ff7c1bc0df83df4",
+      "size": 2320,
+      "run_artifact": 11818740436,
+      "version": "3.11.16",
+      "wall_seconds": 2.74,
+      "rss_mib": 110.91015625,
+      "report_digest": "f0fe138a1067953173c76cfb78d68e39fa49d70b6ad4ee06d967c23f282c807d",
+      "raw_json_sha256": "03141629bea4ecee200170a577dcf3974a6f0e0d183a51d291485860f37c6f52"
+    },
+    "comparator": {
+      "zip": "7401f652c63360ea4fb72687cb7c685af652fa587efefa5f5eba43f039a377b8",
+      "size": 747,
+      "run_artifact": 11816716977
+    }
+  },
+  "source_reference": "research/a1_selected_latent_diversity_317.py",
+  "frozen_original_case_golden_reference": "research/a1_exposed_reader_pilot_317.py:GOLDEN",
+  "original_json_artifacts_retained_external_until": "2026-10-27T13:23:53Z",
+  "scientific_limit": "Previously outcome-exposed R2 seeds only; original STEP metrics and all selected read events indicate no latent alphabet diversity, but this cannot establish all parameters/seeds universal impossibility or independently confirm learning.",
+  "scientific_result": "All 764+966 actual selected source and recipient prelatents were exactly word1 in B/H. No native fusion/fragmentation/noise spawned during 1000 post-h0 original steps. At all six checkpoints, ACTIVE cells contain only word1; original read mask can't transmit novel content."
+}
