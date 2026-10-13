@@ -8,6 +8,7 @@ from __future__ import annotations
 from contextlib import redirect_stdout
 import io
 import json
+import subprocess
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
@@ -21,7 +22,8 @@ class P72MatureOrchestrationContractTests(unittest.TestCase):
     def _execute(self, *, pypy_wall=5.0, corrupt=None, source_ok=True):
         calls = []
 
-        def fake_native_step(exe, scratch, label, ordinal, prior, *, observe):
+        def fake_native_step(exe, scratch, label, ordinal, prior, *, observe, deadline):
+            self.assertGreater(deadline, 0)
             calls.append((exe, label, ordinal, prior, observe))
             self.assertIn(exe, ("/fake/cpython", "/fake/pypy"))
             self.assertEqual(observe, label != "prefix")
@@ -119,6 +121,40 @@ class P72MatureOrchestrationContractTests(unittest.TestCase):
         self.assertEqual(len(calls), 22)
         self.assertEqual(report["status"], "REJECT_OR_HOLD_MATURE_RUNTIME_GATE")
         self.assertLess(report["combined_speed_ratio"], 1.0)
+
+    def test_aggregate_wall_cap_prevents_late_native_spawn(self):
+        with patch.object(p72.time, "monotonic", return_value=1000.0):
+            self.assertEqual(p72.remaining_timeout(1100.0), 100.0)
+            self.assertEqual(p72.remaining_timeout(1300.0), 180.0)
+            with TemporaryDirectory() as td:
+                with patch.object(p72.subprocess, "Popen") as popen:
+                    with self.assertRaisesRegex(TimeoutError, "aggregate"):
+                        p72.native_step(
+                            "/fake/pypy", Path(td), "prefix", 1, None,
+                            observe=False, deadline=999.0,
+                        )
+                    popen.assert_not_called()
+
+    def test_native_timeout_kills_entire_process_group(self):
+        from unittest.mock import Mock
+
+        proc = Mock()
+        proc.pid = 42424
+        proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd="fake", timeout=12), ("", ""),
+        ]
+        with (TemporaryDirectory() as td,
+              patch.object(p72.time, "monotonic", return_value=1000.0),
+              patch.object(p72.subprocess, "Popen", return_value=proc) as popen,
+              patch.object(p72.os, "killpg") as killpg):
+            with self.assertRaisesRegex(TimeoutError, "step/aggregate"):
+                p72.native_step(
+                    "/fake/pypy", Path(td), "prefix", 1, None,
+                    observe=False, deadline=1012.0,
+                )
+            popen.assert_called_once()
+            self.assertEqual(proc.communicate.call_count, 2)
+            killpg.assert_called_once_with(42424, p72.signal.SIGKILL)
 
     def test_wrong_source_fails_before_any_native_call(self):
         calls, report, failure = self._execute(source_ok=False)
