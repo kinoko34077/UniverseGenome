@@ -25,7 +25,7 @@ class P72MatureOrchestrationContractTests(unittest.TestCase):
             calls.append((exe, label, ordinal, prior, observe))
             self.assertIn(exe, ("/fake/cpython", "/fake/pypy"))
             self.assertEqual(observe, label != "prefix")
-            self.assertEqual(label == "prefix", exe == "/fake/pypy")
+            self.assertEqual(exe, "/fake/cpython" if label == "cpython" else "/fake/pypy")
 
             if ordinal <= 4:
                 selected = p72.GOLDEN_FIRST4[ordinal - 1]
@@ -84,7 +84,7 @@ class P72MatureOrchestrationContractTests(unittest.TestCase):
         self.assertEqual(len(calls), 22)
         self.assertEqual(
             [(label, ordinal) for _, label, ordinal, _, _ in calls],
-            [( "prefix", i) for i in range(1, 10)]
+            [("prefix", i) for i in range(1, 10)]
             + [("cpython", 10), ("pypy", 10)]
             + [("prefix", i) for i in range(11, 20)]
             + [("cpython", 20), ("pypy", 20)],
