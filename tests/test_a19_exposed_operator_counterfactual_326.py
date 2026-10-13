@@ -10,6 +10,10 @@ from research.a19_exposed_operator_counterfactual_326 import (
 class ArchivedOriginalContactAlgebraTests(unittest.TestCase):
     def test_all_original_events_source_frozen_without_new_seed(self):
         result=original_contact_counterfactual()
+        self.assertEqual(result["original_a14_source_pr_head_sha"],
+                         "ad8384967cbe740729e636d1724ecfe0fa0a30e3")
+        self.assertEqual(result["original_r2_source_sha"],
+                         "af568ac1558f2f3f86e51341208f5b51557b7a39")
         self.assertEqual(result["positive_original_changed_mask_contacts"],36)
         self.assertEqual(result["negative_original_changed_mask_contacts"],0)
         self.assertEqual(result["original_actual_BH_recipient_contrast"],0)
