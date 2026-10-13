@@ -36,6 +36,7 @@ def _fake_row(runtime: str, ordinal: int, previous: Path | None = None) -> tuple
             "final.json": f"final-{ordinal:02d}",
         },
         "journal_bytes": 1024,
+        "default1024": True,
         "sampled_rss_bytes": 100 * 1024 * 1024,
         "retained_scratch_bytes": 4096,
         "native_wall_s": 20.0 if runtime == "cpython" else 10.0,
@@ -56,6 +57,8 @@ class P73HarnessContractTests(unittest.TestCase):
         self.assertIn("default: '0'", text)
         self.assertIn("host1_cpython", text)
         self.assertIn("host2_pypy", text)
+        self.assertIn("16f9f56e82d1f4ec95a324c1a8cacfd78afc7f0656c0a809a18725ef4391453a", text)
+        self.assertIn("1080s", text)
         self.assertIn("workflow_dispatch", text)
 
     def test_host_executes_exactly_37_source_bound_rounds(self):
@@ -120,6 +123,8 @@ class P73HarnessContractTests(unittest.TestCase):
                     "python_version": [3, 12] if runtime == "cpython" else [3, 11],
                     "executable": f"/fake/{runtime}",
                 },
+                "host_identity": {"hostname": "fixture", "cpu_count": 3},
+                "interpreter_artifact": {"url": None, "sha256": None},
                 "status": "HOST_COMPLETE37",
                 "rounds_completed": 37,
                 "rounds": rows,
@@ -159,6 +164,8 @@ class P73HarnessContractTests(unittest.TestCase):
                     "python_version": [3, 12] if runtime == "cpython" else [3, 11],
                     "executable": f"/fake/{runtime}",
                 },
+                "host_identity": {"hostname": "fixture", "cpu_count": 3},
+                "interpreter_artifact": {"url": None, "sha256": None},
                 "status": "HOST_COMPLETE37",
                 "rounds_completed": 37,
                 "rounds": rows,

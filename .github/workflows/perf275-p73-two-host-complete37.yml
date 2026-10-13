@@ -110,6 +110,9 @@ jobs:
           test "$(git -C "$RUNNER_TEMP/source" rev-parse HEAD)" = "$SOURCE_SHA"
       - name: Run PyPy original selected128 complete37 host
         shell: bash
+        env:
+          PYPY_ARCHIVE_URL: https://downloads.python.org/pypy/pypy3.11-v7.3.23-linux64.tar.bz2
+          PYPY_ARCHIVE_SHA256: 16f9f56e82d1f4ec95a324c1a8cacfd78afc7f0656c0a809a18725ef4391453a
         run: |
           set -euo pipefail
           mkdir -p reports/p73/host2-pypy

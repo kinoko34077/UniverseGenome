@@ -12,7 +12,9 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import platform
 import signal
+import socket
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
@@ -125,7 +127,10 @@ def native_step(
         raise AssertionError("P7.3 source/seed drift")
     if result.get("ordinal") != ordinal or result.get("native128_evaluations") != 128:
         raise AssertionError("P7.3 selected128 ordinal drift")
-    if result.get("patches") != 8 or result.get("journal_bytes", MAX_JOURNAL_BYTES + 1) > MAX_JOURNAL_BYTES:
+    if (result.get("patches") != 8
+            or result.get("default1024") is not True
+            or result.get("observer_hash") is None
+            or result.get("journal_bytes", MAX_JOURNAL_BYTES + 1) > MAX_JOURNAL_BYTES):
         raise AssertionError("P7.3 D15 journal contract drift")
     if result.get("sampled_rss_bytes", MAX_RSS_BYTES + 1) > MAX_RSS_BYTES:
         raise AssertionError("P7.3 RSS cap exceeded")
@@ -146,6 +151,17 @@ def _new_report(runtime: str) -> dict[str, Any]:
         "original_seed16384_executed": False,
         "original_seed49152_executed": False,
         "learning_claim": False,
+        "host_identity": {
+            "hostname": socket.gethostname(),
+            "platform": platform.platform(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+            "cpu_count": os.cpu_count(),
+        },
+        "interpreter_artifact": {
+            "url": os.environ.get("PYPY_ARCHIVE_URL") if runtime == "pypy" else None,
+            "sha256": os.environ.get("PYPY_ARCHIVE_SHA256") if runtime == "pypy" else None,
+        },
     }
 
 
@@ -211,6 +227,8 @@ def _load_host(path: Path, runtime: str) -> dict[str, Any]:
         or report.get("original_seed49152_executed") is not False
         or report.get("learning_claim") is not False
         or not isinstance(report.get("interpreter_identity"), dict)
+        or not isinstance(report.get("host_identity"), dict)
+        or not isinstance(report.get("interpreter_artifact"), dict)
     ):
         raise AssertionError("P7.3 host report contract invalid")
     validate_runtime_identity(runtime, report["interpreter_identity"])
@@ -223,6 +241,7 @@ def _load_host(path: Path, runtime: str) -> dict[str, Any]:
             or row.get("sampled_rss_bytes", MAX_RSS_BYTES + 1) > MAX_RSS_BYTES
             or row.get("retained_scratch_bytes", MAX_RETAINED_BYTES + 1) > MAX_RETAINED_BYTES
             or not isinstance(row.get("runtime_identity"), dict)
+            or row.get("observer_hash") is None
         ):
             raise AssertionError("P7.3 host resource/ordinal contract invalid")
         validate_runtime_identity(runtime, row["runtime_identity"])
