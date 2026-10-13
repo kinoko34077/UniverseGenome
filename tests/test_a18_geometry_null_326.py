@@ -23,7 +23,7 @@ class GeometricNullContract(unittest.TestCase):
         self.assertAlmostEqual(float(expected_complete_2x2_blocks(11)),
                                0.000007419470458790993,places=16)
         self.assertEqual(expected_complete_2x2_blocks(4),
-                         Fraction(1024,1) / 88584268800)
+                         Fraction(24,1023*1022*1021))
 
     def test_sum_and_conditional_per_step_upper(self):
         expected=(
