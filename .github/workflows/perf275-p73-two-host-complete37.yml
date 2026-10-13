@@ -1,0 +1,170 @@
+name: PERF275 P7.3 Manual Two-Host Complete37 Runtime Gate
+
+# This is intentionally user-visible and manual-only. It never runs on a PR,
+# push, or unrelated science workflow, and it never touches seed16384/49152.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "Frozen original performance source SHA"
+        required: true
+        default: "65e1d78576026b0214a0184bd6028e01dc3cc7e1"
+      seed:
+        description: "Performance-only seed; must remain zero"
+        required: true
+        default: '0'
+      acknowledge:
+        description: "Type RUN_P7_3_EXACTLY_ONCE to authorize this one manual run"
+        required: true
+        default: "RUN_P7_3_EXACTLY_ONCE"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf275-p73-two-host-complete37
+  cancel-in-progress: false
+
+jobs:
+  host1_cpython:
+    if: >-
+      inputs.source_sha == '65e1d78576026b0214a0184bd6028e01dc3cc7e1' &&
+      inputs.seed == '0' &&
+      inputs.acknowledge == 'RUN_P7_3_EXACTLY_ONCE'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: driver
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Prepare exact original source checkout
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "65e1d78576026b0214a0184bd6028e01dc3cc7e1"
+          test "${{ inputs.seed }}" = "0"
+          git -C driver fetch --no-tags origin "$SOURCE_SHA"
+          git -C driver worktree add --detach "$RUNNER_TEMP/source" "$SOURCE_SHA"
+          test "$(git -C "$RUNNER_TEMP/source" rev-parse HEAD)" = "$SOURCE_SHA"
+      - name: Run CPython original selected128 complete37 host
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/p73/host1-cpython
+          cd "$RUNNER_TEMP/source"
+          timeout -k 15s 1080s python -u "$GITHUB_WORKSPACE/driver/benchmarks/perf275_p73_two_host_complete37.py" \
+            --runtime cpython --exe "$(command -v python)" \
+            --out "$GITHUB_WORKSPACE/reports/p73/host1-cpython/host-report.json"
+      - name: Preserve CPython host report, including INCOMPLETE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf275-p73-host1-cpython
+          path: reports/p73/host1-cpython/
+          if-no-files-found: warn
+          retention-days: 14
+
+  host2_pypy:
+    if: >-
+      inputs.source_sha == '65e1d78576026b0214a0184bd6028e01dc3cc7e1' &&
+      inputs.seed == '0' &&
+      inputs.acknowledge == 'RUN_P7_3_EXACTLY_ONCE'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: driver
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Install and attest official PyPy 7.3.23
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/pypy3.11-v7.3.23-linux64.tar.bz2"
+          root="$RUNNER_TEMP/pypy3.11-v7.3.23-linux64"
+          curl --fail --location --retry 3 --output "$archive" \
+            https://downloads.python.org/pypy/pypy3.11-v7.3.23-linux64.tar.bz2
+          echo "16f9f56e82d1f4ec95a324c1a8cacfd78afc7f0656c0a809a18725ef4391453a  $archive" | sha256sum -c -
+          tar -xjf "$archive" -C "$RUNNER_TEMP"
+          "$root/bin/pypy3" --version
+      - name: Prepare exact original source checkout
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          test "$SOURCE_SHA" = "65e1d78576026b0214a0184bd6028e01dc3cc7e1"
+          test "${{ inputs.seed }}" = "0"
+          git -C driver fetch --no-tags origin "$SOURCE_SHA"
+          git -C driver worktree add --detach "$RUNNER_TEMP/source" "$SOURCE_SHA"
+          test "$(git -C "$RUNNER_TEMP/source" rev-parse HEAD)" = "$SOURCE_SHA"
+      - name: Run PyPy original selected128 complete37 host
+        shell: bash
+        env:
+          PYPY_ARCHIVE_URL: https://downloads.python.org/pypy/pypy3.11-v7.3.23-linux64.tar.bz2
+          PYPY_ARCHIVE_SHA256: 16f9f56e82d1f4ec95a324c1a8cacfd78afc7f0656c0a809a18725ef4391453a
+        run: |
+          set -euo pipefail
+          mkdir -p reports/p73/host2-pypy
+          cd "$RUNNER_TEMP/source"
+          timeout -k 15s 1080s "$RUNNER_TEMP/pypy3.11-v7.3.23-linux64/bin/pypy3" -u \
+            "$GITHUB_WORKSPACE/driver/benchmarks/perf275_p73_two_host_complete37.py" \
+            --runtime pypy --exe "$RUNNER_TEMP/pypy3.11-v7.3.23-linux64/bin/pypy3" \
+            --out "$GITHUB_WORKSPACE/reports/p73/host2-pypy/host-report.json"
+      - name: Preserve PyPy host report, including INCOMPLETE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf275-p73-host2-pypy
+          path: reports/p73/host2-pypy/
+          if-no-files-found: warn
+          retention-days: 14
+
+  compare_complete37:
+    if: always()
+    needs: [host1_cpython, host2_pypy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: driver
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: perf275-p73-host1-cpython
+          path: reports/p73/host1-cpython
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: perf275-p73-host2-pypy
+          path: reports/p73/host2-pypy
+      - name: Compare complete37 reports and fail closed on any mismatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -u driver/benchmarks/perf275_p73_two_host_complete37.py \
+            --compare-cpython reports/p73/host1-cpython/host-report.json \
+            --compare-pypy reports/p73/host2-pypy/host-report.json \
+            --out reports/p73/p73-verdict.json
+      - name: Preserve final P7.3 verdict, including INCOMPLETE evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf275-p73-complete37-verdict
+          path: reports/p73/
+          if-no-files-found: warn
+          retention-days: 14
