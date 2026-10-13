@@ -185,3 +185,53 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Browser E2E
         run: npx playwright test
+
+  pypy_compatibility:
+    # Non-default, test-only compatibility proof for new runtimes. Never
+    # replays a D16/D18 research seed or the P7.3 native37 study.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "pypy3.11"
+      - name: Attest real PyPy 3.11
+        run: |
+          python - <<'PY'
+          import json
+          import sys
+          identity = {
+              "implementation": sys.implementation.name,
+              "version": list(sys.version_info[:2]),
+              "executable": sys.executable,
+          }
+          print(json.dumps(identity, sort_keys=True))
+          assert identity["implementation"] == "pypy"
+          assert identity["version"] == [3, 11]
+          PY
+      - name: Compile all current Python runtime paths
+        run: python -m compileall core search persistence server tests
+      - name: Full PyPy existing unittest suite
+        run: python -m unittest discover -s tests -v
+      - name: PyPy headless Inner smoke
+        run: python -m core.runner --config config/default.json --json
+      - name: PyPy headless Outer optimizer smoke
+        run: >-
+          python -m core.runner
+          --config config/default.json
+          --optimizer
+          --optimizer-iterations 0
+          --optimizer-timeout-generations 8
+          --json
+      - name: PyPy Phase 6.2 temporal experiment smoke
+        run: >-
+          python -m core.runner
+          --config config/default.json
+          --experiment
+          --experiment-config config/experiment_phase6_temporal_sequence_smoke.json
+          --json
+      - name: PyPy server entrypoint smoke
+        run: python -m server.app --help
