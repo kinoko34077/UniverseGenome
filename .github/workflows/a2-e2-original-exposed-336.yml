@@ -1,0 +1,123 @@
+name: A2 E2 one-time exposed 544/545 physics — reviewed marker only
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research/approvals/a2_e2_336.run"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a2-e2-336-original-exposed-only
+  cancel-in-progress: false
+
+jobs:
+  genuine_exposed_native_research:
+    # Never run on a PR, dispatch, schedule or unrelated source-only change.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Verify reviewed one-file activation commit and exact source
+        id: source_gate
+        shell: bash
+        env:
+          EXACT_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse --verify HEAD)" = "$EXACT_SOURCE_SHA"
+          test "$(git diff --name-only HEAD^ HEAD)" = "research/approvals/a2_e2_336.run"
+          if git cat-file -e HEAD^:research/approvals/a2_e2_336.run 2>/dev/null; then
+            echo "E2 marker must be NEW, not a repeat modification" >&2
+            exit 1
+          fi
+          # First-use proof checks the complete ancestry, not only HEAD^:
+          # deletion/re-addition must never reactivate an already used marker.
+          marker_path="research/approvals/a2_e2_336.run"
+          additions="$(git log --full-history --format='%H' --diff-filter=A HEAD -- "$marker_path" | wc -l | tr -d '[:space:]')"
+          deletions="$(git log --full-history --format='%H' --diff-filter=D HEAD -- "$marker_path" | wc -l | tr -d '[:space:]')"
+          test "$additions" = "1"
+          test "$deletions" = "0"
+          git diff --quiet HEAD -- research/a2_locked_rotate_copy_pilot_336.py research/a2_e2_exposed_activation_336.py research/protocols/a2_e2_exposed_rotate_336.json research/a2_passive_native_recipient_observer_336.py
+          # Compare every tracked scientific code/config blob to the accepted
+          # pre-activation source lock. HEAD^ excludes only the marker commit.
+          python .github/scripts/a2_e2_source_identity_336.py --ref HEAD^
+          python -m research.a2_e2_exposed_activation_336
+          python -m unittest tests.test_a2_e2_roster_336 tests.test_a2_e2_marker_absent_336 tests.test_a2_e2_source_identity_336 -v
+      - name: Genuine source native original-exposed E2 only
+        id: native_physics
+        shell: bash
+        env:
+          EXACT_SOURCE_SHA: ${{ github.sha }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p research/artifacts
+          timeout --signal=TERM --kill-after=10s 900s python -m research.a2_locked_rotate_copy_pilot_336 \
+            --source-sha "$EXACT_SOURCE_SHA" --execute --e2-exposed-only \
+            --output research/artifacts/a2_e2_336_original_exposed_544_545.json
+          sha256sum research/artifacts/a2_e2_336_original_exposed_544_545.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path("research/artifacts/a2_e2_336_original_exposed_544_545.json")
+          outcome=json.loads(path.read_text(encoding="utf-8"))
+          assert outcome["schema"]=="UG_A2_RESEARCH_ONLY_ROTATE_COPY_EXPOSED_PILOT_V1"
+          assert outcome["original_masked_copy_golden_parity"] is True
+          assert outcome["negative_BH_full_equality"] is True
+          assert outcome["positive_BB_sham_full_equality"] is True
+          assert outcome["independent_confirmation"] is False
+          assert outcome["learning_claim"] is False
+          assert path.stat().st_size<=131073
+          print("A2_E2_RESULT_VALIDATED:", outcome["positive_native_paired_read_contrast"]["counts"])
+          PY
+      - name: Record bounded unsuccessful-run metadata (not a scientific outcome)
+        if: failure()
+        id: failure_metadata
+        shell: bash
+        env:
+          EXACT_SOURCE_SHA: ${{ github.sha }}
+          ORIGINAL_RUN_ID: ${{ github.run_id }}
+          ORIGINAL_RUN_ATTEMPT: ${{ github.run_attempt }}
+          PREFLIGHT_OUTCOME: ${{ steps.source_gate.outcome }}
+        run: |
+          set -euo pipefail
+          if test "$PREFLIGHT_OUTCOME" = "failure"; then
+            stage=source-preflight
+            reason=VALIDATION_FAILED
+          else
+            stage=native-physics
+            reason=UNKNOWN
+          fi
+          python -m research.a2_e2_failure_manifest_336 \
+            --stage "$stage" --reason "$reason" \
+            --source-sha "$EXACT_SOURCE_SHA" \
+            --run-id "$ORIGINAL_RUN_ID" --attempt "$ORIGINAL_RUN_ATTEMPT" \
+            --report-path research/artifacts/a2_e2_336_original_exposed_544_545.json \
+            --output research/artifacts/a2_e2_336_failure.json
+          sha256sum research/artifacts/a2_e2_336_failure.json
+      - name: Retain bounded failed-run evidence for Git review
+        if: failure() && steps.failure_metadata.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: a2-e2-336-original-exposed-failure
+          path: research/artifacts/a2_e2_336_failure.json
+          if-no-files-found: error
+          retention-days: 5
+      - name: Retain authenticated short-lived raw evidence for Git review
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: a2-e2-336-original-exposed-raw
+          path: research/artifacts/a2_e2_336_original_exposed_544_545.json
+          if-no-files-found: error
+          retention-days: 5
