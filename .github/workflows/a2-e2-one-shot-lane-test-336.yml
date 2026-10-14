@@ -1,0 +1,30 @@
+name: A2 E2 marker-only workflow source audit #336
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/a2-e2-original-exposed-336.yml"
+      - ".github/workflows/a2-e2-one-shot-lane-test-336.yml"
+      - "tests/test_a2_e2_one_shot_workflow_336.py"
+
+permissions:
+  contents: read
+
+jobs:
+  static_no_exposed_seed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Test only source-controlled workflow gates
+        run: |
+          python -m unittest tests.test_a2_e2_one_shot_workflow_336 -v
