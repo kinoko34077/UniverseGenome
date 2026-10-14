@@ -49,7 +49,9 @@ def synthetic_report():
             "544":{role:fake_record(544,role) for role in ("b","h","control")},
             "545":{role:fake_record(545,role) for role in ("b","h")},
         },
-        "positive_native_paired_read_contrast":{"schema":CONTACT_SCHEMA,"counts":counts},
+        "positive_native_paired_read_contrast":{"schema":CONTACT_SCHEMA,"counts":counts,
+                                                  "b_native_source_event_count":10,
+                                                  "h_native_source_event_count":10},
     }
 
 
@@ -96,6 +98,14 @@ class PreOutcomeStaticScoringTests(unittest.TestCase):
                     "mask_difference_with_equal_context":0,
                 })
                 self.assertEqual(classify_report(report)["classification"],INVALID)
+
+    def test_event_count_consistency_and_missing_provenance_fail(self):
+        report=synthetic_report()
+        report["positive_native_paired_read_contrast"]["b_native_source_event_count"]=11
+        self.assertEqual(classify_report(report)["classification"],INVALID)
+        report=synthetic_report()
+        del report["positive_native_paired_read_contrast"]["h_native_source_event_count"]
+        self.assertEqual(classify_report(report)["classification"],INVALID)
 
     def test_failed_sentinel_controls_budget_and_unexplained_effect(self):
         modifications = (
