@@ -28,6 +28,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Verify reviewed one-file activation commit and exact source
+        id: source_gate
         shell: bash
         env:
           EXACT_SOURCE_SHA: ${{ github.sha }}
@@ -50,6 +51,7 @@ jobs:
           python -m research.a2_e2_exposed_activation_336
           python -m unittest tests.test_a2_e2_roster_336 tests.test_a2_e2_marker_absent_336 tests.test_a2_e2_source_identity_336 -v
       - name: Genuine source native original-exposed E2 only
+        id: native_physics
         shell: bash
         env:
           EXACT_SOURCE_SHA: ${{ github.sha }}
@@ -75,6 +77,39 @@ jobs:
           assert path.stat().st_size<=131073
           print("A2_E2_RESULT_VALIDATED:", outcome["positive_native_paired_read_contrast"]["counts"])
           PY
+      - name: Record bounded unsuccessful-run metadata (not a scientific outcome)
+        if: failure()
+        id: failure_metadata
+        shell: bash
+        env:
+          EXACT_SOURCE_SHA: ${{ github.sha }}
+          ORIGINAL_RUN_ID: ${{ github.run_id }}
+          ORIGINAL_RUN_ATTEMPT: ${{ github.run_attempt }}
+          PREFLIGHT_OUTCOME: ${{ steps.source_gate.outcome }}
+        run: |
+          set -euo pipefail
+          if test "$PREFLIGHT_OUTCOME" = "failure"; then
+            stage=source-preflight
+            reason=VALIDATION_FAILED
+          else
+            stage=native-physics
+            reason=UNKNOWN
+          fi
+          python -m research.a2_e2_failure_manifest_336 \
+            --stage "$stage" --reason "$reason" \
+            --source-sha "$EXACT_SOURCE_SHA" \
+            --run-id "$ORIGINAL_RUN_ID" --attempt "$ORIGINAL_RUN_ATTEMPT" \
+            --report-path research/artifacts/a2_e2_336_original_exposed_544_545.json \
+            --output research/artifacts/a2_e2_336_failure.json
+          sha256sum research/artifacts/a2_e2_336_failure.json
+      - name: Retain bounded failed-run evidence for Git review
+        if: failure() && steps.failure_metadata.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: a2-e2-336-original-exposed-failure
+          path: research/artifacts/a2_e2_336_failure.json
+          if-no-files-found: error
+          retention-days: 5
       - name: Retain authenticated short-lived raw evidence for Git review
         if: success()
         uses: actions/upload-artifact@v4
