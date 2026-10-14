@@ -65,7 +65,7 @@ class A2DesignOnlyPreflight(unittest.TestCase):
             lambda d:d["exposed_exploratory_only"].update(candidate_post_h0_old_baseline_checkpoint_parity_expected=True),
             lambda d:d["bounds"].update(max_rss_mib=1537),
             lambda d:d["bounds"].update(posthoc_tuning=True),
-            lambda d:d["original_r2_frozen_manifest_digest"]="0"*64,
+            lambda d:d.update(original_r2_frozen_manifest_digest="0"*64),
         )
         for index,mutate in enumerate(mutations):
             with self.subTest(index=index):
