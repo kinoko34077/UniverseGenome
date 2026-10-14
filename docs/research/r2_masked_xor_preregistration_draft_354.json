@@ -48,12 +48,12 @@
   "native_witness": {
     "unit": "authentic_source_selected_directed_contact",
     "match_keys": [
-      "generation",
+      "native_generation",
       "physical_address",
+      "source_slot",
+      "recipient_slot",
       "source_life_epoch",
-      "recipient_life_epoch",
-      "source_identity",
-      "recipient_identity"
+      "recipient_life_epoch"
     ],
     "context_exclusion": "mismatched_nontrace_precontact_or_topology",
     "pairwise_effect_support_formula": "source_latent_before & (native_mask_B ^ native_mask_H)",
