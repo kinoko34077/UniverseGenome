@@ -14,7 +14,7 @@ ACTION_FILES = (
     ".github/workflows/a2-e2-original-exposed-336.yml",
     ".github/scripts/a2_e2_source_identity_336.py",
 )
-BASELINE = "d8e863f6b3e213163455c2ad0ebaa691371aa4a2"
+BASELINE = "5faedcdf21c686fa2d4bee78a442c8e397f5a451"
 REQUIRED = frozenset((
     *ACTION_FILES,
     "research/a2_locked_rotate_copy_pilot_336.py",
