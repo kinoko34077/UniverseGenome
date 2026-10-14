@@ -95,8 +95,30 @@ def classify_report(report: dict[str, Any]) -> dict[str, Any]:
     # Source-distinct no-teacher original h0 is a required reference, NOT a B/H
     # bitwise-identical sham. Do not require control == either teacher branch.
     ctrl = data["544"]["control"]
-    if not isinstance(ctrl.get("original_h0_sha256"), str):
+    if (not isinstance(ctrl.get("original_h0_sha256"), str)
+            or not isinstance(ctrl.get("distribution"), dict)
+            or "1000" not in ctrl["distribution"]
+            or not isinstance(ctrl["distribution"]["1000"], dict)):
         return _invalid("MISSING_CANONICAL_NO_TEACHER_REFERENCE")
+    final_distribution = ctrl["distribution"]["1000"]
+    if (type(final_distribution.get("active_cells")) is not int
+            or type(final_distribution.get("distinct_latent_words")) is not int
+            or not 0 <= final_distribution["distinct_latent_words"] <= final_distribution["active_cells"]):
+        return _invalid("INVALID_NO_TEACHER_FINAL_POPULATION_REFERENCE")
+    # This actual source-distinct control is used to characterize background
+    # final state and latent diversity; it is NEVER assumed B/H-identical.
+    control_context = {
+        "original_h0_sha256": ctrl["original_h0_sha256"],
+        "final_checkpoint_sha256": ctrl["checkpoints"]["1000"],
+        "final_active_cells": final_distribution["active_cells"],
+        "final_distinct_latent_words": final_distribution["distinct_latent_words"],
+        "native_selected_event_count": ctrl["native_selected_events"],
+        "final_equals_b": ctrl["checkpoints"]["1000"]
+            == data["544"]["b"]["checkpoints"]["1000"],
+        "final_equals_h": ctrl["checkpoints"]["1000"]
+            == data["544"]["h"]["checkpoints"]["1000"],
+        "equality_is_causal_sham": False,
+    }
     contrast = report.get("positive_native_paired_read_contrast")
     if not isinstance(contrast, dict) or contrast.get("schema") != CONTACT_SCHEMA:
         return _invalid("MISSING_NATIVE_MATCHED_WITNESS")
@@ -138,6 +160,7 @@ def classify_report(report: dict[str, Any]) -> dict[str, Any]:
         "long_term_retention": "NOT_ESTABLISHED",
         "counts": {key: counts[key] for key in COUNT_KEYS},
         "no_teacher_reference_used": True,
+        "no_teacher_context": control_context,
         "independent_confirmation": False,
         "learning_claim": False,
     }
