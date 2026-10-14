@@ -1,0 +1,84 @@
+{
+  "schema": "UG_A1_6_SOURCE_ONLY_CONTACT_READOUT_DESIGN_V1",
+  "owner_issue": 326,
+  "parent_plan_issue": 171,
+  "prior_completed_native_owner": 336,
+  "status": "DESIGN_ONLY_NOT_A_RUN_APPROVAL",
+  "analysis_base_main_sha": "d482f2f9e3a74adb1598d81dfe5fd51524aa8a06",
+  "learning_claim": false,
+  "independent_confirmation": false,
+  "proposed_single_future_exploratory_operator": {
+    "name": "masked_xor",
+    "selection_status": "MECHANISM_FIRST_DESIGN_CANDIDATE_ONLY",
+    "selection_basis": "Existing source-only local operator has effect-bit support from source without requiring a different recipient prelatent; not chosen by old outcome-exposed 4/36 versus 8/36 contrast.",
+    "native_physics_change_allowed_now": false,
+    "teacher_content_in_operator_forbidden": true,
+    "risk": "XOR toggles/erases latent values; contact-local differentiation does not establish teacher-dependent memory or persistence."
+  },
+  "conditional_equal_precontact_bit_identities": {
+    "masked_copy": "(S^D)&(MB^MH)",
+    "masked_xor": "S&(MB^MH)",
+    "rotate_copy_4": "(rotl16(S,4)^D)&(MB^MH)",
+    "masked_and": "(D&(~S&65535))&(MB^MH)"
+  },
+  "required_true_native_gates_before_any_future_scientific_claim": [
+    "matched_same_life_epoch_directed_contact_keys",
+    "identical_nontrace_precontact_state_including_source_and_recipient_latent",
+    "actual_authentic_source_trace_BH_difference",
+    "actual_source_selected_mask_BH_difference",
+    "operator_effect_support_overlap_at_mask_delta",
+    "genuine_recipient_latent_after_BH_difference",
+    "same_teacher_BB_full_state_and_native_event_repeat",
+    "negative_sentinel_BH_full_state_and_event_equality",
+    "source_distinct_no_teacher_reference_not_equated_to_identical_sham",
+    "observed_versus_unobserved_full_state_parity",
+    "through_carrier_life_epoch_retention_proof_required_for_long_term_claim"
+  ],
+  "denominators": [
+    "all_native_directed_contacts_per_branch",
+    "matched_contact_pairs",
+    "unmatched_topology",
+    "equal_nontrace_context_pairs",
+    "confounded_precontext_pairs",
+    "trace_different_equal_context",
+    "mask_different_equal_context",
+    "effective_source_bit_mask_overlap_pairs",
+    "actual_after_latent_different_equal_context",
+    "complete_original_golden_controls"
+  ],
+  "cohort_constraints": {
+    "new_seed_ids": [],
+    "no_seed_qualification_or_execution": true,
+    "previously_outcome_exposed": [
+      544,
+      545
+    ],
+    "independent_seed_start": 1024,
+    "old_phase_h_reserved_inclusive": [
+      96,
+      159
+    ],
+    "future_cohort_disjointness_must_be_reviewed": true
+  },
+  "resource_caps": {
+    "max_wall_seconds_per_host": 900,
+    "max_rss_mib_per_host": 1536,
+    "max_selected_native_events_per_branch": 200000,
+    "max_raw_result_bytes": 131072
+  },
+  "immutability": {
+    "no_production_default_change": true,
+    "no_source_physics_patch": true,
+    "no_marker_or_workflow_change": true,
+    "no_seed_retry": true,
+    "no_parameter_sweep": true,
+    "original_D1_inert_preserved": true
+  },
+  "authorization": {
+    "can_run_actions": false,
+    "separate_future_owner_required": true,
+    "exact_source_code_and_validity_review_required": true,
+    "explicit_new_trial_scope_and_approval_required": true,
+    "real_native_run_performed_by_this_design": false
+  }
+}
