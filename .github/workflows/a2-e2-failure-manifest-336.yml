@@ -1,0 +1,31 @@
+name: A2 E2 failure manifest nonexecuting checks #336
+
+on:
+  pull_request:
+    paths:
+      - "research/a2_e2_failure_manifest_336.py"
+      - "tests/test_a2_e2_failure_manifest_336.py"
+      - ".github/workflows/a2-e2-failure-manifest-336.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  static_failure_metadata:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Source-only error archive tests; NO native physics
+        run: |
+          python -m compileall -q research/a2_e2_failure_manifest_336.py tests/test_a2_e2_failure_manifest_336.py
+          python -m unittest tests.test_a2_e2_failure_manifest_336 -v
