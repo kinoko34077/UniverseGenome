@@ -69,6 +69,7 @@ jobs:
           python - <<'PY'
           import json
           from pathlib import Path
+          from research.a2_e2_outcome_scoring_336 import classify_report
           path=Path("research/artifacts/a2_e2_336_original_exposed_544_545.json")
           outcome=json.loads(path.read_text(encoding="utf-8"))
           assert outcome["schema"]=="UG_A2_RESEARCH_ONLY_ROTATE_COPY_EXPOSED_PILOT_V1"
@@ -78,6 +79,17 @@ jobs:
           assert outcome["independent_confirmation"] is False
           assert outcome["learning_claim"] is False
           assert path.stat().st_size<=131073
+          classification=classify_report(outcome)
+          decision_path=Path("research/artifacts/a2_e2_336_classification.json")
+          decision_bytes=(json.dumps(classification,sort_keys=True,separators=(",",":"),allow_nan=False)+"\n").encode("utf-8")
+          if len(decision_bytes)>8192:
+              raise ValueError("E2 classification evidence exceeds 8KiB")
+          decision_path.write_bytes(decision_bytes)
+          if classification["validity"]!="CONTROLS_AND_MATCHED_CONTACT_COUNTS_VALID":
+              raise ValueError("NOT_EVALUABLE: invalid predeclared E2 controls or contact evidence")
+          assert classification["learning_claim"] is False
+          assert classification["independent_confirmation"] is False
+          print("A2_E2_PREDECLARED_CLASSIFICATION:",classification["classification"])
           print("A2_E2_RESULT_VALIDATED:", outcome["positive_native_paired_read_contrast"]["counts"])
           PY
       - name: Record bounded unsuccessful-run metadata (not a scientific outcome)
@@ -110,7 +122,9 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: a2-e2-336-original-exposed-failure
-          path: research/artifacts/a2_e2_336_failure.json
+          path: |
+            research/artifacts/a2_e2_336_failure.json
+            research/artifacts/a2_e2_336_classification.json
           if-no-files-found: error
           retention-days: 5
       - name: Retain authenticated short-lived raw evidence for Git review
@@ -118,6 +132,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: a2-e2-336-original-exposed-raw
-          path: research/artifacts/a2_e2_336_original_exposed_544_545.json
+          path: |
+            research/artifacts/a2_e2_336_original_exposed_544_545.json
+            research/artifacts/a2_e2_336_classification.json
           if-no-files-found: error
           retention-days: 5
