@@ -16,7 +16,7 @@ concurrency:
 jobs:
   genuine_exposed_native_research:
     # Never run on a PR, dispatch, schedule or unrelated source-only change.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1
     runs-on: ubuntu-24.04
     timeout-minutes: 17
     steps:
@@ -35,6 +35,10 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse --verify HEAD)" = "$EXACT_SOURCE_SHA"
           test "$(git diff --name-only HEAD^ HEAD)" = "research/approvals/a2_e2_336.run"
+          if git cat-file -e HEAD^:research/approvals/a2_e2_336.run 2>/dev/null; then
+            echo "E2 marker must be NEW, not a repeat modification" >&2
+            exit 1
+          fi
           git diff --quiet HEAD -- research/a2_locked_rotate_copy_pilot_336.py research/a2_e2_exposed_activation_336.py research/protocols/a2_e2_exposed_rotate_336.json research/a2_passive_native_recipient_observer_336.py
           python -m research.a2_e2_exposed_activation_336
           python -m unittest tests.test_a2_e2_roster_336 tests.test_a2_e2_marker_absent_336 tests.test_a2_e2_source_identity_336 -v
