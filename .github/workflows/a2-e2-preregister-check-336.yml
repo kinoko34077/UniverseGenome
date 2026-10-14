@@ -1,0 +1,41 @@
+name: A2 E2 exposed-only protocol and activation preflight #336
+
+on:
+  pull_request:
+    paths:
+      - "research/protocols/a2_e2_exposed_rotate_336.json"
+      - "research/a2_e2_exposed_activation_336.py"
+      - "research/a2_locked_rotate_copy_pilot_336.py"
+      - "tests/test_a2_e2_roster_336.py"
+      - "tests/test_a2_e2_marker_absent_336.py"
+      - "tests/test_a2_e2_source_identity_336.py"
+      - ".github/workflows/a2-e2-preregister-check-336.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  source_only_no_native_seed:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Source and activation manifest validation, NO native seed
+        run: |
+          python - <<'PY'
+          import sys
+          expected = "pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name == expected
+          print(sys.version)
+          PY
+          python -m compileall -q research/a2_e2_exposed_activation_336.py research/a2_locked_rotate_copy_pilot_336.py
+          python -m unittest tests.test_a2_e2_roster_336 tests.test_a2_e2_marker_absent_336 tests.test_a2_e2_source_identity_336 tests.test_a2_locked_rotate_copy_pilot_336 -v

@@ -30,6 +30,9 @@ from research.a2_passive_native_recipient_observer_336 import (
 from research.a2_protocol_preflight_334 import (
     MANIFEST, validate_nonexecuting_draft,
 )
+from research.a2_e2_exposed_activation_336 import (
+    verify_activated_exposed_only,
+)
 from research.phase_g_memory_search_159 import _load_protocol
 from research.r1_causal_isolation_172 import profile
 from research.r2_write_rules_175 import (
@@ -133,6 +136,21 @@ def run_candidate_branch(seed:int,role:str,frozen:dict,started:float,
                 check_budget(started)
     if len(checkpoints)!=len(HORIZONS):
         raise ValueError("missing full predeclared original post-h0 horizons")
+    # Independently run original native source from the SAME canonical h0,
+    # never attaching the passive recorder. Compare all complete snapshots.
+    unobserved=clone_state(initial,treatment)
+    reference_exp=IOExperiment(unobserved,experiment=_load_protocol())
+    reference_rule=LocalWriteRule("unit_add",original_indices)
+    control_hashes={"0":canonical_digest(unobserved.to_snapshot())}
+    with reference_rule.attach():
+        for horizon in range(1,1001):
+            reference_exp._advance(())
+            if horizon in HORIZONS[1:]:
+                control_hashes[str(horizon)]=canonical_digest(unobserved.to_snapshot())
+            if horizon%25==0:
+                check_budget(started)
+    if control_hashes!=checkpoints:
+        raise ValueError("INVALID_INSTRUMENTATION: authentic unobserved physical source diverged")
     check_budget(started)
     return {
         "seed":seed,"role":role,
@@ -143,13 +161,26 @@ def run_candidate_branch(seed:int,role:str,frozen:dict,started:float,
         "native_selected_event_sha256":source_event_digest(observer.events),
         "native_free_event_sha256":source_event_digest(observer.prior.free_events),
         "native_free_count":len(observer.prior.free_events),
+        "uninstrumented_full_state_parity":True,
+        "native_selected_examples_first_last":(
+            observer.events[:2]+observer.events[-2:] if observer.events else []
+        ),
         "_actual_native_events":observer.events,
     }
 
 
 def run_accepted_research_only(*, plan:dict, named_approval:bool,
-                               source_sha:str) -> dict[str,Any]:
-    execution_gate(plan=plan,named_approval=named_approval,source_sha=source_sha)
+                               source_sha:str,
+                               approved_e2:bool=False) -> dict[str,Any]:
+    if approved_e2:
+        if not named_approval:
+            raise PermissionError("E2 named original-exposed consent required")
+        # The old #334 manifest remains permanently HOLD. Only separate,
+        # source-reviewed protocol + activation marker can enable this path.
+        validate_nonexecuting_draft(plan)
+        verify_activated_exposed_only(exact_source_sha=source_sha)
+    else:
+        execution_gate(plan=plan,named_approval=named_approval,source_sha=source_sha)
     frozen=load_frozen()
     if frozen["digest"]!=R2_FROZEN_DIGEST:
         raise ValueError("original source R2 predeclared manifest changed")
@@ -216,6 +247,7 @@ def main() -> None:
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-sha",required=True)
     parser.add_argument("--execute",action="store_true")
+    parser.add_argument("--e2-exposed-only",action="store_true")
     parser.add_argument("--output",type=Path)
     args=parser.parse_args()
     plan=json.loads(MANIFEST.read_text(encoding="utf-8"))
@@ -225,6 +257,7 @@ def main() -> None:
         raise ValueError("explicit Git-archivable local output path required")
     value=run_accepted_research_only(
         plan=plan,named_approval=args.execute,source_sha=args.source_sha,
+        approved_e2=args.e2_exposed_only,
     )
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(value,sort_keys=True,separators=(",",":"))+"\n")
