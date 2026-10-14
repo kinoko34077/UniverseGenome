@@ -17,7 +17,7 @@ class OneActivationCommitOnly(TestCase):
         if MARKER.exists():
             self.assertEqual(
                 MARKER.read_bytes(),
-                b"A2-E2-336-EXPOSED-544-545-ROTATE4-ONCE\\n",
+                b"A2-E2-336-EXPOSED-544-545-ROTATE4-ONCE\n",
             )
 
     def test_no_dispatch_schedule_or_pr_experiment(self):
