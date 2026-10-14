@@ -10,8 +10,13 @@ import subprocess
 LOCK = Path(".github/a2-e2-reviewed-code-lock-336.json")
 ROOTS = ("core", "config", "persistence", "research", "search", "server")
 EXTENSIONS = (".py", ".json", ".yaml", ".yml", ".toml", ".js", ".ts")
-BASELINE = "131739a7e8d004c9f9153e80aa4bccb49ce242c6"
+ACTION_FILES = (
+    ".github/workflows/a2-e2-original-exposed-336.yml",
+    ".github/scripts/a2_e2_source_identity_336.py",
+)
+BASELINE = "c4464d8fba43b00ffe392ce95a370ee977ee17c7"
 REQUIRED = frozenset((
+    *ACTION_FILES,
     "research/a2_locked_rotate_copy_pilot_336.py",
     "research/a2_e2_exposed_activation_336.py",
     "research/a2_e2_failure_manifest_336.py",
@@ -27,7 +32,7 @@ REQUIRED = frozenset((
 def tracked_source_blobs(ref: str) -> dict[str, str]:
     """Derive blob SHA from the checked-out Git *tree*, never the working dir."""
     raw = subprocess.check_output(
-        ("git", "ls-tree", "-r", "-z", ref, "--", *ROOTS), timeout=15
+        ("git", "ls-tree", "-r", "-z", ref, "--", *ROOTS, *ACTION_FILES), timeout=15
     )
     result: dict[str, str] = {}
     for item in raw.split(b"\0"):
@@ -36,7 +41,9 @@ def tracked_source_blobs(ref: str) -> dict[str, str]:
         header, path_bytes = item.split(b"\t", 1)
         _, kind, sha = header.decode("ascii").split()
         path = path_bytes.decode("utf-8")
-        if kind != "blob" or not path.endswith(EXTENSIONS):
+        if (kind != "blob" or not path.endswith(EXTENSIONS)
+                or not (path.startswith(tuple(root + "/" for root in ROOTS))
+                        or path in ACTION_FILES)):
             continue
         if path in result:
             raise ValueError("duplicate source Git tree path")
@@ -74,6 +81,7 @@ def verify_locked_tree(ref: str) -> dict[str, object]:
             or manifest.get("owner_issue") != 336
             or manifest.get("baseline_commit") != BASELINE
             or manifest.get("source_roots") != list(ROOTS)
+            or manifest.get("source_actions") != list(ACTION_FILES)
             or manifest.get("file_extensions") != list(EXTENSIONS)
             or manifest.get("excluded_outcome_marker")
                 != "research/approvals/a2_e2_336.run"):
