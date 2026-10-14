@@ -1,7 +1,7 @@
 {
   "schema": "UG_A2_E2_REVIEWED_CODE_BLOB_LOCK_V1",
   "owner_issue": 336,
-  "baseline_commit": "d8e863f6b3e213163455c2ad0ebaa691371aa4a2",
+  "baseline_commit": "5faedcdf21c686fa2d4bee78a442c8e397f5a451",
   "source_roots": [
     "core",
     "config",
@@ -20,10 +20,10 @@
     ".ts"
   ],
   "excluded_outcome_marker": "research/approvals/a2_e2_336.run",
-  "comment": "136 immutable accepted scientific/config/Action/scorer Git blobs through PR345 main, plus preactivation full Git ancestry. Scorer integration into effectful report validation is a separate HOLD condition; source equality alone is not experiment approval.",
+  "comment": "136 reviewed Git blobs including executable E2 Action F5 post-outcome classifier, its attester, immutable physics/config and scorer. No marker, no original changed-physics study; lineage persistence unproven and source parity is not activation consent.",
   "blobs": {
-    ".github/scripts/a2_e2_source_identity_336.py": "a4e047ce8f3f15be2f7d2c402691f669b91334f6",
-    ".github/workflows/a2-e2-original-exposed-336.yml": "b9aaac5efe8c2ea935ba8144d0ae335c2187dd66",
+    ".github/scripts/a2_e2_source_identity_336.py": "9e7917d65b41308f545d312ebfeffa3da7c3a24c",
+    ".github/workflows/a2-e2-original-exposed-336.yml": "14a6b61f5f837410c6e26b34b51cad6c1020149f",
     "config/default.json": "fbac3c22d345280c846d6d26c83e46e96ba772ca",
     "config/experiment_e2e.json": "3d398cd16f0aa2dbff863c6b6cf16c4fb0f53427",
     "config/experiment_phase6_forgetting_relearning_smoke.json": "8dcdf6afbebc63a4fc55f246c294a747add74815",
