@@ -32,14 +32,16 @@ class PassiveNativeRecipientObserver:
         self._observed_contexts: dict[tuple[int,...],dict[str,Any]] = {}
         self.events: list[dict[str,Any]] = []
         self._attached = False
+        self._used = False
 
     @contextmanager
     def attach(self) -> Iterator["PassiveNativeRecipientObserver"]:
-        if self._attached or self.events or self._observed_contexts:
+        if self._attached or self._used:
             raise ValueError("E1a observer is single-use for one physical continuation")
         # Save REAL native mask function BEFORE installing any wrapper.
         native_mask = physics.transmission_mask
         self._attached = True
+        self._used = True
 
         def read_only_mask(seed, generation, address, pair, bond_strength,
                            participant=None, *, source_trace=None):
