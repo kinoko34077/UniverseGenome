@@ -19,6 +19,7 @@ class OneActivationCommitOnly(TestCase):
     def test_no_dispatch_schedule_or_pr_experiment(self):
         text=WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('branches: [main]',text)
+        self.assertIn('github.run_attempt == 1',text)
         self.assertIn('paths:',text)
         self.assertIn('"research/approvals/a2_e2_336.run"',text)
         self.assertNotIn('workflow_dispatch:',text)
@@ -27,6 +28,7 @@ class OneActivationCommitOnly(TestCase):
         self.assertIn('permissions:\n  contents: read',text)
         self.assertIn('persist-credentials: false',text)
         self.assertIn('git diff --name-only HEAD^ HEAD',text)
+        self.assertIn('git cat-file -e HEAD^:research/approvals/a2_e2_336.run',text)
         self.assertIn('test "$(git diff --name-only HEAD^ HEAD)" = "research/approvals/a2_e2_336.run"',text)
         self.assertIn('timeout --signal=TERM --kill-after=10s 900s',text)
         self.assertIn('--execute --e2-exposed-only',text)
