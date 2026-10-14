@@ -1,7 +1,7 @@
 {
   "schema": "UG_A2_E2_REVIEWED_CODE_BLOB_LOCK_V1",
   "owner_issue": 336,
-  "baseline_commit": "c4464d8fba43b00ffe392ce95a370ee977ee17c7",
+  "baseline_commit": "d8e863f6b3e213163455c2ad0ebaa691371aa4a2",
   "source_roots": [
     "core",
     "config",
@@ -20,9 +20,9 @@
     ".ts"
   ],
   "excluded_outcome_marker": "research/approvals/a2_e2_336.run",
-  "comment": "Immutable exact accepted scientific and runtime entrypoint source blobs. Future newly merged research code requires reviewed lock refresh before separately consented marker; neither the lock nor the runner executes physics.",
+  "comment": "136 immutable accepted scientific/config/Action/scorer Git blobs through PR345 main, plus preactivation full Git ancestry. Scorer integration into effectful report validation is a separate HOLD condition; source equality alone is not experiment approval.",
   "blobs": {
-    ".github/scripts/a2_e2_source_identity_336.py": "ee3035265ed2a7c6c06df97bfb75078fda47ef52",
+    ".github/scripts/a2_e2_source_identity_336.py": "a4e047ce8f3f15be2f7d2c402691f669b91334f6",
     ".github/workflows/a2-e2-original-exposed-336.yml": "b9aaac5efe8c2ea935ba8144d0ae335c2187dd66",
     "config/default.json": "fbac3c22d345280c846d6d26c83e46e96ba772ca",
     "config/experiment_e2e.json": "3d398cd16f0aa2dbff863c6b6cf16c4fb0f53427",
@@ -69,6 +69,7 @@
     "research/a19_exposed_operator_counterfactual_326.py": "88cabb6fdcb2cc12e6a330823f197f65e0fa3c83",
     "research/a2_e2_exposed_activation_336.py": "ffe52f3dc4389e1d214147176a73f5cda1b50798",
     "research/a2_e2_failure_manifest_336.py": "5fbfd2cabb449da7a15ac7d27d3bdc53ff20afc2",
+    "research/a2_e2_outcome_scoring_336.py": "5493840a6835ca6c8971bdf160675bb0a694e1a8",
     "research/a2_locked_rotate_copy_pilot_336.py": "d3e12ec43b4f0acb0147f2a229fd08402ccfe7e4",
     "research/a2_matched_recipient_contract_336.py": "5253059025f2c58f3e3800355d6a1153b876dce2",
     "research/a2_passive_native_recipient_observer_336.py": "030277d3cdb1d4c585fa8a3f03b215033a0b7f70",
