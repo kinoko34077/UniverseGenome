@@ -93,6 +93,7 @@ class OneActivationCommitOnly(TestCase):
         self.assertIn('permissions:\n  contents: read',text)
         self.assertIn('persist-credentials: false',text)
         self.assertIn('git diff --name-only HEAD^ HEAD',text)
+        self.assertIn('python .github/scripts/a2_e2_source_identity_336.py --ref HEAD^',text)
         self.assertIn('git cat-file -e HEAD^:research/approvals/a2_e2_336.run',text)
         self.assertIn('test "$(git diff --name-only HEAD^ HEAD)" = "research/approvals/a2_e2_336.run"',text)
         self.assertIn('timeout --signal=TERM --kill-after=10s 900s',text)
