@@ -98,7 +98,11 @@ class OneActivationCommitOnly(TestCase):
         self.assertIn('timeout --signal=TERM --kill-after=10s 900s',text)
         self.assertIn('--execute --e2-exposed-only',text)
         self.assertIn('retention-days: 5',text)
-        self.assertIn('actions/upload-artifact@v4',text)
+        self.assertIn('actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02',text)
+        for pin in ('actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683',
+                    'actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065',
+                    'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02'):
+            self.assertIn(pin,text)
         self.assertNotIn('contents: write',text)
         self.assertNotIn('git push',text)
         self.assertNotIn('GITHUB_TOKEN',text)
