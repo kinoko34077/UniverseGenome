@@ -88,6 +88,8 @@ def verify_source_locked_protocol(source:dict) -> dict:
         raise ValueError("E2 immutable resource/scoring bound expanded")
     d=source["decision"]
     if (d["valid_zero"]!="NEGATIVE_NO_MATCHED_RECIPIENT_EFFECT"
+        or d["valid_local_retention_unresolved"]!="LOCAL_RECEIVER_EFFECT_RETENTION_UNRESOLVED"
+        or d["long_term_retention_requires_life_epoch_carrier_evidence"] is not True
         or d["valid_transient"]!="TRANSIENT_PHYSICAL_EFFECT_NOT_L3"
         or d["valid_persistent"]!="OUTCOME_EXPOSED_RETENTION_CANDIDATE_NOT_INDEPENDENT_L3"
         or d["invalid"]!="NOT_EVALUABLE_NO_POSTHOC_SEED_REPLACEMENT"

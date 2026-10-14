@@ -1,7 +1,7 @@
 {
   "schema": "UG_A2_E2_REVIEWED_CODE_BLOB_LOCK_V1",
   "owner_issue": 336,
-  "baseline_commit": "5faedcdf21c686fa2d4bee78a442c8e397f5a451",
+  "baseline_commit": "3ffc3900c599be86af83565730553088d6f09580",
   "source_roots": [
     "core",
     "config",
@@ -20,9 +20,9 @@
     ".ts"
   ],
   "excluded_outcome_marker": "research/approvals/a2_e2_336.run",
-  "comment": "136 reviewed Git blobs including executable E2 Action F5 post-outcome classifier, its attester, immutable physics/config and scorer. No marker, no original changed-physics study; lineage persistence unproven and source parity is not activation consent.",
+  "comment": "136 reviewed scientific/config/Action/scorer Git blobs with pre-outcome explicit LOCAL_RECEIVER_EFFECT_RETENTION_UNRESOLVED category. No real physics executed and no marker; positive local effect cannot auto-establish long-term lineage or L3.",
   "blobs": {
-    ".github/scripts/a2_e2_source_identity_336.py": "9e7917d65b41308f545d312ebfeffa3da7c3a24c",
+    ".github/scripts/a2_e2_source_identity_336.py": "162fddc3edcf004724b1497332642ed844ca135f",
     ".github/workflows/a2-e2-original-exposed-336.yml": "14a6b61f5f837410c6e26b34b51cad6c1020149f",
     "config/default.json": "fbac3c22d345280c846d6d26c83e46e96ba772ca",
     "config/experiment_e2e.json": "3d398cd16f0aa2dbff863c6b6cf16c4fb0f53427",
@@ -67,7 +67,7 @@
     "research/a17_original_fusion_funnel_329.py": "29341c04718b584a4b936a5f33693ec76a4559e9",
     "research/a18_geometry_null_326.py": "718466153539118992c2347bfe77b5accc55df6e",
     "research/a19_exposed_operator_counterfactual_326.py": "88cabb6fdcb2cc12e6a330823f197f65e0fa3c83",
-    "research/a2_e2_exposed_activation_336.py": "ffe52f3dc4389e1d214147176a73f5cda1b50798",
+    "research/a2_e2_exposed_activation_336.py": "bb6a718d639a543a4ba4f6b612ed7f3de04e3a56",
     "research/a2_e2_failure_manifest_336.py": "5fbfd2cabb449da7a15ac7d27d3bdc53ff20afc2",
     "research/a2_e2_outcome_scoring_336.py": "5493840a6835ca6c8971bdf160675bb0a694e1a8",
     "research/a2_locked_rotate_copy_pilot_336.py": "d3e12ec43b4f0acb0147f2a229fd08402ccfe7e4",
@@ -139,7 +139,7 @@
     "research/outer_search_phase_f_acceptance.py": "913a00ebb55acdd186e16d22a47a848edbcc9cff",
     "research/phase_g_decay_axis_159.py": "5da00fde7d4156b6db768a6dfa6781834349bc05",
     "research/phase_g_memory_search_159.py": "b896ee5471f449e8be93ad8a1283f95766cef8d0",
-    "research/protocols/a2_e2_exposed_rotate_336.json": "3f27c304d5b638d14f0e49244f515675e9f5fbb7",
+    "research/protocols/a2_e2_exposed_rotate_336.json": "b3baf5858d2cf2b91001a2ca312a5c644cfd5c4e",
     "research/protocols/a2_rotate_copy_preflight_334.json": "af54d897cf53b74fc3d55bff4abd6266f30247f1",
     "research/r1_causal_analysis_172.py": "44f2a93dbde321be8983a5bb141073b03d536851",
     "research/r1_causal_isolation_172.py": "1f8a8f98d5a504805705fb61f38d3dc5c308c25a",
