@@ -85,7 +85,9 @@
     "valid_transient": "TRANSIENT_PHYSICAL_EFFECT_NOT_L3",
     "valid_persistent": "OUTCOME_EXPOSED_RETENTION_CANDIDATE_NOT_INDEPENDENT_L3",
     "invalid": "NOT_EVALUABLE_NO_POSTHOC_SEED_REPLACEMENT",
-    "independent_learning_claim_allowed": false
+    "independent_learning_claim_allowed": false,
+    "valid_local_retention_unresolved": "LOCAL_RECEIVER_EFFECT_RETENTION_UNRESOLVED",
+    "long_term_retention_requires_life_epoch_carrier_evidence": true
   },
   "publication": {
     "result_destination": "git-pr-to-kinoko34077/UniverseGenome/research/artifacts",
