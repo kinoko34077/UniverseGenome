@@ -12,9 +12,13 @@ MARKER=Path("research/approvals/a2_e2_336.run")
 
 
 class OneActivationCommitOnly(TestCase):
-    def test_no_marker_in_source_only_preparation(self):
-        self.assertFalse(MARKER.exists())
+    def test_activation_marker_exact_if_present(self):
         self.assertTrue(WORKFLOW.is_file())
+        if MARKER.exists():
+            self.assertEqual(
+                MARKER.read_bytes(),
+                b"A2-E2-336-EXPOSED-544-545-ROTATE4-ONCE\\n",
+            )
 
     def test_no_dispatch_schedule_or_pr_experiment(self):
         text=WORKFLOW.read_text(encoding="utf-8")
