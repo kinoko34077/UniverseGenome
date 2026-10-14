@@ -75,6 +75,19 @@ class OneActivationCommitOnly(TestCase):
         self.assertNotIn("continue-on-error:", workflow)
         self.assertNotIn("retry", workflow.lower())
 
+    def test_predeclared_f5_validity_is_runtime_gate_and_evidence(self):
+        workflow=WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("from research.a2_e2_outcome_scoring_336 import classify_report",workflow)
+        self.assertIn("classification=classify_report(outcome)",workflow)
+        self.assertIn('if classification["validity"]!="CONTROLS_AND_MATCHED_CONTACT_COUNTS_VALID":',workflow)
+        self.assertIn('raise ValueError("NOT_EVALUABLE:',workflow)
+        self.assertIn('assert classification["learning_claim"] is False',workflow)
+        self.assertIn('assert classification["independent_confirmation"] is False',workflow)
+        self.assertIn("a2_e2_336_classification.json",workflow)
+        self.assertIn("a2-e2-336-original-exposed-failure",workflow)
+        self.assertIn("a2-e2-336-original-exposed-raw",workflow)
+        self.assertNotIn("continue-on-error:",workflow)
+
     def test_no_dispatch_schedule_or_pr_experiment(self):
         text=WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('branches: [main]',text)
