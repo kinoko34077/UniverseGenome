@@ -96,7 +96,7 @@
   },
   "activation": {
     "marker_path": "research/approvals/a2_e2_336.run",
-    "marker_exact_text": "A2-E2-336-EXPOSED-544-545-ROTATE4-ONCE\\n",
+    "marker_exact_text": "A2-E2-336-EXPOSED-544-545-ROTATE4-ONCE\n",
     "separate_reviewed_marker_pr_required": true,
     "may_trigger_only_after_full_preflight_CI_and_formal_review": true,
     "actual_dispatched": false,
