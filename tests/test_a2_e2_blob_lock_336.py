@@ -65,7 +65,7 @@ class SourceBlobLockTests(unittest.TestCase):
         self.assertIn("research/a2_e2_outcome_scoring_336.py",GUARD.REQUIRED)
         self.assertIn("research/a2_e2_exposed_activation_336.py",GUARD.REQUIRED)
         self.assertIn("research/a2_locked_rotate_copy_pilot_336.py",GUARD.REQUIRED)
-        self.assertEqual(GUARD.BASELINE,"d8e863f6b3e213163455c2ad0ebaa691371aa4a2")
+        self.assertEqual(GUARD.BASELINE,"5faedcdf21c686fa2d4bee78a442c8e397f5a451")
 
 
 if __name__=="__main__":
