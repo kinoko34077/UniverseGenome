@@ -1,0 +1,112 @@
+{
+  "schema": "UG_R2_MASKED_XOR_PREREGISTRATION_DESIGN_V0_354",
+  "owner_issue": 354,
+  "parent_issue": 171,
+  "authority": "STANDING_USER_APPROVAL_FOR_IN_SCOPE_WORK; SCIENTIFIC_GATES_NOT_YET_ACCEPTED",
+  "state": "SOURCE_ONLY_DESIGN_NO_NATIVE_EXECUTION",
+  "source_main_sha": "c99e5e88a407bb72120c3ac766b6a6fdbca364a2",
+  "previous_exposed_owner": 336,
+  "candidate": {
+    "operator": "masked_xor",
+    "operator_delta_only_after_matched_h0": true,
+    "write_operator": "unit_add",
+    "single_candidate": true,
+    "selection": "SOURCE_SEMANTICS_NOT_OLD_EXPOSED_4_VS_8",
+    "production_config_unchanged": true
+  },
+  "role_bands_proposed_not_validated": {
+    "historical_exposed": {
+      "start": 0,
+      "end": 1023,
+      "post_h0_execution_allowed": false
+    },
+    "historical_phase_h_holdout": {
+      "start": 96,
+      "end": 159,
+      "post_h0_execution_allowed": false
+    },
+    "future_independent_reserve": {
+      "start": 1024,
+      "end": 2047,
+      "qualification_allowed_now": false
+    },
+    "future_exploratory_proposal": {
+      "start": 2048,
+      "end": 2559,
+      "qualification_allowed_now": false
+    },
+    "unassigned_from": 2560
+  },
+  "seed_freeze": {
+    "selected_seeds": [],
+    "cohort_collision_audit_complete": false,
+    "h0_qualification_executed": false,
+    "qualification_rule_frozen": false,
+    "stopping_rule_frozen": false,
+    "post_h0_seed_selection_forbidden": true
+  },
+  "native_witness": {
+    "unit": "authentic_source_selected_directed_contact",
+    "match_keys": [
+      "generation",
+      "physical_address",
+      "source_life_epoch",
+      "recipient_life_epoch",
+      "source_identity",
+      "recipient_identity"
+    ],
+    "context_exclusion": "mismatched_nontrace_precontact_or_topology",
+    "pairwise_effect_support_formula": "source_latent_before & (native_mask_B ^ native_mask_H)",
+    "required_counters": [
+      "native_selected_B",
+      "native_selected_H",
+      "matched_contacts",
+      "unmatched_contacts",
+      "confounded_precontact",
+      "comparable_precontact",
+      "source_trace_different",
+      "native_mask_different",
+      "mask_xor_source_support_nonzero",
+      "recipient_after_different",
+      "postcontact_lifetime_proved"
+    ],
+    "decision_order": [
+      "SOURCE_GOLDEN",
+      "SAME_TEACHER_REPEAT",
+      "NEGATIVE_SENTINEL",
+      "NO_TEACHER_REFERENCE",
+      "INSTRUMENTATION_PARITY",
+      "SOURCE_NATIVE_CONTACT_PROVENANCE",
+      "CONTACT_DENOMINATORS",
+      "ACTUAL_RECEIVER_DIFFERENCE",
+      "CARRIER_RETENTION"
+    ],
+    "invalid_if": "any_required_gate_fails_or_no_comparable_native_contact",
+    "classify_invalid_as": "NOT_EVALUABLE_NO_SEED_REPLACEMENT",
+    "negative_if": "valid_comparable_contacts_but_zero_actual_receiver_difference",
+    "positive_local_if": "actual_receiver_after_difference_at_equal_precontext_and_trace/mask_effect_support",
+    "long_term_retention_claim_allowed": false,
+    "independent_learning_claim_allowed": false
+  },
+  "limits": {
+    "wall_seconds_max": 900,
+    "rss_mib_max": 1536,
+    "events_per_branch_max": 200000,
+    "raw_bytes_max": 131072,
+    "no_retry": true
+  },
+  "authorization": {
+    "can_run_actions": false,
+    "can_create_marker": false,
+    "can_run_h0_qualification": false,
+    "can_consume_r3_or_phase_h": false,
+    "learning_claim": false
+  },
+  "next_source_only_requirements": [
+    "audit_all_prior_repo_seed_usage_for_band_collision",
+    "finalize_h0_only_rule_before_qualification",
+    "freeze_role_counts_and_stop_bounds",
+    "adapt_native_observer_for_masked_xor_with_real_witness_schema",
+    "frozen_hash_and_ordinary_ci_formal_review"
+  ]
+}
