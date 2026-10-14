@@ -10,7 +10,7 @@ from unittest import TestCase, mock
 
 from research.a2_locked_rotate_copy_pilot_336 import (
     SCHEMA, candidate_config, execution_gate,
-    run_accepted_research_only,
+    run_accepted_research_only, run_candidate_branch,
 )
 from research.a2_protocol_preflight_334 import MANIFEST
 
@@ -50,6 +50,14 @@ class SourceLockedResearchNoExecution(TestCase):
                         named_approval=consent,
                         source_sha=SHA,
                     )
+
+    def test_direct_branch_entry_denied_before_h0_or_any_native_work(self):
+        with mock.patch("research.a2_locked_rotate_copy_pilot_336.h0_branches",
+                        side_effect=AssertionError("original h0 must not be read")):
+            with self.assertRaises(PermissionError):
+                run_candidate_branch(544,"b",{},0.0)
+            with self.assertRaises(PermissionError):
+                run_candidate_branch(545,"h",{},0.0)
 
     def test_command_flag_alone_cannot_override_original_HOLD(self):
         for change in (
