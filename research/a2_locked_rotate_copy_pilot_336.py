@@ -164,7 +164,8 @@ def run_accepted_research_only(*, plan:dict, named_approval:bool,
     if b_sham!=data["544"]["b"]:
         raise ValueError("positive same-teacher B/B native sham non-deterministic")
     negative=data["545"]
-    if negative["b"]!=negative["h"]:
+    if ({k:v for k,v in negative["b"].items() if k!="role"}
+            !={k:v for k,v in negative["h"].items() if k!="role"}):
         raise ValueError("negative original h0-identical B/H treatment diverged")
     positive=compare_native_contact_witnesses(
         data["544"]["b"]["_actual_native_events"],
@@ -212,11 +213,11 @@ def main() -> None:
     plan=json.loads(MANIFEST.read_text(encoding="utf-8"))
     # Always deny when --execute omitted; current accepted manifest still
     # denies even when --execute is supplied. Never auto-launch from CI.
+    if args.output is None:
+        raise ValueError("explicit Git-archivable local output path required")
     value=run_accepted_research_only(
         plan=plan,named_approval=args.execute,source_sha=args.source_sha,
     )
-    if args.output is None:
-        raise ValueError("explicit Git-archivable local output path required")
     args.output.parent.mkdir(parents=True,exist_ok=True)
     args.output.write_text(json.dumps(value,sort_keys=True,separators=(",",":"))+"\n")
 
