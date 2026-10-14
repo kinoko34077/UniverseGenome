@@ -56,6 +56,25 @@ class OneActivationCommitOnly(TestCase):
             commit("marker reintroduction")
             self.assertEqual(counts(),(2,1))
 
+
+    def test_failure_metadata_wired_without_turning_failure_into_success(self):
+        workflow=WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("id: source_gate", workflow)
+        self.assertIn("id: native_physics", workflow)
+        self.assertIn("if: failure()", workflow)
+        self.assertIn("id: failure_metadata", workflow)
+        self.assertIn("research.a2_e2_failure_manifest_336", workflow)
+        self.assertIn("--stage \"$stage\" --reason \"$reason\"", workflow)
+        self.assertIn("--run-id \"$ORIGINAL_RUN_ID\" --attempt \"$ORIGINAL_RUN_ATTEMPT\"", workflow)
+        self.assertIn("reason=UNKNOWN", workflow)
+        self.assertIn("reason=VALIDATION_FAILED", workflow)
+        self.assertIn("if: failure() && steps.failure_metadata.outcome == 'success'", workflow)
+        self.assertIn("name: a2-e2-336-original-exposed-failure", workflow)
+        self.assertIn("if-no-files-found: error", workflow)
+        self.assertIn("if: success()", workflow)
+        self.assertNotIn("continue-on-error:", workflow)
+        self.assertNotIn("retry", workflow.lower())
+
     def test_no_dispatch_schedule_or_pr_experiment(self):
         text=WORKFLOW.read_text(encoding="utf-8")
         self.assertIn('branches: [main]',text)
