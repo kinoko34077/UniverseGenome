@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-          fetch-depth: 2
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -39,6 +39,13 @@ jobs:
             echo "E2 marker must be NEW, not a repeat modification" >&2
             exit 1
           fi
+          # First-use proof checks the complete ancestry, not only HEAD^:
+          # deletion/re-addition must never reactivate an already used marker.
+          marker_path="research/approvals/a2_e2_336.run"
+          additions="$(git log --full-history --format='%H' --diff-filter=A HEAD -- "$marker_path" | wc -l | tr -d '[:space:]')"
+          deletions="$(git log --full-history --format='%H' --diff-filter=D HEAD -- "$marker_path" | wc -l | tr -d '[:space:]')"
+          test "$additions" = "1"
+          test "$deletions" = "0"
           git diff --quiet HEAD -- research/a2_locked_rotate_copy_pilot_336.py research/a2_e2_exposed_activation_336.py research/protocols/a2_e2_exposed_rotate_336.json research/a2_passive_native_recipient_observer_336.py
           python -m research.a2_e2_exposed_activation_336
           python -m unittest tests.test_a2_e2_roster_336 tests.test_a2_e2_marker_absent_336 tests.test_a2_e2_source_identity_336 -v
