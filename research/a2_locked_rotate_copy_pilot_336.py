@@ -41,6 +41,9 @@ from research.transduction_audit_120 import canonical_digest, clone_state
 ISSUE = 336
 SCHEMA = "UG_A2_RESEARCH_ONLY_ROTATE_COPY_EXPOSED_PILOT_V1"
 MAX_REPORT = 128 * 1024
+# Internal sentinel: callers must first pass execution_gate; public branch
+# entry cannot accidentally start original seed physics from a plain import.
+_AUTHORIZED_ENTRY = object()
 
 
 def execution_gate(*, plan:dict, named_approval:bool, source_sha:str) -> None:
@@ -91,8 +94,11 @@ def original_h0(seed:int, role:str, frozen:dict) -> dict:
     return pair[role]
 
 
-def run_candidate_branch(seed:int,role:str,frozen:dict,started:float) -> dict[str,Any]:
-    """Only reachable after external execution_gate acceptance, NEVER in CI."""
+def run_candidate_branch(seed:int,role:str,frozen:dict,started:float,
+                         *, _approval_token:object|None=None) -> dict[str,Any]:
+    """Only the validated guarded run may initiate original seed physics."""
+    if _approval_token is not _AUTHORIZED_ENTRY:
+        raise PermissionError("A2 no direct original seed execution outside accepted entry")
     initial=original_h0(seed,role,frozen)
     _,treatment=candidate_config()
     state=clone_state(initial,treatment)  # Switch ONLY AFTER source-native h0.
@@ -159,8 +165,10 @@ def run_accepted_research_only(*, plan:dict, named_approval:bool,
     for seed,roles in ((544,("b","h","control")),(545,("b","h"))):
         data[str(seed)]={}
         for role in roles:
-            data[str(seed)][role]=run_candidate_branch(seed,role,frozen,started)
-    b_sham=run_candidate_branch(544,"b",frozen,started)
+            data[str(seed)][role]=run_candidate_branch(seed,role,frozen,started,
+                                                       _approval_token=_AUTHORIZED_ENTRY)
+    b_sham=run_candidate_branch(544,"b",frozen,started,
+                                _approval_token=_AUTHORIZED_ENTRY)
     if b_sham!=data["544"]["b"]:
         raise ValueError("positive same-teacher B/B native sham non-deterministic")
     negative=data["545"]
