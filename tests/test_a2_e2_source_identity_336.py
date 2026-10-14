@@ -17,7 +17,10 @@ class ExactCheckoutProof(TestCase):
             SimpleNamespace(stdout="f"*40+"\n",returncode=0),
             SimpleNamespace(stdout="",returncode=0),
         ])
-        with patch("research.a2_e2_exposed_activation_336.Path.is_file",return_value=True), \
+        with patch("research.a2_e2_exposed_activation_336.verify_source_locked_protocol",
+                   return_value={"marker_path":"research/approvals/a2_e2_336.run",
+                                 "marker_bytes":MARKER}), \
+             patch("research.a2_e2_exposed_activation_336.Path.is_file",return_value=True), \
              patch("research.a2_e2_exposed_activation_336.Path.read_bytes",return_value=MARKER), \
              patch("research.a2_e2_exposed_activation_336.subprocess.run",
                    side_effect=lambda *a,**kw: next(outputs)):
@@ -29,7 +32,10 @@ class ExactCheckoutProof(TestCase):
             SimpleNamespace(stdout=SOURCE+"\n",returncode=0),
             SimpleNamespace(stdout="",returncode=1),
         ])
-        with patch("research.a2_e2_exposed_activation_336.Path.is_file",return_value=True), \
+        with patch("research.a2_e2_exposed_activation_336.verify_source_locked_protocol",
+                   return_value={"marker_path":"research/approvals/a2_e2_336.run",
+                                 "marker_bytes":MARKER}), \
+             patch("research.a2_e2_exposed_activation_336.Path.is_file",return_value=True), \
              patch("research.a2_e2_exposed_activation_336.Path.read_bytes",return_value=MARKER), \
              patch("research.a2_e2_exposed_activation_336.subprocess.run",
                    side_effect=lambda *a,**kw: next(outputs)):
