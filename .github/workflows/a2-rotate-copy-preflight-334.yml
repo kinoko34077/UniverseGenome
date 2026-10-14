@@ -1,0 +1,40 @@
+name: A2 rotate_copy research-only protocol preflight #334
+
+on:
+  pull_request:
+    paths:
+      - "research/protocols/a2_rotate_copy_preflight_334.json"
+      - "research/a2_protocol_preflight_334.py"
+      - "tests/test_a2_protocol_preflight_334.py"
+      - "research/designs/a2_rotate_copy_preflight_334.md"
+      - ".github/workflows/a2-rotate-copy-preflight-334.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  nonexecuting_protocol_check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12", "pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Assert interpreter and only source/h0/seed/hold gates
+        run: |
+          python - <<'PY'
+          import sys
+          expected = "pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name == expected
+          print(sys.version)
+          PY
+          python -m compileall -q research/a2_protocol_preflight_334.py tests/test_a2_protocol_preflight_334.py
+          python -m unittest tests.test_a2_protocol_preflight_334 -v
+          python -m research.a2_protocol_preflight_334
