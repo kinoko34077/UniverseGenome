@@ -1,0 +1,74 @@
+name: A2 E2 one-time exposed 544/545 physics — reviewed marker only
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research/approvals/a2_e2_336.run"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: a2-e2-336-original-exposed-only
+  cancel-in-progress: false
+
+jobs:
+  genuine_exposed_native_research:
+    # Never run on a PR, dispatch, schedule or unrelated source-only change.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify reviewed one-file activation commit and exact source
+        shell: bash
+        env:
+          EXACT_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse --verify HEAD)" = "$EXACT_SOURCE_SHA"
+          test "$(git diff --name-only HEAD^ HEAD)" = "research/approvals/a2_e2_336.run"
+          git diff --quiet HEAD -- research/a2_locked_rotate_copy_pilot_336.py research/a2_e2_exposed_activation_336.py research/protocols/a2_e2_exposed_rotate_336.json research/a2_passive_native_recipient_observer_336.py
+          python -m research.a2_e2_exposed_activation_336
+          python -m unittest tests.test_a2_e2_roster_336 tests.test_a2_e2_marker_absent_336 tests.test_a2_e2_source_identity_336 -v
+      - name: Genuine source native original-exposed E2 only
+        shell: bash
+        env:
+          EXACT_SOURCE_SHA: ${{ github.sha }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p research/artifacts
+          timeout --signal=TERM --kill-after=10s 900s python -m research.a2_locked_rotate_copy_pilot_336 \
+            --source-sha "$EXACT_SOURCE_SHA" --execute --e2-exposed-only \
+            --output research/artifacts/a2_e2_336_original_exposed_544_545.json
+          sha256sum research/artifacts/a2_e2_336_original_exposed_544_545.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path("research/artifacts/a2_e2_336_original_exposed_544_545.json")
+          outcome=json.loads(path.read_text(encoding="utf-8"))
+          assert outcome["schema"]=="UG_A2_RESEARCH_ONLY_ROTATE_COPY_EXPOSED_PILOT_V1"
+          assert outcome["original_masked_copy_golden_parity"] is True
+          assert outcome["negative_BH_full_equality"] is True
+          assert outcome["positive_BB_sham_full_equality"] is True
+          assert outcome["independent_confirmation"] is False
+          assert outcome["learning_claim"] is False
+          assert path.stat().st_size<=131073
+          print("A2_E2_RESULT_VALIDATED:", outcome["positive_native_paired_read_contrast"]["counts"])
+          PY
+      - name: Retain authenticated short-lived raw evidence for Git review
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a2-e2-336-original-exposed-raw
+          path: research/artifacts/a2_e2_336_original_exposed_544_545.json
+          if-no-files-found: error
+          retention-days: 5
