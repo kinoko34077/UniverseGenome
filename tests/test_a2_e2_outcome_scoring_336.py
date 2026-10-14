@@ -18,6 +18,7 @@ def fake_record(seed,role):
         "native_selected_event_sha256":"b"*64,
         "native_free_event_sha256":"c"*64,
         "checkpoints":{h:"d"*64 for h in ("0","1","10","100","250","500","1000")},
+        "distribution":{"1000":{"active_cells":11,"distinct_latent_words":1}},
         "uninstrumented_full_state_parity":True,
     }
 
@@ -60,6 +61,8 @@ class PreOutcomeStaticScoringTests(unittest.TestCase):
         result=classify_report(synthetic_report())
         self.assertEqual(result["classification"],NEGATIVE)
         self.assertTrue(result["no_teacher_reference_used"])
+        self.assertEqual(result["no_teacher_context"]["final_distinct_latent_words"],1)
+        self.assertFalse(result["no_teacher_context"]["equality_is_causal_sham"])
         self.assertEqual(result["local_receiver_effect"],"NO_MATCHED_NATIVE_RECEIVER_DELTA")
         self.assertEqual(result["long_term_retention"],"NOT_ESTABLISHED")
         self.assertFalse(result["learning_claim"])
@@ -79,6 +82,14 @@ class PreOutcomeStaticScoringTests(unittest.TestCase):
         report=synthetic_report()
         report["data"]["544"]["control"]["original_h0_sha256"]="f"*64
         self.assertEqual(classify_report(report)["classification"],NEGATIVE)
+
+    def test_no_teacher_real_reference_is_required_and_noncausal(self):
+        report=synthetic_report()
+        report["data"]["544"]["control"]["distribution"]["1000"]["distinct_latent_words"]=12
+        self.assertEqual(classify_report(report)["classification"],INVALID)
+        report=synthetic_report()
+        del report["data"]["544"]["control"]["distribution"]
+        self.assertEqual(classify_report(report)["classification"],INVALID)
 
     def test_missing_source_distinct_control_is_not_evaluable(self):
         report=synthetic_report()
