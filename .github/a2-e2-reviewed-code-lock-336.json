@@ -1,7 +1,7 @@
 {
   "schema": "UG_A2_E2_REVIEWED_CODE_BLOB_LOCK_V1",
   "owner_issue": 336,
-  "baseline_commit": "131739a7e8d004c9f9153e80aa4bccb49ce242c6",
+  "baseline_commit": "c4464d8fba43b00ffe392ce95a370ee977ee17c7",
   "source_roots": [
     "core",
     "config",
@@ -20,8 +20,10 @@
     ".ts"
   ],
   "excluded_outcome_marker": "research/approvals/a2_e2_336.run",
-  "comment": "Immutable reference to source-only scientific and failure-handling inputs; no effectful run. A future code change invalidates this lock and requires re-review before activation.",
+  "comment": "Immutable exact accepted scientific and runtime entrypoint source blobs. Future newly merged research code requires reviewed lock refresh before separately consented marker; neither the lock nor the runner executes physics.",
   "blobs": {
+    ".github/scripts/a2_e2_source_identity_336.py": "ee3035265ed2a7c6c06df97bfb75078fda47ef52",
+    ".github/workflows/a2-e2-original-exposed-336.yml": "b9aaac5efe8c2ea935ba8144d0ae335c2187dd66",
     "config/default.json": "fbac3c22d345280c846d6d26c83e46e96ba772ca",
     "config/experiment_e2e.json": "3d398cd16f0aa2dbff863c6b6cf16c4fb0f53427",
     "config/experiment_phase6_forgetting_relearning_smoke.json": "8dcdf6afbebc63a4fc55f246c294a747add74815",
@@ -155,5 +157,9 @@
     "server/__init__.py": "395e0e6077b0e59015414208099ebd91a21564d0",
     "server/app.py": "a381eed01e0bfed3a2027b4b77af8969e5938682",
     "server/runtime.py": "ed9f13f78aa7e745ae12992fe9adece84630d3b6"
-  }
+  },
+  "source_actions": [
+    ".github/workflows/a2-e2-original-exposed-336.yml",
+    ".github/scripts/a2_e2_source_identity_336.py"
+  ]
 }
