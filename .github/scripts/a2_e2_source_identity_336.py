@@ -14,12 +14,13 @@ ACTION_FILES = (
     ".github/workflows/a2-e2-original-exposed-336.yml",
     ".github/scripts/a2_e2_source_identity_336.py",
 )
-BASELINE = "c4464d8fba43b00ffe392ce95a370ee977ee17c7"
+BASELINE = "d8e863f6b3e213163455c2ad0ebaa691371aa4a2"
 REQUIRED = frozenset((
     *ACTION_FILES,
     "research/a2_locked_rotate_copy_pilot_336.py",
     "research/a2_e2_exposed_activation_336.py",
     "research/a2_e2_failure_manifest_336.py",
+    "research/a2_e2_outcome_scoring_336.py",
     "research/a2_matched_recipient_contract_336.py",
     "research/a2_passive_native_recipient_observer_336.py",
     "research/a1_exposed_reader_pilot_317.py",
