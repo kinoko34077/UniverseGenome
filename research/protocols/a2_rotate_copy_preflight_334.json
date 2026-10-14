@@ -1,0 +1,146 @@
+{
+  "schema": "UG_A2_ROTATE_COPY_RESEARCH_ONLY_PREFLIGHT_DRAFT_V1",
+  "issue": 334,
+  "state": "DESIGN_ONLY_NOT_APPROVED_TO_RUN",
+  "frozen_source_read_baseline_main": "9c5db6b0012744c37b28cdf0509581d6f6ffe819",
+  "original_r2_physics_source": "af568ac1558f2f3f86e51341208f5b51557b7a39",
+  "original_r2_frozen_manifest_digest": "3087009065925887d9db770d3d9bc216db1ff2deba0bc730a2bbdf0a8d9ba543",
+  "original_exposed_case_action_run": 37950076024,
+  "candidate_selection_basis": "existing_local_rotated_masked_copy_semantics_without_natural_four_single_2x2_fusion_precondition_not_maximizing_exposed_8_vs_4",
+  "candidate": {
+    "source": "core.physics.PhysicsConfig",
+    "original_operator": "masked_copy",
+    "hypothetical_operator": "rotate_copy",
+    "rotate_amount": 4,
+    "only_permitted_post_h0_config_change": "latent_operator",
+    "all_other_fields": "exactly_equal_to_original_research_R2_profile",
+    "h0_setup": "original_masked_copy_only_prior_to_h0_same_original_teacher_scheduling",
+    "operator_activation": "clone_after_original_h0_only",
+    "production_default_change": false,
+    "source_code_change": false
+  },
+  "exposed_exploratory_only": {
+    "positive_seed": 544,
+    "negative_seed": 545,
+    "positive_qualification": "R2 h0 positive B66/H8",
+    "negative_qualification": "R2 h0 identical B66/H8",
+    "teacher_values": {
+      "b": 66,
+      "h": 8
+    },
+    "same_teacher_sham": [
+      "B_from_same_h0_clone_a",
+      "B_from_same_h0_clone_b"
+    ],
+    "control_no_teacher": "separate canonical original control h0; never require it to equal B/H h0",
+    "writer": "research_only_unit_add",
+    "trace_decay_rate": 256,
+    "h0_native_generation": 13,
+    "teacher_after_h0": false,
+    "physical_steps": 1000,
+    "checkpoints": [
+      0,
+      1,
+      10,
+      100,
+      250,
+      500,
+      1000
+    ],
+    "candidate_post_h0_old_baseline_checkpoint_parity_expected": false,
+    "baseline_original_masked_copy_golden_required": true,
+    "negative_BH_identical_required": true,
+    "identity_lifecycle_check": "source_recipient_life_epochs_and_not_reused_slot_id",
+    "source_native_reader_required": true
+  },
+  "gates": {
+    "before_experiment": [
+      "dedicated_new_research_issue_or_explicit_owner_approval",
+      "exact_executable_code_and_protocol_SHA_reviewed",
+      "host_runtime_source_frozen",
+      "all_h0_reference_sha_checked",
+      "proof_only_one_config_field_changes",
+      "negative_sham_and_same_teacher_control_handlers_verified",
+      "full_predeclared_metrics_and_interpretations",
+      "full_ordinary_CI_and_formal_review"
+    ],
+    "validity": [
+      "original_R2_manifest_digest_pass",
+      "original_h0_sources_match_original_R2",
+      "historical_baseline_masked_copy_all_six_golden_match",
+      "negative_545_BH_candidate_full_state_identical",
+      "positive_BB_sham_full_state_identical",
+      "candidate_same_host_deterministic_full_replay",
+      "source_native_real_step_and_real_selected_contact_only",
+      "no_global_production_or_orig_source_modification",
+      "per_host_rss_le_1536_mib",
+      "per_host_wall_le_900_s",
+      "compact_original_sha_and_Git_provenance_retained",
+      "no_saved_original_copy_mask_assumed_after_candidate_divergence"
+    ],
+    "primary_observation": "actual_physically_selected_teacher_specific_matched_recipient_16bit_after_copy_difference_with_source_and_recipient_life_epochs",
+    "secondary": [
+      "population_latent_alphabet_diversity_at_frozen_horizons",
+      "first_recipient_bit_divergence_under_exact_matched_contact",
+      "time_to_last_teacher_content_specific_divergence",
+      "carrier_free_turnover_and_legitimate_handoff",
+      "actual_sham_and_no_teacher_baselines",
+      "contact_mask_overlap_given_actual_source_word",
+      "negative_sentinel",
+      "runtime_rss_wall_per_host"
+    ],
+    "classify": {
+      "invalid": "NOT_EVALUABLE_stop_without_posthoc_seed_or_threshold_change",
+      "physical_delta_zero": "NEGATIVE_OR_CHANGE_PATH_no_legitimate_alternative_output",
+      "physical_delta_only_no_later_survival": "ALPHABET_OR_TRANSIENT_PHYSICAL_EFFECT_NOT_MEMORY",
+      "transient_or_persistent_exposed": "EXPLORATORY_ONLY_NO_INDEPENDENT_LEARNING_CLAIM",
+      "general_learning": "FORBIDDEN_WITHOUT_NEW_INDEPENDENT_R3_AND_L4_TO_L7_PREACCEPTANCE"
+    }
+  },
+  "bounds": {
+    "max_rss_mib": 1536,
+    "max_host_wall_seconds": 900,
+    "max_json_result_bytes": 131072,
+    "max_physical_steps_after_h0": 1000,
+    "seed_fallback": false,
+    "posthoc_tuning": false
+  },
+  "seed_partition": {
+    "historic_old_phaseH_reserved": [
+      96,
+      159
+    ],
+    "historic_R1_pool": [
+      160,
+      543
+    ],
+    "historic_R2_pool": [
+      544,
+      1023
+    ],
+    "exploratory_this_draft": [
+      544,
+      545
+    ],
+    "independent_R3_floor": 1024,
+    "independent_R3_seeds_to_be_selected_by_this_draft": [],
+    "heldout_consumed": false
+  },
+  "record_policy": {
+    "destination": "kinoko34077/UniverseGenome Git repository research/artifacts; never Google Drive",
+    "preserve": "exact_original_JSON_if_generated_plus_compact_manifest_roles_conditions_python_CPU_RSS_Snaphot_SHA_Action_ZIP_SHA",
+    "original_action_reference_required": true,
+    "original_Git_authored_source_sha_required": true
+  },
+  "execution_permission": {
+    "approval_state": "HOLD",
+    "can_run_actions": false,
+    "can_change_physics": false,
+    "can_change_defaults": false,
+    "can_consume_new_seed": false,
+    "can_consume_heldout": false,
+    "can_promote_R3": false,
+    "learning_claim": false
+  },
+  "decision_now": "SOURCE_ONLY_PREFLIGHT_DEVELOPMENT_THEN_HOLD_FOR_EXPLICIT_ACCEPTED_EXPERIMENT_PROTOCOL"
+}
