@@ -67,7 +67,8 @@ def compare_locked_sources(expected: dict[str, str],
         )
 
 
-def verify_source_lock(ref: str) -> dict[str, object]:
+def verify_locked_tree(ref: str) -> dict[str, object]:
+    """Verify exact source blob inventory; works on shallow CI checkouts."""
     manifest = json.loads(LOCK.read_text(encoding="utf-8"))
     if (manifest.get("schema") != "UG_A2_E2_REVIEWED_CODE_BLOB_LOCK_V1"
             or manifest.get("owner_issue") != 336
@@ -77,10 +78,6 @@ def verify_source_lock(ref: str) -> dict[str, object]:
             or manifest.get("excluded_outcome_marker")
                 != "research/approvals/a2_e2_336.run"):
         raise ValueError("source lock envelope is not the reviewed specification")
-    subprocess.run(
-        ("git", "merge-base", "--is-ancestor", BASELINE, ref),
-        check=True, timeout=10,
-    )
     actual = tracked_source_blobs(ref)
     compare_locked_sources(manifest["blobs"], actual)
     return {"status": "SOURCE_BLOB_LOCK_MATCH",
@@ -89,6 +86,16 @@ def verify_source_lock(ref: str) -> dict[str, object]:
             "ref": ref,
             "scientific_experiment_executed": False}
 
+
+
+def verify_source_lock(ref: str) -> dict[str, object]:
+    """Execution gate: inventory AND complete Git ancestry, fail closed."""
+    result = verify_locked_tree(ref)
+    subprocess.run(
+        ("git", "merge-base", "--is-ancestor", BASELINE, ref),
+        check=True, timeout=10,
+    )
+    return result
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
