@@ -4,6 +4,8 @@ This is static workflow inspection. It never triggers GitHub Actions, creates
 an original seed, imports the study runner or writes an activation marker.
 """
 from pathlib import Path
+from tempfile import TemporaryDirectory
+import subprocess
 from unittest import TestCase
 
 
@@ -19,6 +21,40 @@ class OneActivationCommitOnly(TestCase):
                 MARKER.read_bytes(),
                 b"A2-E2-336-EXPOSED-544-545-ROTATE4-ONCE\n",
             )
+
+
+    def test_real_git_first_add_then_delete_readd_is_not_one_shot(self):
+        # Exercise the actual Git-history predicate, not only YAML text.
+        with TemporaryDirectory() as work:
+            root=Path(work)
+            def git(*args):
+                return subprocess.run(
+                    ["git",*args],cwd=root,check=True,
+                    stdout=subprocess.PIPE,stderr=subprocess.PIPE,
+                    text=True,
+                ).stdout.strip()
+            git("init")
+            git("config","user.name","E2 Synthetic Test")
+            git("config","user.email","e2-test@example.invalid")
+            marker=root/"research"/"approvals"/"a2_e2_336.run"
+            marker.parent.mkdir(parents=True)
+            def commit(message):
+                git("add","--all")
+                git("commit","-m",message)
+            def counts():
+                path="research/approvals/a2_e2_336.run"
+                return tuple(len(git("log","--full-history","--format=%H",
+                    f"--diff-filter={kind}","HEAD","--",path).splitlines())
+                    for kind in ("A","D"))
+            marker.write_text("A2-E2-336-EXPOSED-544-545-ROTATE4-ONCE\\n")
+            commit("first marker introduction")
+            self.assertEqual(counts(),(1,0))
+            marker.unlink()
+            commit("marker removal")
+            self.assertEqual(counts(),(1,1))
+            marker.write_text("A2-E2-336-EXPOSED-544-545-ROTATE4-ONCE\\n")
+            commit("marker reintroduction")
+            self.assertEqual(counts(),(2,1))
 
     def test_no_dispatch_schedule_or_pr_experiment(self):
         text=WORKFLOW.read_text(encoding="utf-8")
