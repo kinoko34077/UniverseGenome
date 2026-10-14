@@ -1,0 +1,38 @@
+name: A2 passive actual native selected contact parity #336
+
+on:
+  pull_request:
+    paths:
+      - "research/a2_passive_native_recipient_observer_336.py"
+      - "tests/test_a2_passive_native_recipient_observer_336.py"
+      - "research/designs/a2_passive_native_recipient_observer_336.md"
+      - ".github/workflows/a2-passive-native-contact-336.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  true_native_step_synthetic_fidelity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.12","pypy3.11"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Interpreter and synthetic two-cell real step parity, no study seed
+        run: |
+          python - <<'PY'
+          import sys
+          expected="pypy" if "${{ matrix.python }}".startswith("pypy") else "cpython"
+          assert sys.implementation.name==expected
+          print(sys.version)
+          PY
+          python -m compileall -q research/a2_passive_native_recipient_observer_336.py tests/test_a2_passive_native_recipient_observer_336.py
+          python -m unittest tests.test_a2_matched_recipient_contract_336 tests.test_a2_passive_native_recipient_observer_336 -v
