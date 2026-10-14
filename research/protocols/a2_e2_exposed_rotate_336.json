@@ -1,0 +1,105 @@
+{
+  "schema": "UG_A2_E2_EXPOSED_ROTATE_NATIVE_PROTOCOL_V1",
+  "owner_issue": 336,
+  "design_provenance_issue": 334,
+  "status": "APPROVED_SCOPED_EXPOSED_ONLY_PENDING_CODE_REVIEW_AND_ACTIVATION",
+  "authorization": {
+    "source": "User message in project conversation on 2026-10-14 JST: そのまま進めていい, following specifically named E2 real pilot",
+    "consent_scope": "original already-exposed seed544/545 h0 B/H plus fixed B/B and no-teacher control, original native rotate_copy(4) after h0 for exactly 1000 generations",
+    "forbid_new_seed": true,
+    "forbid_holdout": true,
+    "forbid_production_default_change": true,
+    "forbid_candidate_sweep": true,
+    "learning_claim": false
+  },
+  "accepted_baseline_main_sha": "710b906d5fd5bf800912abcb5e282e5d0f13068b",
+  "original_R2_source_sha": "af568ac1558f2f3f86e51341208f5b51557b7a39",
+  "original_R2_manifest_digest": "3087009065925887d9db770d3d9bc216db1ff2deba0bc730a2bbdf0a8d9ba543",
+  "original_R2_run_id": 37950076024,
+  "cohorts": {
+    "positive_exposed_seed": 544,
+    "negative_exposed_seed": 545,
+    "roles": [
+      "b",
+      "h",
+      "control"
+    ],
+    "teacher_values": {
+      "b": 66,
+      "h": 8,
+      "control": null
+    },
+    "original_h0_generation": 13,
+    "historical_R2_seed_window": [
+      544,
+      1023
+    ],
+    "independent_R3_min_seed": 1024,
+    "old_phaseH_reserved": [
+      96,
+      159
+    ],
+    "new_qualification_seed_count": 0,
+    "new_heldout_consumed": false
+  },
+  "treatment": {
+    "original_h0_operator": "masked_copy",
+    "candidate_operator": "rotate_copy",
+    "candidate_rotate_amount": 4,
+    "only_field_changed_after_h0": "latent_operator",
+    "post_h0_teacher_events": 0,
+    "original_writer": "unit_add",
+    "trace_decay_rate": 256,
+    "steps_per_branch": 1000,
+    "snapshot_horizons": [
+      0,
+      1,
+      10,
+      100,
+      250,
+      500,
+      1000
+    ]
+  },
+  "comparison": {
+    "original_baseline_all_six_golden_required": true,
+    "positive_B_H_matching_requires_same_nontrace_physics": true,
+    "negative_545_B_H_full_equality_required": true,
+    "positive_544_B_B_full_equality_required": true,
+    "distinct_control_h0_not_misreported_as_identical_sham": true,
+    "instrumented_uninstrumented_full_state_required": true,
+    "deterministic_repeat_required": true,
+    "no_future_masks_reused_from_original": true,
+    "empty_contact_denominators_must_be_reported": true
+  },
+  "budget": {
+    "max_total_wall_seconds_per_host": 900,
+    "max_rss_mib": 1536,
+    "max_per_branch_native_events": 200000,
+    "max_report_bytes": 131072,
+    "no_seed_fallback": true,
+    "no_parameter_tuning_after_first_outcome": true
+  },
+  "decision": {
+    "valid_zero": "NEGATIVE_NO_MATCHED_RECIPIENT_EFFECT",
+    "valid_transient": "TRANSIENT_PHYSICAL_EFFECT_NOT_L3",
+    "valid_persistent": "OUTCOME_EXPOSED_RETENTION_CANDIDATE_NOT_INDEPENDENT_L3",
+    "invalid": "NOT_EVALUABLE_NO_POSTHOC_SEED_REPLACEMENT",
+    "independent_learning_claim_allowed": false
+  },
+  "publication": {
+    "result_destination": "git-pr-to-kinoko34077/UniverseGenome/research/artifacts",
+    "source_runtime_environment_sha_required": true,
+    "original_report_json_sha256_required": true,
+    "original_actions_artifact_sha256_required": true,
+    "do_not_upload_google_drive": true
+  },
+  "activation": {
+    "marker_path": "research/approvals/a2_e2_336.run",
+    "marker_exact_text": "A2-E2-336-EXPOSED-544-545-ROTATE4-ONCE\\n",
+    "separate_reviewed_marker_pr_required": true,
+    "may_trigger_only_after_full_preflight_CI_and_formal_review": true,
+    "actual_dispatched": false,
+    "user_approval_recorded": true
+  }
+}
