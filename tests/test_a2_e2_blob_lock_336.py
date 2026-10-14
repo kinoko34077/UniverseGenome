@@ -11,10 +11,16 @@ SPEC.loader.exec_module(GUARD)
 
 class SourceBlobLockTests(unittest.TestCase):
     def test_pr_effective_tree_is_frozen(self):
-        result=GUARD.verify_source_lock("HEAD")
+        result=GUARD.verify_locked_tree("HEAD")
         self.assertEqual(result["status"],"SOURCE_BLOB_LOCK_MATCH")
         self.assertGreaterEqual(result["locked_file_count"],125)
         self.assertFalse(result["scientific_experiment_executed"])
+
+    def test_effectful_entry_still_requires_verified_full_ancestry(self):
+        import inspect
+        gate=inspect.getsource(GUARD.verify_source_lock)
+        self.assertIn("verify_locked_tree(ref)",gate)
+        self.assertIn('"merge-base", "--is-ancestor"',gate)
 
     def test_changed_deleted_added_and_malformed_sources_fail(self):
         fixed={key:"a"*40 for key in GUARD.REQUIRED}
