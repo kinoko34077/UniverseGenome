@@ -7,6 +7,7 @@ protocol, authenticated named consent and exact Actions source commit.
 from __future__ import annotations
 import json
 from pathlib import Path
+import subprocess
 
 from research.a2_protocol_preflight_334 import (
     MANIFEST as ORIGINAL_DRAFT, validate_nonexecuting_draft,
@@ -114,6 +115,25 @@ def verify_activated_exposed_only(*, exact_source_sha:str) -> dict:
     activation=Path(d["marker_path"])
     if not activation.is_file() or activation.read_bytes()!=d["marker_bytes"]:
         raise PermissionError("E2 physical study has not passed separate marker PR")
+    # The user supplied SHA is NOT evidence by itself. Match the exact checked
+    # out commit; never let a plausible-looking hexadecimal label attest code.
+    try:
+        checked_out=subprocess.run(
+            ["git","rev-parse","--verify","HEAD"],
+            check=True,capture_output=True,text=True,timeout=5,
+        ).stdout.strip()
+        dirty=subprocess.run(
+            ["git","diff","--quiet","HEAD","--",
+             "research/a2_locked_rotate_copy_pilot_336.py",
+             "research/a2_e2_exposed_activation_336.py",
+             "research/protocols/a2_e2_exposed_rotate_336.json",
+             "research/a2_passive_native_recipient_observer_336.py"],
+            check=False,capture_output=True,text=True,timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise PermissionError("E2 git source identity unavailable") from exc
+    if checked_out != exact_source_sha or dirty.returncode != 0:
+        raise PermissionError("E2 exact checked-out Git source not attested")
     return {"status":"APPROVED_EXPOSED_ONLY_BY_GIT_ACTIVATION",
             "exact_source_sha":exact_source_sha,
             "original_h0_seed_roster":[544,545],
