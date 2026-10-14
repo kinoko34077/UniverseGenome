@@ -100,6 +100,13 @@ def classify_report(report: dict[str, Any]) -> dict[str, Any]:
     contrast = report.get("positive_native_paired_read_contrast")
     if not isinstance(contrast, dict) or contrast.get("schema") != CONTACT_SCHEMA:
         return _invalid("MISSING_NATIVE_MATCHED_WITNESS")
+    if (type(contrast.get("b_native_source_event_count")) is not int
+            or type(contrast.get("h_native_source_event_count")) is not int
+            or contrast["b_native_source_event_count"]
+                != data["544"]["b"]["native_selected_events"]
+            or contrast["h_native_source_event_count"]
+                != data["544"]["h"]["native_selected_events"]):
+        return _invalid("MATCHED_EVENT_PROVENANCE_MISMATCH")
     counts = contrast.get("counts")
     if (not isinstance(counts, dict) or
             any(type(counts.get(k)) is not int or counts[k] < 0 for k in COUNT_KEYS)):
@@ -110,6 +117,9 @@ def classify_report(report: dict[str, Any]) -> dict[str, Any]:
     mask = counts["mask_difference_with_equal_context"]
     receiver = counts["recipient_difference_with_equal_context"]
     triple = counts["trace_mask_recipient_difference_with_equal_context"]
+    if (contrast["b_native_source_event_count"] + contrast["h_native_source_event_count"]
+            != matched * 2 + counts["unmatched_topology"]):
+        return _invalid("MATCHED_EVENT_TOTAL_INCONSISTENT", counts)
     if (matched != same + counts["confounded_precontext"]
             or same < trace or trace < mask or receiver != triple
             or receiver > mask):
