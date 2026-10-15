@@ -35,7 +35,17 @@ class SourceOnlyRoutePreflight(unittest.TestCase):
         self.assertFalse(p["approval_to_run"])
         self.assertFalse(p["learning_claim"])
         self.assertEqual(p["used_new_seeds"],[])
-        self.assertFalse(Path("research/approvals/l3_route_e0_363.run").exists())
+        # Source CI lacks a marker; a later separately reviewed single-file
+        # activation PR may contain a source-locked marker. Both must be
+        # testable without executing a genuine physics experiment.
+        marker = Path("research/approvals/l3_route_e0_363.run")
+        if marker.exists():
+            self.assertRegex(
+                marker.read_text(),
+                r"\\AL3-ROUTE-E0-363-SOURCE-NATIVE-ONE-SHOT [0-9a-f]{40}\\n\\Z",
+            )
+        else:
+            self.assertFalse(marker.exists())
         with self.assertRaises(PermissionError):
             exact_marker_gate("0"*40)
 
