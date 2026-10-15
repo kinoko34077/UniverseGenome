@@ -5,7 +5,7 @@
 ## Preserved original evidence
 
 - **True original report JSON**: [`l3_xor358_original_544_545_run38667491457.json.base64`](l3_xor358_original_544_545_run38667491457.json.base64), raw original 20,992 bytes, authenticated stdout `sha256:f9ff71a0ef14c75fc37f021d29e983efbb1cb4e3b2d7eed6451403462907999f`. The Base64 is copied unmodified from the original job's `L3_XOR358_RAW_B64_BEGIN/END` sentinels, without reserializing JSON.
-- **Original predeclared classification JSON**: [`l3_xor358_classification_run38667491457.json.base64`](l3_xor358_classification_run38667491457.json.base64), raw 486 bytes, copied unmodified from `L3_XOR358_CLASS_B64_BEGIN/END`.
+- **Original predeclared classification JSON**: [`l3_xor358_classification_run38667491457.json.base64`](l3_xor358_classification_run38667491457.json.base64), raw 486 bytes, independently verified `sha256:15ebb54a08d1307bca81c4fce0496803140a6a901447c060c163d4cdec4d3a01`, copied unmodified from `L3_XOR358_CLASS_B64_BEGIN/END`.
 - Original Actions ZIP artifact ID `11943255896`, 3,819 bytes, provider-reported digest `sha256:8fc178a7aca1cad065b98146c3dd2e239e8f0d3a81850898f72f5967ff8457c8`, expires 2026-10-20. The original log-preserved report remains recoverable from Git after expiry.
 - To verify: `base64 --decode research/artifacts/l3_xor358_original_544_545_run38667491457.json.base64 | sha256sum`; compare with the stdout digest above. Classification similarly decodes to original JSON. Original control and source SHA are inside the byte-preserved report.
 
