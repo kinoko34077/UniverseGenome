@@ -70,7 +70,7 @@ class MaskedXorNativeActualSourceParity(unittest.TestCase):
         with bp.attach():
             physics.step(b)
         report=classify_purported_native_contacts(ap.events,bp.events)
-        self.assertEqual(report["counts"]["matched_selected_contacts"],2)
+        self.assertEqual(report["counts"]["matched_contacts"],2)
         self.assertEqual(report["counts"]["confounded_precontext"],0)
         self.assertEqual(report["counts"]["source_trace_different"],1)
         self.assertEqual(report["counts"]["native_mask_different"],1)
