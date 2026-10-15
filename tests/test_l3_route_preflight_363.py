@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 from tests.l3_native_route_pilot_363 import (
     exact_marker_gate, original_report, trace_carrier_slots,
@@ -46,8 +48,19 @@ class SourceOnlyRoutePreflight(unittest.TestCase):
             )
         else:
             self.assertFalse(marker.exists())
-        with self.assertRaises(PermissionError):
-            exact_marker_gate("0"*40)
+        # Keep the negative PR gate test independent from CI's own event.
+        # A later legitimate main marker push may have a shallow checkout,
+        # but a pull_request must reject before reading any Git history.
+        with patch.dict(os.environ, {
+            "GITHUB_EVENT_NAME": "pull_request",
+            "GITHUB_REF": "refs/pull/1/merge",
+            "GITHUB_RUN_ATTEMPT": "1",
+        }):
+            with patch("subprocess.run", side_effect=AssertionError(
+                "PR gate must reject before inspecting Git history"
+            )):
+                with self.assertRaises(PermissionError):
+                    exact_marker_gate("0"*40)
 
     def test_trace_carrier_pair_extraction_exact_initial_h0_only(self):
         b={"arrays":{"slow_trace":[0,1,10,5]}}
