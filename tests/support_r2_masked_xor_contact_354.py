@@ -45,7 +45,9 @@ def _native_key(event: dict[str, Any]) -> tuple[int, ...]:
     if (type(event["trace_bonus_shift"]) is not int
             or not 0 <= event["trace_bonus_shift"] <= 8):
         raise ValueError("invalid trace width-shift")
-    if event["native_operator"] != OPERATOR or event["rotate_amount"] != 0:
+    if (event["native_operator"] != OPERATOR
+            or type(event["rotate_amount"]) is not int
+            or event["rotate_amount"] != 4):
         raise ValueError("wrong physical operator/rotate amount")
     width = min(16, 1 + (event["source_bond_strength"] >> 4)
                 + (event["source_trace_start"] >> event["trace_bonus_shift"]))
@@ -56,7 +58,7 @@ def _native_key(event: dict[str, Any]) -> tuple[int, ...]:
         event["source_latent_before"],
         event["recipient_latent_before"],
         event["native_mask"],
-        rotate_amount=0,
+        rotate_amount=4,
     )
     if event["recipient_latent_after"] != expected:
         raise ValueError("recipient-after contradicts native masked_xor semantics")
