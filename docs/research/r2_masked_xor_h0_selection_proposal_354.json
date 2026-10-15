@@ -1,0 +1,67 @@
+{
+  "schema": "UG_R2_MASKED_XOR_H0_ROLE_SELECTION_PROPOSAL_V0_354",
+  "status": "SOURCE_ONLY_PROPOSAL_UNREVIEWED_ROSTER_AND_POOL",
+  "owner_issue": 354,
+  "source_main_after_pr355": "783820ce4ab3f19996712e6cc6d86f3ca85b2462",
+  "native_intervention": "masked_xor",
+  "original_physics_h0_operator": "masked_copy",
+  "teacher_values": [
+    66,
+    8
+  ],
+  "only_h0_input_allowed": true,
+  "max_qualification_horizon": 0,
+  "candidate_exploratory_pool_provisional": {
+    "start_inclusive": 2048,
+    "end_inclusive": 2559
+  },
+  "independent_future_pool_reserved": {
+    "start_inclusive": 1024,
+    "end_inclusive": 2047,
+    "never_scan_for_candidate_selection": true
+  },
+  "all_previous_outcome_exposure_excluded_end_inclusive": 1023,
+  "legacy_phase_h_reserved_inclusive": [
+    96,
+    159
+  ],
+  "proposed_quota": {
+    "positives": 16,
+    "negative_sentinels": 8
+  },
+  "h0_flags": {
+    "positive": "B_vs_H_slow_trace_diff AND B_vs_H_full_state_diff",
+    "negative": "NOT B_vs_H_slow_trace_diff AND B_vs_H_full_state_equal",
+    "indeterminate": "all other patterns; do not treat as sentinel"
+  },
+  "fixed_sampling": "ascending numeric seed in explicitly preallocated exploratory pool only; stop at first point where both quotas filled; record every inspected h0 whether selected or excluded",
+  "if_quota_short": "NOT_EVALUABLE_NO_POSTHOC_SEED_REPLACEMENT",
+  "if_dirty_or_unbounded": "NOT_EVALUABLE_NO_POSTHOC_SEED_REPLACEMENT",
+  "required_h0_provenance": [
+    "source_commit",
+    "engine_digest",
+    "physics_config_digest",
+    "experiment_protocol_digest",
+    "teacher_B_H",
+    "each_B_H_control_h0_digest",
+    "full_state_BH_equality",
+    "slow_trace_BH_equality",
+    "same_teacher_h0_repeat"
+  ],
+  "role_selection_requires": [
+    "repo_wide_seed_collision_audit",
+    "source_sha_and_config_frozen",
+    "qualification_rule_and_stop_bound_accepted",
+    "eligibility_scan_authorized"
+  ],
+  "study_sampling_class": "exploratory_h0_only; not independent R3/L3 acceptance",
+  "scientific_effect_result_not_inferable": true,
+  "experimental_runs_performed_here": 0,
+  "new_h0_examined": 0,
+  "selected_seed_ids": [],
+  "approved_to_qualify": false,
+  "approved_to_run_native_posth0": false,
+  "source_native_action_or_marker_change": false,
+  "production_default_change": false,
+  "learning_claim": false
+}
