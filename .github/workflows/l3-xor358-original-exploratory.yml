@@ -96,6 +96,17 @@ jobs:
           print("L3_XOR358_CLASSIFICATION:",label)
           print("L3_XOR358_NATIVE_COUNTS:",counts)
           PY
+          # Durable recovery path independent of short-lived Actions artifacts:
+          # source-native raw JSON and decision are emitted byte-exact in log
+          # for later Git archival with SHA256 verification (no secrets).
+          echo "L3_XOR358_RAW_B64_BEGIN"
+          base64 -w0 research/artifacts/l3_xor_exposed_358_original_544_545.json
+          echo
+          echo "L3_XOR358_RAW_B64_END"
+          echo "L3_XOR358_CLASS_B64_BEGIN"
+          base64 -w0 research/artifacts/l3_xor_exposed_358_classification.json
+          echo
+          echo "L3_XOR358_CLASS_B64_END"
       - name: Preserve bounded study outputs for review and Git archival
         if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
