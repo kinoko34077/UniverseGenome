@@ -1,0 +1,97 @@
+{
+  "schema": "UG_L3_XOR358_EXPOSED_EXPLORATORY_V1",
+  "owner_issue": 358,
+  "parent_plan_issue": 171,
+  "design_issue": 354,
+  "status": "FROZEN_DESIGN_SOURCE_REVIEW_PENDING_SEPARATE_MARKER",
+  "old_authentic_e2_owner": 336,
+  "scientific_goal": "actual recipient-after B/H latent difference at matched equal-nontrace genuine selected directed native contact",
+  "claim_scope": "EXPLORATORY_EXPOSED_NOT_INDEPENDENT",
+  "fixed_roster": {
+    "positive": 544,
+    "negative": 545,
+    "teacher_b": 66,
+    "teacher_h": 8
+  },
+  "h0": {
+    "source": "research.r2_write_rules_175.h0_branches",
+    "manifest": "research/artifacts/r2_frozen_175.json",
+    "require_original_immutable_digest": true,
+    "initial_operator": "masked_copy",
+    "generation": 13
+  },
+  "treatment": {
+    "writer": "unit_add",
+    "trace_decay_rate": 256,
+    "latent_operator": "masked_xor",
+    "unchanged_rotate_amount": 4,
+    "only_changed_config_field": "latent_operator",
+    "steps_after_h0": 1000,
+    "post_h0_external_teacher_events": 0,
+    "checkpoints": [
+      0,
+      1,
+      10,
+      100,
+      250,
+      500,
+      1000
+    ]
+  },
+  "branches": {
+    "544": [
+      "b",
+      "h",
+      "control",
+      "b_repeat"
+    ],
+    "545": [
+      "b",
+      "h"
+    ]
+  },
+  "controls": [
+    "old_masked_copy_six_golden",
+    "same_teacher_BB_full_determinism",
+    "negative_545_BH_full_equality",
+    "positive_544_no_teacher_source_distinct",
+    "each_branch_instrumented_uninstrumented_full_state",
+    "source_native_mask_selected_twice_directed",
+    "matched_equal_nontrace_context_only"
+  ],
+  "decision": {
+    "invalid": "NOT_EVALUABLE_SOURCE_OR_CONTROL_FAILURE",
+    "zero_denominator": "NOT_EVALUABLE_NO_COMPARABLE_NATIVE_CONTACTS",
+    "valid_zero": "NEGATIVE_NO_MATCHED_RECIPIENT_EFFECT",
+    "valid_nonzero": "LOCAL_RECEIVER_EFFECT_RETENTION_UNRESOLVED",
+    "independent_acceptance": false,
+    "long_term_retention": false,
+    "learning_claim": false
+  },
+  "limits": {
+    "host_wall_seconds": 900,
+    "host_max_rss_mib": 1536,
+    "max_native_directed_events_per_branch": 200000,
+    "max_report_bytes": 131072,
+    "no_retry": true
+  },
+  "activation": {
+    "marker": "research/approvals/l3_xor_exposed_358.run",
+    "marker_prefix": "L3-XOR-358-EXPOSED-544-545-SINGLEFACTOR4-ONCE ",
+    "requires_accepted_reviewed_code_base_sha": true,
+    "only_push_marker_on_main": true,
+    "github_run_attempt_must_equal_one": true,
+    "source_locked_review_pr_first": true
+  },
+  "reserved": {
+    "old_phase_h": [
+      96,
+      159
+    ],
+    "independent_future_floor": 1024,
+    "heldout_consumed": false,
+    "new_seed_ids": []
+  },
+  "new_h0_screened": 0,
+  "actual_science_run_performed": false
+}
