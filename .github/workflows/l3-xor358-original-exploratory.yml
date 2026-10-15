@@ -1,0 +1,108 @@
+name: L3 XOR358 single-source exploratory native physics — one reviewed marker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research/approvals/l3_xor_exposed_358.run"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: l3-xor358-exposed-once
+  cancel-in-progress: false
+
+jobs:
+  bounded_exploratory_native_physics:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Source-locked original frozen E2 and new one-factor static identity
+        shell: bash
+        env:
+          ORIGINAL_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$ORIGINAL_SHA"
+          test "$(git diff --name-only HEAD^ HEAD)" = "research/approvals/l3_xor_exposed_358.run"
+          test "$(git log --full-history --format=%H --diff-filter=A HEAD -- research/approvals/l3_xor_exposed_358.run | wc -l)" -eq 1
+          test "$(git log --full-history --format=%H --diff-filter=M HEAD -- research/approvals/l3_xor_exposed_358.run | wc -l)" -eq 0
+          test "$(git log --full-history --format=%H --diff-filter=D HEAD -- research/approvals/l3_xor_exposed_358.run | wc -l)" -eq 0
+          python .github/scripts/a2_e2_source_identity_336.py --ref HEAD^
+          python -m unittest tests.test_l3_xor_native_source_358 tests.test_r2_masked_xor_contact_354 -v
+      - name: Genuine 544/545 original source-native masked_xor treatment only
+        id: science
+        shell: bash
+        env:
+          EXACT_SOURCE_SHA: ${{ github.sha }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p research/artifacts
+          timeout --signal=TERM --kill-after=10s 900s python -m tests.l3_xor_exposed_pilot_358 \
+            --source-sha "$EXACT_SOURCE_SHA" --execute \
+            --output research/artifacts/l3_xor_exposed_358_original_544_545.json
+          sha256sum research/artifacts/l3_xor_exposed_358_original_544_545.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          file=Path("research/artifacts/l3_xor_exposed_358_original_544_545.json")
+          report=json.loads(file.read_text(encoding="utf-8"))
+          assert report["schema"]=="UG_L3_MASKED_XOR358_AUTHENTIC_EXPOSED_PILOT_V1"
+          assert report["old_original_R2_manifest_digest"]=="3087009065925887d9db770d3d9bc216db1ff2deba0bc730a2bbdf0a8d9ba543"
+          assert report["original_masked_copy_golden_parity"]
+          assert report["negative_BH_full_equality"]
+          assert report["positive_BB_sham_full_equality"]
+          assert report["native_observer_attached_and_full_state_parity"]
+          assert report["conditions"]["treatment_operator"]=="masked_xor"
+          assert report["conditions"]["rotate_amount"]==4
+          assert report["independent_confirmation"] is False
+          assert report["learning_claim"] is False
+          assert file.stat().st_size <= 131072
+          witness=report["positive_native_paired_read_contrast"]
+          label=witness["classification"]
+          counts=witness["counts"]
+          assert label in {
+              "NOT_EVALUABLE_NO_SEED_REPLACEMENT",
+              "NEGATIVE_NO_MATCHED_RECIPIENT_EFFECT",
+              "LOCAL_RECEIVER_EFFECT_RETENTION_UNRESOLVED",
+          }
+          if counts["comparable_precontact"] == 0:
+              assert label=="NOT_EVALUABLE_NO_SEED_REPLACEMENT"
+          elif counts["recipient_after_different"] == 0:
+              assert label=="NEGATIVE_NO_MATCHED_RECIPIENT_EFFECT"
+          else:
+              assert label=="LOCAL_RECEIVER_EFFECT_RETENTION_UNRESOLVED"
+          result={
+              "schema":"UG_L3_XOR358_PREDECLARED_CLASSIFICATION_V1",
+              "validity":"CONTROLS_VALID_NATIVE_MATCHED_OBSERVER",
+              "classification":label,
+              "counts":counts,
+              "independent_confirmation":False,
+              "long_term_retention_proven":False,
+              "learning_claim":False,
+          }
+          decision=Path("research/artifacts/l3_xor_exposed_358_classification.json")
+          decision.write_text(json.dumps(result,sort_keys=True,separators=(",",":"))+"\n")
+          print("L3_XOR358_CLASSIFICATION:",label)
+          print("L3_XOR358_NATIVE_COUNTS:",counts)
+          PY
+      - name: Preserve bounded study outputs for review and Git archival
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: l3-xor358-authentic-exposed-one-shot-evidence
+          path: |
+            research/artifacts/l3_xor_exposed_358_original_544_545.json
+            research/artifacts/l3_xor_exposed_358_classification.json
+          if-no-files-found: error
+          retention-days: 5
