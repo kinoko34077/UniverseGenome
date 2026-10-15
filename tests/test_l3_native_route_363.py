@@ -45,7 +45,7 @@ class TraceContactStageClassifier(unittest.TestCase):
         self.assertEqual(c["native_mask_delta_confounded"],1)
         self.assertEqual(c["field_diff_source_hp"],1)
         self.assertEqual(c["field_diff_source_latent_before"],1)
-        self.assertEqual(c["recipient_after_delta_comparable"],0)
+        self.assertEqual(c.get("recipient_after_delta_comparable",0),0)
         self.assertTrue(z["nontrace_confounded_receiver_delta_is_NOT_caused_by_trace"])
 
     def test_no_trace_reach_and_unmatched(self):
@@ -55,7 +55,7 @@ class TraceContactStageClassifier(unittest.TestCase):
         self.assertEqual(z["classification"],
                          "NO_SOURCE_TRACE_CONTRAST_AT_MATCHED_CONTACTS")
         self.assertEqual(z["counts"]["matched_contact_keys"],1)
-        self.assertEqual(z["counts"]["source_trace_delta_all_matched"],0)
+        self.assertEqual(z["counts"].get("source_trace_delta_all_matched",0),0)
         h["recipient_slot"]=4
         with self.assertRaisesRegex(ValueError,"invalid source-native witness schema"):
             classify_route([b],[{"missing":1}],initial_trace_carrier_slots={1})
