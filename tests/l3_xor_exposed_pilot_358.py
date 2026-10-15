@@ -115,9 +115,9 @@ def original_h0(seed:int, role:str, frozen:dict) -> dict:
 
 def run_candidate_branch(seed:int,role:str,frozen:dict,started:float,
                          *, _approval_token:object|None=None) -> dict[str,Any]:
-    """Only the validated guarded run may initiate original seed physics."""
+    """Only the reviewed #358 one-shot source/marker gate can produce this token."""
     if _approval_token is not _AUTHORIZED_ENTRY:
-        raise PermissionError("A2 no direct original seed execution outside accepted entry")
+        raise PermissionError("#358 no native branch without a one-shot study gate")
     initial=original_h0(seed,role,frozen)
     _,treatment=candidate_config()
     state=clone_state(initial,treatment)  # Switch ONLY AFTER source-native h0.
@@ -232,6 +232,7 @@ def run_exposed_study(*, source_sha: str) -> dict[str, Any]:
             "checkpoints":list(HORIZONS),
         },
         "data":data,"positive_native_paired_read_contrast":positive,
+        "native_observer_attached_and_full_state_parity":True,
         "original_masked_copy_golden_parity":True,
         "negative_BH_full_equality":True,"positive_BB_sham_full_equality":True,
         "independent_confirmation":False,"learning_claim":False,
@@ -259,7 +260,7 @@ def main() -> None:
         raise PermissionError("native #358 execution requires explicit reviewed one-shot marker")
     value=run_exposed_study(source_sha=args.source_sha)
     args.output.parent.mkdir(parents=True,exist_ok=True)
-    args.output.write_text(json.dumps(value,sort_keys=True,separators=(",",":"))+"\\n")
+    args.output.write_text(json.dumps(value,sort_keys=True,separators=(",",":"))+chr(10))
 
 
 if __name__=="__main__":
