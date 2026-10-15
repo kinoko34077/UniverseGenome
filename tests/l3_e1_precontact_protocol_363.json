@@ -1,0 +1,85 @@
+{
+  "schema": "UG_L3_363_E1_ORIGINAL_SELECTED_PRECONTACT_SOURCE_ONLY_V1",
+  "owner_issue": 363,
+  "parent_issue": 171,
+  "status": "SOURCE_ONLY_PREDECLARATION_NO_NEW_PHYSICS_AUTHORIZATION",
+  "science_question": "Does a source slow_trace-only difference alter the actual native selected mask and receiver word under exactly the same authentic B-branch nontrace precontact state?",
+  "science_scope": "EXPLORATORY_EXPOSED_544_NATIVE_LOCAL_CAUSAL_INTERVENTION_NOT_INDEPENDENT_NOT_LEARNING",
+  "frozen_provenance": {
+    "original_E0_action": 38788978495,
+    "archived_raw_sha256": "08b1368a74729dfa5bee6da29069a7d757cc053fd5de493777e701196aa1368d",
+    "original_E0_archive": "research/artifacts/l3_route_e0_363_original_544_545_run38788978495.json.base64",
+    "exposed_seed": 544,
+    "negative_sentinel_seed": 545,
+    "original_h0_carrier_slot": 31,
+    "life_epoch": 0
+  },
+  "original_known_result": {
+    "matched": 764,
+    "equal_nontrace": 668,
+    "confounded": 96,
+    "source_trace_delta_confounded": 95,
+    "mask_delta_confounded": 36,
+    "after_delta_confounded_not_causal": 65,
+    "comparable_effect": 0,
+    "first_trace_contrast_generation": 49
+  },
+  "predeclared_selection": {
+    "branch_roles": [
+      "b",
+      "h"
+    ],
+    "source": "genuine independently locked original-h0 B/H native source-selected events; not reconstructed from E0 aggregate",
+    "order": "FIRST ascending complete native contact key (generation,address,source_slot,recipient_slot,source_life_epoch,recipient_life_epoch)",
+    "criteria": [
+      "matched B/H selected directed contact key",
+      "source_slot == 31",
+      "source_life_epoch == 0",
+      "B source_trace_start != H source_trace_start"
+    ],
+    "exclusions": [
+      "mask-based event choice",
+      "recipient-after-based choice",
+      "post-treatment winner selection",
+      "fallback to different source/seed/operator"
+    ],
+    "not_found": "NOT_EVALUABLE_NO_QUALIFIED_ORIGINAL_H0_CONTACT",
+    "provenance_required": "genuine full-state pre-step snapshot for B at first selected event and source-native selected-pair witness in both branches; E0 archived aggregate alone is insufficient"
+  },
+  "intervention": {
+    "baseline": "fresh clone of exact genuine B pre-step authoritative snapshot; no mutation",
+    "treatment": "another fresh clone of identical B pre-step snapshot, replace ONLY selected source slow_trace with naturally observed H value before the SAME native generation",
+    "same_value_sham": "copy B source_trace value into otherwise identical B snapshot",
+    "zero_trace_control": "set selected source slow_trace to zero on otherwise identical B snapshot",
+    "source_bit_absence_control": "separate negative branch explicitly zeroes source latent word, preserves all other reference physical inputs; not counted as trace-only treatment",
+    "execution": "full original core.physics.step on each cloned state, not reconstructed algebra; same original seed,generation,coordinates,source/recipient pair,address,lifetimes,RNG/config",
+    "required_invariants": [
+      "pre-step all fields bit-for-bit identical across B/treatment except one chosen source slow_trace entry",
+      "native selected directed contact key/address/pair unchanged",
+      "all NONTRACE_CONTEXT fields equal at actual pre-transmit moment",
+      "instrumented and uninstrumented post-step full-authoritative state parity for every arm",
+      "compare native_mask, source_latent_before,recipient_latent_before,recipient_latent_after at original selected contact",
+      "masked_xor recipient delta equals source_before & (baseline_mask XOR treatment_mask) when contextual equality holds",
+      "no receiver result asserted as spontaneous teacher-history transfer or persistence"
+    ]
+  },
+  "bounds": {
+    "max_global_seconds_per_host": 900,
+    "max_rss_mib": 1536,
+    "max_native_events_per_branch": 200000,
+    "no_retry": true,
+    "no_old_one_shot_action_relaunch": true,
+    "new_effectful_workflow_and_marker_require_separate_formal_review": true
+  },
+  "endpoints": {
+    "effect": "LOCAL_AUTHENTIC_CONTEXT_CONTROLLED_RECEIVER_EFFECT_RETENTION_UNRESOLVED",
+    "no_reach": "NOT_EVALUABLE_NO_QUALIFIED_ORIGINAL_H0_CONTACT",
+    "context_mismatch": "FAIL_SELECTED_EVENT_OR_NONTRACE_CONTEXT_MISMATCH",
+    "no_mask": "NEGATIVE_TRACE_READER_MASK_NOT_REACHED",
+    "no_source_bit_overlap": "NEGATIVE_MASK_CHANGE_WITHOUT_SOURCE_BIT",
+    "no_after": "NEGATIVE_NO_REAL_RECIPIENT_EFFECT",
+    "independent_confirmation": false,
+    "learning_claim": false
+  },
+  "actual_e1_original_physics_started": false
+}
