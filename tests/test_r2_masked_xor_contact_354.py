@@ -24,8 +24,8 @@ class SourceOnlyContactContractTest(unittest.TestCase):
             "source_latent_before": source, "recipient_latent_before": dest,
             "trace_bonus_shift": 0, "source_trace_start": trace,
             "native_mask": mask, "recipient_latent_after": apply_latent_operator(
-                "masked_xor", source, dest, mask, rotate_amount=0,
-            ), "native_operator": "masked_xor", "rotate_amount": 0,
+                "masked_xor", source, dest, mask, rotate_amount=4,
+            ), "native_operator": "masked_xor", "rotate_amount": 4,
         }
         self.assertEqual(set(e), set(FIELDS))
         return e
