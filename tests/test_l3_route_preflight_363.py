@@ -42,7 +42,7 @@ class SourceOnlyRoutePreflight(unittest.TestCase):
         if marker.exists():
             self.assertRegex(
                 marker.read_text(),
-                r"\\AL3-ROUTE-E0-363-SOURCE-NATIVE-ONE-SHOT [0-9a-f]{40}\\n\\Z",
+                r"\AL3-ROUTE-E0-363-SOURCE-NATIVE-ONE-SHOT [0-9a-f]{40}\n\Z",
             )
         else:
             self.assertFalse(marker.exists())
