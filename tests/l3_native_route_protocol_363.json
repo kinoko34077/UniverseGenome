@@ -1,0 +1,93 @@
+{
+  "schema": "UG_L3_NATIVE_ROUTE_E0_363_FROZEN_V1",
+  "owner_issue": 363,
+  "parent_issue": 171,
+  "status": "SOURCE_ONLY_PREPARATION_ACTION_DISABLED_UNTIL_SEPARATE_REVIEWED_MARKER",
+  "cause_question": "where source teacher B/H trace stops being attributable at actual selected directed native contacts",
+  "scientific_role": "EXPLORATORY_EXPOSED_REPEATED_INPUTS_NOT_INDEPENDENT",
+  "experimental_controls": {
+    "original_one_shot_report_sha256": "f9ff71a0ef14c75fc37f021d29e983efbb1cb4e3b2d7eed6451403462907999f",
+    "original_native_one_shot_run": 38667491457,
+    "original_source_marker_sha": "2a2cf845e12617583790c1838a4dfe5573a5ef45",
+    "source_positive_seed": 544,
+    "source_negative_seed": 545,
+    "teachers_b_h": [
+      66,
+      8
+    ],
+    "h0_operator": "masked_copy",
+    "post_h0_operator": "masked_xor",
+    "rotate_amount_unchanged": 4,
+    "research_write_rule": "unit_add",
+    "trace_decay_rate": 256,
+    "native_steps_post_h0": 1000,
+    "checkpoints": [
+      0,
+      1,
+      10,
+      100,
+      250,
+      500,
+      1000
+    ],
+    "data_roles": {
+      "544": [
+        "b",
+        "h",
+        "control",
+        "b_repeat"
+      ],
+      "545": [
+        "b",
+        "h"
+      ]
+    },
+    "no_data_driven_seed_or_event_selection": true
+  },
+  "primary_predeclared_counts": [
+    "matched_contact_keys",
+    "equal_nontrace_precontact",
+    "confounded_nontrace_precontact",
+    "source_trace_delta_all_matched",
+    "source_trace_delta_confounded",
+    "source_trace_delta_comparable",
+    "native_mask_delta_all_matched",
+    "native_mask_delta_comparable",
+    "recipient_after_delta_all_matched",
+    "recipient_after_delta_confounded_NOT_CAUSAL",
+    "recipient_after_delta_comparable",
+    "B_h0_trace_carrier_source_events",
+    "H_h0_trace_carrier_source_events"
+  ],
+  "partition_contract": "exclusive S/R/O boolean triad over source_before_latent/recipient_before_latent/other_NONTRACE_CONTEXT; original life-epoch directed key",
+  "interpretation": "Confounded receiver-after differences are association ONLY. No new operator or seed selected from outcomes",
+  "gate": [
+    "frozen_original_full_h0_sha",
+    "original_old_masked_copy_12_golden",
+    "negative_545_B_H_full",
+    "same_teacher_B_B",
+    "H_equals_no_teacher_control",
+    "per_branch_native_instrumented_uninstrumented_full_state",
+    "exact_previous_358_branch_checkpoints_and_event_sha",
+    "source_native_unchanged_mask_and_after",
+    "bounded_event_and_resource",
+    "one_new_marker_only_main_push"
+  ],
+  "limits": {
+    "max_global_seconds": 900,
+    "max_host_rss_mib": 1536,
+    "max_source_native_events_per_branch": 200000,
+    "max_raw_report_bytes": 131072,
+    "no_retry": true
+  },
+  "activation": {
+    "marker": "research/approvals/l3_route_e0_363.run",
+    "prefix": "L3-ROUTE-E0-363-SOURCE-NATIVE-ONE-SHOT ",
+    "requires_marker_parent_equal_reviewed_source": true
+  },
+  "actual_new_native_run_started": false,
+  "approval_to_run": false,
+  "used_new_seeds": [],
+  "used_reserved_R3_or_PhaseH": false,
+  "learning_claim": false
+}
