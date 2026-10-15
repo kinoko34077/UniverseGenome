@@ -12,6 +12,8 @@ on:
       - "tests/support_l3_e1_precontact_363.py"
       - "tests/l3_e1_precontact_protocol_363.json"
       - "tests/test_l3_e1_precontact_protocol_363.py"
+      - "tests/l3_e1_native_intervention_363.py"
+      - "tests/test_l3_e1_native_source_363.py"
       - ".github/workflows/l3-route-source-audit-363.yml"
       - ".github/workflows/l3-route-e0-one-shot-363.yml"
 
@@ -35,4 +37,4 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Pure synthetic native-stage rules and original log-derived bytes ONLY
         run: |
-          python -m unittest tests.test_l3_native_route_363 tests.test_l3_route_preflight_363 tests.test_l3_trace_only_physical_read_363 tests.test_l3_e1_precontact_protocol_363 -v
+          python -m unittest tests.test_l3_native_route_363 tests.test_l3_route_preflight_363 tests.test_l3_trace_only_physical_read_363 tests.test_l3_e1_precontact_protocol_363 tests.test_l3_e1_native_source_363 -v
