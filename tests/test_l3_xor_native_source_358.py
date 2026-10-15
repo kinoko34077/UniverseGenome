@@ -5,7 +5,9 @@ It verifies instrumented/uninstrumented actual native state parity and the
 complete selected transmission field provenance; no teacher result is claimed.
 """
 import copy
+import os
 import unittest
+from unittest.mock import patch
 
 import core.physics as physics
 from core.state import SHAPE_SINGLE
@@ -96,8 +98,19 @@ class MaskedXorNativeActualSourceParity(unittest.TestCase):
         self.assertEqual(changed, {"latent_operator"})
         self.assertEqual(altered.rotate_amount, reference.rotate_amount)
         self.assertEqual(altered.rotate_amount, 4)
-        with self.assertRaises(PermissionError):
-            verify_study_gate("0" * 40)
+        # A negative PR gate test must not depend on the ambient Actions event.
+        # The original one-shot marker exists on main; push jobs may use a
+        # shallow checkout without HEAD^, which is not a PR-gate regression.
+        with patch.dict(os.environ, {
+            "GITHUB_EVENT_NAME": "pull_request",
+            "GITHUB_REF": "refs/pull/1/merge",
+            "GITHUB_RUN_ATTEMPT": "1",
+        }):
+            with patch("subprocess.run", side_effect=AssertionError(
+                "PR gate must reject before inspecting Git history"
+            )):
+                with self.assertRaises(PermissionError):
+                    verify_study_gate("0" * 40)
 
     def test_fail_closed_wrong_mode_and_single_use(self):
         s=artificial_native_contact()
