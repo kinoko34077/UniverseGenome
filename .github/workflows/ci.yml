@@ -191,9 +191,6 @@ jobs:
     # replays a D16/D18 research seed or the P7.3 native37 study.
     runs-on: ubuntu-24.04
     timeout-minutes: 18
-    # Experiment: PyPy GC heap limit only; physical 1536MiB D15 admission unchanged.
-    env:
-      PYPY_GC_MAX: 256MB
     steps:
       - uses: actions/checkout@v4
         with:
