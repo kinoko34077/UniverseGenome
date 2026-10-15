@@ -15,6 +15,9 @@ def fixture(**kwargs):
 class TraceContactStageClassifier(unittest.TestCase):
     def test_equal_context_trace_and_native_receiver_bit_delta(self):
         b, h = fixture(trace=0, mask=2), fixture(trace=1, mask=3)
+        # Explicit synthetic pre-h0 survivor, unlike fixture default epoch 3.
+        b["source_life_epoch"]=0
+        h["source_life_epoch"]=0
         z=classify_route([b],[h],initial_trace_carrier_slots={1})
         self.assertEqual(z["classification"],"TRACE_REACHED_COMPARABLE_CONTACT")
         c=z["counts"]
