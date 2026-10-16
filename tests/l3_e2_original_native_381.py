@@ -15,6 +15,7 @@ from dataclasses import asdict
 import hashlib
 import json
 import os
+import resource
 from pathlib import Path
 import subprocess
 import time
@@ -22,7 +23,7 @@ from unittest.mock import patch
 
 from core.experiment import IOExperiment
 from core.state import Lifecycle, UniverseState
-from research.a1_exposed_reader_pilot_317 import source_event_digest
+from research.a1_exposed_reader_pilot_317 import R2_FROZEN_DIGEST, source_event_digest
 from research.a2_matched_recipient_contract_336 import CONTACT_KEY
 from research.phase_g_memory_search_159 import _load_protocol
 from research.r2_write_rules_175 import LocalWriteRule, HORIZONS, h0_branches, load_frozen
@@ -280,6 +281,8 @@ def study(source_sha: str, *, _token=None) -> dict:
     e1=actual_e1_archive()
     e0=archived_e0()
     frozen=load_frozen()
+    if frozen["digest"] != R2_FROZEN_DIGEST:
+        raise ValueError("original R2 qualified frozen manifest drift")
     branches=h0_branches(544)
     for role in ("b","h","control"):
         if canonical_digest(branches[role]) != frozen["h0_evidence"]["544"][role+"_digest"]:
@@ -379,11 +382,16 @@ def study(source_sha: str, *, _token=None) -> dict:
             "free_event_count":len(a["free_events"]),
             "source_native_parity":a["full_native_parity"],
         } for name,a in arms.items()},
+        "preintervention_h0_checkpoints": {
+            k:v for k,v in e0["branch_summaries"]["544"]["b"]["checkpoints"].items()
+            if actual_h0_generation+int(k) <= pre["generation"]
+        },
         "candidate_graph":graph,
         "classification":result,
         "independent_confirmation":False,"natural_spontaneous_teacher_causality_proven":False,
         "turnover_causal_proof":False,"learning_claim":False,
-        "resources":{"seconds":round(time.perf_counter()-start,3)},
+        "resources":{"seconds":round(time.perf_counter()-start,3),
+                     "rss_mib":resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024},
     }
     budget(start)
     if len(json.dumps(out,sort_keys=True,separators=(",",":")).encode())>131072:
