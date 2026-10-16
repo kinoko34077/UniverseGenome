@@ -13,8 +13,26 @@ class SourceBlobLockTests(unittest.TestCase):
     def test_pr_effective_tree_is_frozen(self):
         result=GUARD.verify_locked_tree("HEAD")
         self.assertEqual(result["status"],"SOURCE_BLOB_LOCK_MATCH")
-        self.assertEqual(result["locked_file_count"],136)
+        self.assertEqual(result["locked_file_count"],138)  # 136 previously reviewed + 2 source-reviewed Outer research blobs
         self.assertFalse(result["scientific_experiment_executed"])
+
+    def test_outer_research_added_blobs_are_also_strictly_reviewed(self):
+        lock=__import__("json").loads(GUARD.LOCK.read_text(encoding="utf-8"))
+        new={
+            "research/outer_l3_memory_search_386.py":
+                "bcbf53d0ba1c2d3ee8aa4c09b9a4f68406821373",
+            "research/outer_l3_search_protocol_386.json":
+                "f90c978bac21412a6487011affa91ffe20f0f7ff",
+        }
+        for path,sha in new.items():
+            self.assertEqual(lock["blobs"][path],sha)
+        actual=GUARD.tracked_source_blobs("HEAD")
+        self.assertEqual(set(actual),set(lock["blobs"]))
+        for path,sha in new.items():
+            altered=dict(actual)
+            altered[path]="0"*40
+            with self.assertRaisesRegex(ValueError,"unreviewed scientific source divergence"):
+                GUARD.compare_locked_sources(lock["blobs"],altered)
 
     def test_effectful_entry_still_requires_verified_full_ancestry(self):
         import inspect
