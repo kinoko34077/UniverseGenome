@@ -136,6 +136,7 @@
     "research/legacy_outer_search_oracle.py": "2d4e94f1b570f0799ee9e80e3e7599f57522aafb",
     "research/memory_coupling_audit_122.py": "cad05c7b32df7608ba2706dc31aef3a5fc825c0e",
     "research/memory_persistence_arena_127.py": "39b26f581e41c33fd26bdc91d08e332815af8590",
+    "research/outer_l3_inner_adapter_388.py": "86a2cdd41435573cfa394ccce2d631fd0dfb50d7",
     "research/outer_l3_memory_search_386.py": "75d265f353c632814c0b50832c8ee6c0dd794c9a",
     "research/outer_l3_search_protocol_386.json": "abd28cd928d57c9d5028fc3a43481a3b694eae36",
     "research/outer_search_phase_f_acceptance.py": "913a00ebb55acdd186e16d22a47a848edbcc9cff",
