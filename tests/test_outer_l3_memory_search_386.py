@@ -3,7 +3,7 @@ import inspect
 import unittest
 
 from core.physics import PhysicsConfig
-from search.evolution import Optimizer
+from search.evolution import SteadyStateOptimizer
 from search.outer_search import build_default_search_registry, legacy_search_plan
 from research.outer_l3_memory_search_386 import (
     _protocol, birth_mode, build_outer_l3_registry, build_outer_l3_search_plan,
@@ -44,7 +44,7 @@ class OuterL3ResearchContract(unittest.TestCase):
         self.assertIn(("phase5_legacy",1),registry.objective_profiles)
         self.assertEqual(legacy_search_plan().plan_id,"phase5_legacy")
         self.assertIn("optimizer currently supports the legacy-equivalent SearchPlan only",
-                      inspect.getsource(Optimizer.__init__))
+                      inspect.getsource(SteadyStateOptimizer.__init__))
         self.assertFalse(p["winning_candidate_selected"])
         self.assertFalse(p["effectful_search_executed"])
 
