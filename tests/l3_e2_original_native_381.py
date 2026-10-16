@@ -173,7 +173,14 @@ def trajectory_arm(
                 budget(start)
     if bare.to_snapshot() != state.to_snapshot():
         raise ValueError("E2 authoritative terminal observer/bare drift")
+    # A BLACK_HOLE is a retained physical identity, but is not an ACTIVE
+    # living recipient. Count presence and active-living separately.
     living = {
+        (slot, int(obs.prior.epochs[slot]))
+        for slot in range(state.max_cells)
+        if state.lifecycle[slot] == Lifecycle.ACTIVE
+    }
+    present = {
         (slot, int(obs.prior.epochs[slot]))
         for slot in range(state.max_cells)
         if state.lifecycle[slot] != Lifecycle.FREE
@@ -184,7 +191,8 @@ def trajectory_arm(
         "events": obs.events,
         "selected_event_digest": source_event_digest(obs.events),
         "free_events": obs.prior.free_events, "birth_events": birth_events,
-        "terminal_living_epochs": living, "final_snapshot": state.to_snapshot(),
+        "terminal_living_epochs": living, "terminal_present_epochs": present,
+        "final_snapshot": state.to_snapshot(),
         "terminal_digest": canonical_digest(state.to_snapshot()),
         "full_native_parity": True,
     }
@@ -380,6 +388,8 @@ def study(source_sha: str, *, _token=None) -> dict:
             "native_directed_selected_contacts":len(a["events"]),
             "birth_event_count":len(a["birth_events"]),
             "free_event_count":len(a["free_events"]),
+            "terminal_active_epoch_count":len(a["terminal_living_epochs"]),
+            "terminal_present_epoch_count":len(a["terminal_present_epochs"]),
             "source_native_parity":a["full_native_parity"],
         } for name,a in arms.items()},
         "preintervention_h0_checkpoints": {
