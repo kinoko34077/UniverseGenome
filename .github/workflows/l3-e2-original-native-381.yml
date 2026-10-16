@@ -1,0 +1,100 @@
+name: L3 E2 #381 genuine original native +1000/turnover — one reviewed marker only
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "research/approvals/l3_e2_original_native_381.run"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: l3-e2-original-one-shot-381
+  cancel-in-progress: false
+
+jobs:
+  bounded_original_e2_native_lineage:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.run_attempt == 1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 17
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Confirm reviewed E2 marker-only source lock, frozen original E1 and nonexecuting gate
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$(git diff --name-only HEAD^ HEAD)" = "research/approvals/l3_e2_original_native_381.run"
+          test "$(git log --full-history --format=%H --diff-filter=A HEAD -- research/approvals/l3_e2_original_native_381.run | wc -l)" -eq 1
+          test "$(git log --full-history --format=%H --diff-filter=M HEAD -- research/approvals/l3_e2_original_native_381.run | wc -l)" -eq 0
+          test "$(git log --full-history --format=%H --diff-filter=D HEAD -- research/approvals/l3_e2_original_native_381.run | wc -l)" -eq 0
+          python -m unittest tests.test_l3_e2_retention_protocol_379 tests.test_l3_e2_native_source_381 -v
+      - name: Genuine source-locked original seed544 E2 native downstream and epoch candidate (once)
+        shell: bash
+        env:
+          EXACT_SOURCE_SHA: ${{ github.sha }}
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          set -euo pipefail
+          mkdir -p research/artifacts
+          timeout --signal=TERM --kill-after=10s 900s python -m tests.l3_e2_original_native_381 \
+            --source-sha "$EXACT_SOURCE_SHA" --execute \
+            --output research/artifacts/l3_e2_original_native_381.json
+          sha256sum research/artifacts/l3_e2_original_native_381.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path("research/artifacts/l3_e2_original_native_381.json")
+          r=json.loads(p.read_text(encoding="utf-8"))
+          assert r["schema"] == "UG_L3_381_E2_ORIGINAL_RETENTION_CAUSAL_V1"
+          assert r["owner"] == 381
+          assert r["source_sha"]
+          assert r["original_e0_raw_sha256"] == "08b1368a74729dfa5bee6da29069a7d757cc053fd5de493777e701196aa1368d"
+          assert r["original_e1_raw_sha256"] == "3d7075a727c6bb1e2c08887cf7b1dc8313594d1f5f788ddc1b7915ddcd182164"
+          assert r["independent_confirmation"] is False
+          assert r["learning_claim"] is False
+          assert r["turnover_causal_proof"] is False
+          assert r["natural_spontaneous_teacher_causality_proven"] is False
+          assert set(r["arms"]) == {
+              "baseline", "same_value_sham", "trace_only_H",
+              "source_zero_baseline", "source_zero_trace_H",
+          }
+          assert r["horizons"]["original_contact_pre_generation"] == 49
+          assert r["horizons"]["original_contact_post_generation"] == 50
+          assert r["horizons"]["required_last_generation"] >= 1050
+          assert r["classification"] in {
+              "NO_NEW_DOWNSTREAM_DIFFERENCE",
+              "SHORT_LIVED_EXPIRED_BY_FROZEN_HORIZON",
+              "CANDIDATE_LINEAGE_WITNESS_NOT_INDEPENDENT",
+              "PERSISTENT_SNAPSHOT_ONLY_NO_LINEAGE",
+          }
+          assert all(a["source_native_parity"] is True
+                     and a["native_directed_selected_contacts"] <= 200000
+                     for a in r["arms"].values())
+          assert r["resources"]["seconds"] <= 900
+          assert r["resources"]["rss_mib"] <= 1536
+          assert p.stat().st_size <= 131072
+          print("L3_E2_381_NATIVE_CLASSIFICATION:",r["classification"])
+          print("L3_E2_381_CANDIDATES:",r["candidate_graph"])
+          PY
+          echo "L3_E2_381_RAW_B64_BEGIN"
+          base64 -w0 research/artifacts/l3_e2_original_native_381.json
+          echo
+          echo "L3_E2_381_RAW_B64_END"
+      - name: Preserve authentic original bounded E2 witness for byte-exact Git archival
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: l3-e2-381-original-native-epoch-witness
+          path: research/artifacts/l3_e2_original_native_381.json
+          if-no-files-found: error
+          retention-days: 5
