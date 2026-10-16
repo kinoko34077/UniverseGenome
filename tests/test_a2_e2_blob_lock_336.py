@@ -28,7 +28,7 @@ class SourceBlobLockTests(unittest.TestCase):
             "86a2cdd41435573cfa394ccce2d631fd0dfb50d7"
         )
         new["research/outer_l3_native_evidence_388.py"] = (
-            "0ed8e2aa456aa795f437f8b08c24a595b4c8ea73"
+            "281e7b52894de0a8a82a61c41efc49821e994f82"
         )
         for path,sha in new.items():
             self.assertEqual(lock["blobs"][path],sha)
