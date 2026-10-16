@@ -72,6 +72,20 @@ def build_outer_l3_search_plan() -> SearchPlan:
     registry = build_outer_l3_registry()
     domains = p["search_domains"]
     rules = p["rule_domains"]
+    if (p.get("search_domain_mutation_invariant")
+            != "each_sorted_adjacent_scalar_pair_has_bidirectional_existing_adjacent_binary_step"
+            or p.get("search_domain_mutation_strategy") != "adjacent_binary_registered"):
+        raise ValueError("reviewed Outer mutation reachability specification missing")
+    # The accepted generic mutation helper doubles/halves a value (0->1).
+    # Domains with holes such as 0,256 cannot be reached by candidate evolution.
+    # Assert BOTH directions for every adjacent permitted scalar value.
+    for dimension_id, values in domains.items():
+        if values != sorted(set(values)) or len(values) < 2:
+            raise ValueError(f"unordered/degenerate search domain: {dimension_id}")
+        for left, right in zip(values, values[1:]):
+            if ((1 if left == 0 else left * 2) != right
+                    or (0 if right <= 1 else right // 2) != left):
+                raise ValueError(f"disconnected candidate mutation domain: {dimension_id}")
     if (set(domains) != set(registry.scalar_dimensions)
             or set(rules) != set(registry.rule_dimensions)):
         raise ValueError("all current registered physics variables/rules must be declared")
