@@ -20,9 +20,9 @@ class SourceBlobLockTests(unittest.TestCase):
         lock=__import__("json").loads(GUARD.LOCK.read_text(encoding="utf-8"))
         new={
             "research/outer_l3_memory_search_386.py":
-                "bcbf53d0ba1c2d3ee8aa4c09b9a4f68406821373",
+                "75d265f353c632814c0b50832c8ee6c0dd794c9a",
             "research/outer_l3_search_protocol_386.json":
-                "f90c978bac21412a6487011affa91ffe20f0f7ff",
+                "abd28cd928d57c9d5028fc3a43481a3b694eae36",
         }
         for path,sha in new.items():
             self.assertEqual(lock["blobs"][path],sha)
