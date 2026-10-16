@@ -10,12 +10,15 @@
   "population": {
     "capacity_slots": 128,
     "simultaneous_cpu_execution_guaranteed": false,
-    "initialization": "bounded_strata_then_adaptive_registered_mutation",
+    "initialization": "stratified_birth_mode_and_operator_balanced_then_adjacent_binary_mutation",
     "scheduler": "research_only_not_integrated_optimizer"
   },
   "search_domains": {
     "initial_density": [
+      1,
+      2,
       4,
+      8,
       16,
       32,
       64
@@ -34,14 +37,26 @@
     ],
     "noise_rate": [
       0,
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64,
+      128,
       256,
+      512,
       1024,
+      2048,
       4096,
+      8192,
       16384,
-      65535
+      32768
     ],
     "bond_gain": [
       0,
+      1,
       2,
       4,
       8
@@ -64,11 +79,22 @@
     ],
     "fragmentation_base_probability": [
       0,
+      1,
+      2,
+      4,
+      8,
+      16,
+      32,
+      64,
+      128,
       256,
+      512,
       1024,
+      2048,
       4096,
+      8192,
       16384,
-      65535
+      32768
     ],
     "black_hole_grace": [
       1,
@@ -78,41 +104,68 @@
     ],
     "rotate_amount": [
       0,
+      1,
+      2,
       4,
-      8,
-      12
+      8
     ],
     "trace_write_cap": [
       0,
+      1,
+      2,
+      4,
       8,
       16,
       32,
-      64
+      64,
+      128
     ],
     "trace_transfer_cap": [
       0,
+      1,
+      2,
       4,
       8,
       16,
-      32
+      32,
+      64,
+      128
     ],
     "trace_discharge_cap": [
       0,
+      1,
+      2,
       4,
       8,
-      16
+      16,
+      32,
+      64,
+      128
     ],
     "trace_decay_rate": [
       0,
       1,
+      2,
       4,
+      8,
       16,
+      32,
       64,
-      256
+      128,
+      256,
+      512,
+      1024,
+      2048,
+      4096,
+      8192,
+      16384,
+      32768
     ],
     "trace_bonus_shift": [
-      3,
-      5,
+      0,
+      1,
+      2,
+      4,
       8
     ]
   },
@@ -225,5 +278,7 @@
   "effectful_search_executed": false,
   "winning_candidate_selected": false,
   "heldout_used": false,
-  "learning_claim": false
+  "learning_claim": false,
+  "search_domain_mutation_invariant": "each_sorted_adjacent_scalar_pair_has_bidirectional_existing_adjacent_binary_step",
+  "search_domain_mutation_strategy": "adjacent_binary_registered"
 }
