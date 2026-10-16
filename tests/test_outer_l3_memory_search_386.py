@@ -48,6 +48,35 @@ class OuterL3ResearchContract(unittest.TestCase):
         self.assertFalse(p["winning_candidate_selected"])
         self.assertFalse(p["effectful_search_executed"])
 
+    def test_all_scalar_domains_are_bidirectionally_mutation_reachable(self):
+        from search.outer_search import CandidateValues, scalar_mutation_directions
+        protocol=_protocol()
+        plan=build_outer_l3_search_plan()
+        registry=build_outer_l3_registry()
+        scalars={k:v[0] for k,v in protocol["search_domains"].items()}
+        rules={"latent_operator":"masked_copy"}
+        for name,domain in protocol["search_domains"].items():
+            with self.subTest(name=name):
+                self.assertEqual(list(domain),sorted(set(domain)))
+                for left,right in zip(domain,domain[1:]):
+                    self.assertEqual(1 if left==0 else 2*left,right)
+                    self.assertEqual(0 if right<=1 else right//2,left)
+                    scalars[name]=left
+                    up=scalar_mutation_directions(
+                        plan=plan,registry=registry,
+                        candidate=CandidateValues(scalars=dict(scalars),rules=rules),
+                        dimension_id=name,
+                        base_config=PhysicsConfig(fragmentation_enabled=True))
+                    self.assertIn(1,up)
+                    scalars[name]=right
+                    down=scalar_mutation_directions(
+                        plan=plan,registry=registry,
+                        candidate=CandidateValues(scalars=dict(scalars),rules=rules),
+                        dimension_id=name,
+                        base_config=PhysicsConfig(fragmentation_enabled=True))
+                    self.assertIn(-1,down)
+                    scalars[name]=domain[0]
+
     def test_native_birth_modes_without_running_a_world(self):
         p=_protocol()
         v={k:a[0] for k,a in p["search_domains"].items()}
