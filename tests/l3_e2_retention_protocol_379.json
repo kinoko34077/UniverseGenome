@@ -1,0 +1,160 @@
+{
+  "schema": "UG_L3_E2_379_ORIGINAL_CONTEXT_DOWNSTREAM_SOURCE_ONLY_V1",
+  "owner_issue": 379,
+  "parent_owner_issue": 363,
+  "science_parent_issue": 171,
+  "status": "SOURCE_ONLY_DESIGN_NOT_AUTHORIZED_TO_EXECUTE_NATIVE_E2",
+  "question": "From the verified original seed544 E1 native generation49 contact, does a sole pre-step source slow_trace intervention yield a causal downstream, cross-life-epoch, plus1000-horizon memory pathway rather than a transient local recipient bit?",
+  "evidence": {
+    "e0_original_action": 38788978495,
+    "e0_original_raw_sha256": "08b1368a74729dfa5bee6da29069a7d757cc053fd5de493777e701196aa1368d",
+    "e1_original_action": 38812162541,
+    "e1_raw_archive": "research/artifacts/l3_e1_363_original_native_run38812162541.json.base64",
+    "e1_raw_sha256": "3d7075a727c6bb1e2c08887cf7b1dc8313594d1f5f788ddc1b7915ddcd182164",
+    "selected": {
+      "native_generation": 49,
+      "physical_address": 500,
+      "source_slot": 31,
+      "source_life_epoch": 0,
+      "recipient_slot": 22,
+      "recipient_life_epoch": 0,
+      "baseline_source_trace": 32,
+      "intervention_source_trace": 0,
+      "source_latent_before": 1,
+      "recipient_latent_before": 1,
+      "baseline_native_mask": 8193,
+      "intervention_native_mask": 8192,
+      "baseline_recipient_after": 0,
+      "intervention_recipient_after": 1,
+      "local_mask_xor": 1,
+      "local_recipient_xor": 1
+    },
+    "e1_classification": "LOCAL_AUTHENTIC_CONTEXT_CONTROLLED_RECEIVER_EFFECT_RETENTION_UNRESOLVED",
+    "e1_independent_confirmation": false,
+    "e1_learning_claim": false
+  },
+  "cohort": {
+    "exposed_seed": 544,
+    "not_independent": true,
+    "do_not_use_R3_or_PhaseH": true,
+    "original_e0_e1_one_shots_consumed": true
+  },
+  "horizon_contract": {
+    "original_selected_pre_step_native_generation": 49,
+    "original_selected_post_step_snapshot_generation": 50,
+    "h0_post_step_indexes": [
+      1,
+      10,
+      100,
+      250,
+      500,
+      1000
+    ],
+    "additional_steps_after_selected_contact": [
+      0,
+      1,
+      10,
+      100,
+      250,
+      500,
+      1000
+    ],
+    "h0_snapshot_generation": "DYNAMIC_FROZEN_TRUE_H0_SNAPSHOT_GENERATION_MUST_BE_OBSERVED_AND_H0_DIGEST_AUTHENTICATED",
+    "absolute_h0_plus_steps": "h0_snapshot_generation + post_h0_steps",
+    "absolute_post_selected": "50 + additional_steps_after_selected_contact",
+    "required_last_native_snapshot_generation": "max(h0_generation+1000,1050)",
+    "no_equating_h0_plus1000_to_post_selected_plus1000": true,
+    "checkpoint_requirements": [
+      "exact absolute native generation",
+      "post_h0 index when applicable",
+      "additional steps after selected native contact when applicable",
+      "baseline and intervention complete authoritative snapshot digest",
+      "source31,recipient22 current life-epoch status, latent/trace bit values",
+      "observed native selected pairs and life-epoch provenance",
+      "no source observer change to authoritative state",
+      "one full original physics step per generation, no skipped or algebraic replacement"
+    ]
+  },
+  "arms": [
+    {
+      "label": "original_B_baseline",
+      "source_trace": 32,
+      "source_latent": "ORIGINAL_B",
+      "interpretation": "source-original native B full-state and E0 known checkpoint parity mandatory"
+    },
+    {
+      "label": "B_same_value_sham",
+      "source_trace": 32,
+      "source_latent": "ORIGINAL_B",
+      "interpretation": "full-authoritative parity with baseline at all horizons"
+    },
+    {
+      "label": "B_trace_H_only",
+      "source_trace": 0,
+      "source_latent": "ORIGINAL_B",
+      "interpretation": "single-source trace-only change against B baseline; causal total downstream effect"
+    },
+    {
+      "label": "B_source_bit_zero_baseline",
+      "source_trace": 32,
+      "source_latent": 0,
+      "interpretation": "separate negative source-bit control, not trace-only estimand"
+    },
+    {
+      "label": "B_source_bit_zero_H_trace",
+      "source_trace": 0,
+      "source_latent": 0,
+      "interpretation": "paired negative source-bit control, never spontaneous teacher-dependent evidence"
+    }
+  ],
+  "native_lineage_rules": {
+    "initial_affected_identity": [
+      22,
+      0
+    ],
+    "physical_epoch_identity": "tuple(slot_id, life_epoch), NOT slot index alone",
+    "event_provenance": "two genuine complete native selected directed-contact logs with exact selected pair+address+generation+epochs, original physics, instrumented/bare snapshot parity and complete free/spawn histories",
+    "per_contact_checks": [
+      "same true selected native key in both arms",
+      "mechanical geometry/bond/speed/structure/hp/pretrace-context comparable or label post-treatment mechanical divergence",
+      "native source and recipient before/after latent and masks retained",
+      "(recipient_before_B XOR recipient_before_I) XOR ((source_before_B AND mask_B) XOR (source_before_I AND mask_I)) == recipient_after_B XOR recipient_after_I",
+      "source physical epoch is on an independently verified causal perturbation path",
+      "recipient physical epoch alive at reported stage, not just slot reused"
+    ],
+    "path_claim": "Each compatible selected edge is only a CANDIDATE; an actual cross-life-epoch causal lineage claim requires complete chronological free/spawn evidence, originating E1 bit intervention, qualified path into distinct living identity and terminal +1000 controls; do NOT infer from latent contrast or full snapshot hash difference alone.",
+    "turnover_claim_requires": [
+      "original source31/epoch0 and/or original recipient22/epoch0 freeing event with original actual lifecycle time",
+      "physically traceable selected transmission before/after free, all source and recipient epochs corroborated by original spawn/free events",
+      "distinct living physical epoch with preserved attributable difference at frozen long horizon",
+      "same-source sham and source-bit-zero controls negative",
+      "no substitution of naturally confounded B/H arm",
+      "post-treatment mechanical context divergence classified as causal total effect, NOT repeated local isolated trace-only evidence"
+    ]
+  },
+  "result_classes": [
+    "INVALID_ORIGINAL_SOURCE_OR_PARITY",
+    "NO_NEW_DOWNSTREAM_DIFFERENCE",
+    "SHORT_LIVED_EXPIRED_BY_FROZEN_HORIZON",
+    "PERSISTENT_SNAPSHOT_ONLY_NO_LINEAGE",
+    "CANDIDATE_LINEAGE_WITNESS_NOT_INDEPENDENT",
+    "POST_TREATMENT_MECHANICAL_DIVERGENCE_LIMITS_LOCAL_ATTRIBUTION"
+  ],
+  "resources": {
+    "max_host_seconds": 900,
+    "max_rss_mib": 1536,
+    "max_native_directed_events_per_arm": 200000,
+    "max_original_raw_bytes": 131072,
+    "no_retry": true,
+    "no_auto_seed_substitution": true,
+    "no_effectful_workflow_or_marker_in_this_design": true
+  },
+  "scientific_claims": {
+    "natural_spontaneous_teacher_dependent_BH_causality_proven": false,
+    "original_carrier_turnover_retention_proven": false,
+    "independent_R3_confirmation": false,
+    "learning_claim": false,
+    "output_learning_claim": false
+  },
+  "actual_e2_original_native_physics_started": false
+}
