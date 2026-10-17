@@ -189,6 +189,10 @@ current `main`; the earlier invalidated PASS remains historical evidence only. T
 measurement remains baseline 0 / trained 0 with no learning claim. See the
 [Phase 6+ handoff](docs/PHASE6_HANDOFF.md) for the bounded next-phase contract.
 
+### Post-Phase G Outer-first research (2026-10-17)
+
+The terminal #159 `CHANGE_PATH` and #167 `HOLD-UNRESOLVED` results remain historical and unchanged. A later, separately scoped Outer-first L3 lane is tracked by [#363](https://github.com/kinoko34077/UniverseGenome/issues/363), with source work under [#386](https://github.com/kinoko34077/UniverseGenome/issues/386) and [#388](https://github.com/kinoko34077/UniverseGenome/issues/388). O1 and O2-1/O2-2/O2-3 are accepted as source-only slices on main `e4cd5072e06236b6eed5a68fad18c0b1ae501f86`; post-main CI #38950900042 succeeded. O2-3 is synthetic-only and does not authenticate real evidence or establish a winning physical candidate. The next design/source gate is [#393](https://github.com/kinoko34077/UniverseGenome/issues/393), for pre-outcome h0-only cohort manifests and bounded evaluation design. It does not authorize a new physical run, held-out validation, Phase H/R3, production-profile change, or a learning claim.
+
 ## Canonical entry points
 
 - [Specification index](docs/SPECIFICATION.md)
