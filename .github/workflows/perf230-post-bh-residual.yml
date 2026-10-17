@@ -1,0 +1,54 @@
+name: PERF230 Post-BH Original Native CPU Residual Profile
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/perf230-post-bh-residual.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source_bound_native_residual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Genuine default1024 seed0 native CPU profile and original snapshot oracle
+        run: |
+          timeout -k 10s 220s python -m benchmarks.perf_residual_219 \
+            --physical-generations 32 --output reports/perf230-post-bh-residual.json
+      - name: Source-locked hotspot summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("reports/perf230-post-bh-residual.json").read_text())
+          slot = data["native_default_slot0"]
+          assert slot["whole_optimizer_state_sha256"] == "e146bebe695dec14fc978e47d4a1e189d1e30bdaa83f9d6e69eec3c4d201f4c1"
+          assert data["D16_default_seed16384_long_science"] is False
+          assert data["learning_claim"] is False
+          print(json.dumps({
+            "source_sha":data["source_sha"],
+            "original_full_optimizer_digest":slot["whole_optimizer_state_sha256"],
+            "unprofiled_wall_s":slot["uninstrumented_wall_s"],
+            "profiled_wall_s":slot["cprofile"]["wall_s"],
+            "profiled_cpu_s":slot["cprofile"]["process_cpu_s"],
+            "top_self":slot["cprofile"]["top_self"][:16],
+            "top_cumulative":slot["cprofile"]["top_cumulative"][:12]
+          },sort_keys=True))
+          PY
+      - name: Archive source-bound residual timing and profiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-post-bh-original-native-residual
+          path: reports/perf230-post-bh-residual.json
+          if-no-files-found: error
+          retention-days: 7
