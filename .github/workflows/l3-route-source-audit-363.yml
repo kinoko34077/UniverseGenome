@@ -28,6 +28,9 @@ on:
       - "tests/test_outer_l3_native_evidence_388.py"
       - "research/outer_l3_eligible_selection_388.py"
       - "tests/test_outer_l3_eligible_selection_388.py"
+      - "research/outer_l3_h0_cohort_protocol_393.json"
+      - "research/outer_l3_h0_cohort_393.py"
+      - "tests/test_outer_l3_h0_cohort_393.py"
       - ".github/a2-e2-reviewed-code-lock-336.json"
       - "tests/test_a2_e2_blob_lock_336.py"
       - ".github/workflows/l3-route-source-audit-363.yml"
@@ -53,4 +56,4 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Pure synthetic native-stage rules and original log-derived bytes ONLY
         run: |
-          python -m unittest tests.test_l3_native_route_363 tests.test_l3_route_preflight_363 tests.test_l3_trace_only_physical_read_363 tests.test_l3_e1_precontact_protocol_363 tests.test_l3_e1_native_source_363 tests.test_l3_e2_retention_protocol_379 tests.test_l3_e2_native_source_381 tests.test_outer_l3_memory_search_386 tests.test_outer_l3_inner_adapter_388 tests.test_outer_l3_native_evidence_388 tests.test_outer_l3_eligible_selection_388 tests.test_a2_e2_blob_lock_336 -v
+          python -m unittest tests.test_l3_native_route_363 tests.test_l3_route_preflight_363 tests.test_l3_trace_only_physical_read_363 tests.test_l3_e1_precontact_protocol_363 tests.test_l3_e1_native_source_363 tests.test_l3_e2_retention_protocol_379 tests.test_l3_e2_native_source_381 tests.test_outer_l3_memory_search_386 tests.test_outer_l3_inner_adapter_388 tests.test_outer_l3_native_evidence_388 tests.test_outer_l3_eligible_selection_388 tests.test_outer_l3_h0_cohort_393 tests.test_a2_e2_blob_lock_336 -v
