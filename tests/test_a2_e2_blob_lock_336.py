@@ -13,7 +13,7 @@ class SourceBlobLockTests(unittest.TestCase):
     def test_pr_effective_tree_is_frozen(self):
         result=GUARD.verify_locked_tree("HEAD")
         self.assertEqual(result["status"],"SOURCE_BLOB_LOCK_MATCH")
-        self.assertEqual(result["locked_file_count"],141)  # 140 previously reviewed + 1 O2-3 research-only eligibility blob
+        self.assertEqual(result["locked_file_count"],143)  # previous 141 plus two reviewed O3-A source blobs
         self.assertFalse(result["scientific_experiment_executed"])
 
     def test_outer_research_added_blobs_are_also_strictly_reviewed(self):
@@ -32,6 +32,12 @@ class SourceBlobLockTests(unittest.TestCase):
         )
         new["research/outer_l3_eligible_selection_388.py"] = (
             "41bc5da2c70b4caa6f6b9c1964d88d2089ddaa94"
+        )
+        new["research/outer_l3_h0_cohort_393.py"] = (
+            "47da11a6ac42a1d838067091946a830d12c28a58"
+        )
+        new["research/outer_l3_h0_cohort_protocol_393.json"] = (
+            "f5835bd2ea9a5ccf9ab713f6a62728c2f8b05742"
         )
         for path,sha in new.items():
             self.assertEqual(lock["blobs"][path],sha)
