@@ -1,0 +1,76 @@
+{
+  "schema": "UG_OUTER_L3_O3_A_H0_COHORT_SOURCE_GATE_V1",
+  "issue": 393,
+  "parent_science_owner": 363,
+  "outer_architecture_issue": 144,
+  "accepted_o2_source_main": "e4cd5072e06236b6eed5a68fad18c0b1ae501f86",
+  "mode": "SOURCE_ONLY_UNPOPULATED_NO_SEED_APPROVAL",
+  "purpose": "Choose and freeze disjoint h0-only qualified training/validation cohorts before downstream outcomes or Outer fitness. No seed can be enrolled on the strength of caller-provided digests alone.",
+  "exclusions": {
+    "reserved_closed_inclusive": [
+      [
+        96,
+        159
+      ]
+    ],
+    "documented_exposed_seeds": [
+      544,
+      545
+    ],
+    "further_outcome_exposure_ledger": "REQUIRED_BEFORE_REAL_MATERIALIZATION",
+    "no_auto_fill": true,
+    "exclusion_completeness_certified": false
+  },
+  "roles": {
+    "training": {
+      "min_cases": 4,
+      "only_h0_preoutcome": true
+    },
+    "validation": {
+      "min_cases": 4,
+      "only_h0_preoutcome": true,
+      "fully_sealed_until_training_candidate_frozen": true
+    }
+  },
+  "control_roles": [
+    "teacher_B",
+    "teacher_H",
+    "no_teacher",
+    "same_value_sham",
+    "negative_sentinel"
+  ],
+  "source": {
+    "digest_algorithm": "sha256",
+    "required_git_source_sha40": true,
+    "required_native_h0_digest_sha256": true,
+    "required_before_outcome_original_provenance": true,
+    "external_independent_evidence_attestation": "MISSING_GATE_O3_B",
+    "raw_prefix_provenance_required": true
+  },
+  "mandatory_matching": [
+    "same_seed",
+    "same_h0_generation",
+    "same_original_source",
+    "same_candidate_physics",
+    "same_nontrace_h0_prestep_context_for_local_causal_claims",
+    "negative_and_sham_controls"
+  ],
+  "execution": {
+    "source_only_no_true_h0_generation": true,
+    "manifest_unpopulated": true,
+    "requires_independent_attestation_in_o3b": true,
+    "no_Inner_step_in_tests": true,
+    "no_outer_winner": true,
+    "no_phase_h_or_r3": true,
+    "max_population_slots": 128,
+    "actual_cpu_concurrency": "UNSPECIFIED_NEEDS_O3_C"
+  },
+  "scientific": {
+    "original_E2_exposed544_births": 0,
+    "original_E2_result": "PERSISTENT_SNAPSHOT_ONLY_NO_LINEAGE",
+    "learning_claim": false,
+    "turnover_proven": false,
+    "independent_validation_performed": false,
+    "winning_candidate_selected": false
+  }
+}
