@@ -1,0 +1,41 @@
+name: PERF219 Test-Only Native CPU Hotpath Profiling
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf_native_cpu_219.py"
+      - "tests/test_perf_native_cpu_219.py"
+      - ".github/workflows/perf-native-profiler-219.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded_test_only_cpu_profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install optional profiling comparison backends
+        run: python -m pip install --disable-pip-version-check numpy==2.3.5 numba==0.65.1
+      - name: Check test-only benchmark harness
+        run: python -m unittest discover -s tests -p 'test_perf_native_cpu_219.py' -v
+      - name: Profile bounded actual physical and selected-slot code
+        run: |
+          timeout 300s python -m benchmarks.perf_native_cpu_219 \
+            --physical-generations 96 \
+            --output reports/perf-native-cpu-219.json
+      - name: Archive exact-head profiling evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-native-cpu-219
+          path: reports/perf-native-cpu-219.json
+          if-no-files-found: error
+          retention-days: 7
