@@ -33,10 +33,11 @@
     }
   },
   "control_roles": [
+    "baseline",
+    "same_value_sham",
     "teacher_B",
     "teacher_H",
     "no_teacher",
-    "same_value_sham",
     "negative_sentinel"
   ],
   "source": {
