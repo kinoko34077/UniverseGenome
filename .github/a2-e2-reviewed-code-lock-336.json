@@ -137,6 +137,8 @@
     "research/memory_coupling_audit_122.py": "cad05c7b32df7608ba2706dc31aef3a5fc825c0e",
     "research/memory_persistence_arena_127.py": "39b26f581e41c33fd26bdc91d08e332815af8590",
     "research/outer_l3_eligible_selection_388.py": "41bc5da2c70b4caa6f6b9c1964d88d2089ddaa94",
+    "research/outer_l3_h0_cohort_393.py": "47da11a6ac42a1d838067091946a830d12c28a58",
+    "research/outer_l3_h0_cohort_protocol_393.json": "f5835bd2ea9a5ccf9ab713f6a62728c2f8b05742",
     "research/outer_l3_inner_adapter_388.py": "86a2cdd41435573cfa394ccce2d631fd0dfb50d7",
     "research/outer_l3_memory_search_386.py": "75d265f353c632814c0b50832c8ee6c0dd794c9a",
     "research/outer_l3_native_evidence_388.py": "281e7b52894de0a8a82a61c41efc49821e994f82",
