@@ -1,0 +1,41 @@
+name: PERF230 P4.1 Original Default128 Four Selected Rounds Pilot
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf230_multi_rounds_241.py"
+      - ".github/workflows/perf230-multi-rounds-241.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  original_seed0_native_four_rounds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Original short golden and source-frozen consecutive native128 smoke
+        run: |
+          mkdir -p reports
+          timeout -k 15s 90s python -m benchmarks.perf230_multi_rounds_241 \
+            --short-smoke --output reports/perf230-p41-short-smoke.json
+      - name: Four original consecutive seed0 default1024 native128 selected rounds, max900s
+        run: |
+          timeout -k 20s 900s python -m benchmarks.perf230_multi_rounds_241 \
+            --output reports/perf230-p41-default1024-four-rounds.json
+      - name: Archive source-bound per-round wall/RSS/journal/v7 records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-p41-original-seed0-four-rounds
+          path: reports/*.json
+          if-no-files-found: warn
+          retention-days: 7
