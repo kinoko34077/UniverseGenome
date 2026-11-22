@@ -126,6 +126,27 @@ class Phase3PopulationTests(unittest.TestCase):
             summaries.append(summary)
         self.assertLessEqual(summaries[-1]["history_memory_bytes"], summaries[0]["history_memory_budget_bytes"])
 
+    def test_p2g_history_memory_fallback_when_getsizeof_unsupported(self):
+        """PyPy cannot report per-object getsizeof; metadata must not crash."""
+        from unittest.mock import patch
+
+        population = Population.from_defaults(
+            base_seed=76, config=population_config(), history_length=128,
+        )
+        population.run(2)
+        prior_cpython_estimate = population.history_memory_bytes
+        with patch("core.population.sys.getsizeof", side_effect=TypeError("PyPy")):
+            fallback = population.history_memory_bytes
+            summary = population.summary()
+        self.assertGreater(prior_cpython_estimate, 0)
+        self.assertGreater(fallback, 0)
+        self.assertEqual(summary["history_memory_bytes"], fallback)
+        self.assertTrue(summary["history_memory_within_budget"])
+        self.assertGreaterEqual(
+            fallback, 4 * sum(len(record) for record in population._history),
+        )
+        self.assertEqual(population.generation, 2)
+
     def test_p3_006_status_config_and_ui_surface(self):
         raw = load_config(ROOT / "config" / "default.json")
         status = build_status(raw)

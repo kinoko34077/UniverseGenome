@@ -240,8 +240,26 @@ class Population:
 
     @property
     def history_memory_bytes(self) -> int:
-        """Return a reproducible estimate of retained compact history memory."""
-        return sys.getsizeof(self._history) + sum(sys.getsizeof(record) for record in self._history)
+        """Estimate retained compact-history bytes without assuming CPython.
+
+        Preserve the established CPython size estimate exactly. PyPy deliberately
+        does not implement sys.getsizeof, so report a conservative serialized
+        text/deque payload envelope instead. This is NOT process RSS; the
+        actual runtime budget must still be enforced by OS resident sampling.
+        """
+        try:
+            return sys.getsizeof(self._history) + sum(
+                sys.getsizeof(record) for record in self._history
+            )
+        except TypeError:
+            # For text records, 4 bytes per Unicode code point plus a fixed
+            # object allowance; the deque slot allowance includes its full
+            # configured capacity. This remains an estimate, not an exact heap
+            # measurement under PyPy's shared/object-map storage.
+            return (
+                256 + 8 * (self.history_length + 1)
+                + sum(128 + 4 * len(record) for record in self._history)
+            )
 
     def _record_history(self) -> None:
         self._history.append(_encode_history({
