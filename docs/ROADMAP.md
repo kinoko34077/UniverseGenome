@@ -1,11 +1,15 @@
 # UniverseGenome Implementation Roadmap
 
 ## Current repository state
+### Post-Phase G Outer-first research (2026-10-17)
+
+The terminal #159 `CHANGE_PATH` and #167 `HOLD-UNRESOLVED` results remain historical and unchanged. A later, separately scoped Outer-first L3 lane is tracked by [#363](https://github.com/kinoko34077/UniverseGenome/issues/363), with source work under [#386](https://github.com/kinoko34077/UniverseGenome/issues/386) and [#388](https://github.com/kinoko34077/UniverseGenome/issues/388). O1 and O2-1/O2-2/O2-3 are accepted as source-only slices on main `e4cd5072e06236b6eed5a68fad18c0b1ae501f86`; post-main CI #38950900042 succeeded. O2-3 is synthetic-only and does not authenticate real evidence or establish a winning physical candidate. The next design/source gate is [#393](https://github.com/kinoko34077/UniverseGenome/issues/393), for pre-outcome h0-only cohort manifests and bounded evaluation design. It does not authorize a new physical run, held-out validation, Phase H/R3, production-profile change, or a learning claim.
+
 
 Phase 0 through Phase 5 are readiness-accepted on `main`. Current State
 reconciliation #66, Phase 5 remediation #65, GUI/search integration #63, and
 post-v0.1 residual reconciliation #61 are complete; readiness rerun #60 passed.
-Phase 6 roadmap #78 is active. P6.1 multiple independent byte mappings are
+The earlier Phase 6 roadmap #78 records the bounded sequence. P6.1 multiple independent byte mappings are
 accepted through #79 / PR #80, P6.2 temporal sequence discrimination through
 #82 / PR #83, P6.3 multi-event output timing through #85 / PR #86, P6.4
 forgetting/relearning retention through #88 / PR #89, P6.5 controlled
