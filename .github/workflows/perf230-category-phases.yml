@@ -1,0 +1,38 @@
+name: PERF230 Native Default Category CPU and Clone Profile
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf230_category_phases.py"
+      - "tests/test_perf230_category_phases.py"
+      - ".github/workflows/perf230-category-phases.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profile_per_category:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate frozen profiler sampling and safety contract
+        run: python -m unittest discover -s tests -p 'test_perf230_category_phases.py' -v
+      - name: Genuine original default1024 native slot0/32/64/96 profiled and source-parity unprofiled
+        run: |
+          timeout -k 15s 450s python -m benchmarks.perf230_category_phases \
+            --output reports/perf230-category-phases.json
+      - name: Source-SHA-bound hotspot and original full-state equivalence evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-category-cpu-profile
+          path: reports/perf230-category-phases.json
+          if-no-files-found: error
+          retention-days: 7
