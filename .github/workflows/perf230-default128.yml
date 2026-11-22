@@ -1,0 +1,73 @@
+name: PERF230 Real Default128 Native Selected One-Round Baseline
+
+on:
+  pull_request:
+    paths:
+      - "benchmarks/perf230_default128.py"
+      - "tests/test_perf230_default128.py"
+      - ".github/workflows/perf230-default128.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actual_original_default128:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        workers: [1, 2, 4]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check source-bound report validation tests
+        run: python -m unittest discover -s tests -p 'test_perf230_default128.py' -v
+      - name: Real native selected128 original default1024 performance-only one-round trial
+        run: |
+          timeout -k 20s 900s python -m benchmarks.perf230_default128 \
+            --workers ${{ matrix.workers }} \
+            --output reports/perf230-default128-${{ matrix.workers }}.json
+      - name: Archive complete or interrupted source-bound performance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf230-default128-${{ matrix.workers }}
+          path: reports/perf230-default128-${{ matrix.workers }}.json
+          if-no-files-found: warn
+          retention-days: 7
+
+  compare_exact_state:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [actual_original_default128]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "perf230-default128-*"
+          path: reports
+          merge-multiple: true
+      - name: Verify whole selected v7 state and compare original default wall
+        run: |
+          python -m benchmarks.perf230_default128 \
+            --compare-dir reports \
+            --output reports/perf230-comparison.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perf230-default128-verified-comparison
+          path: reports/perf230-comparison.json
+          if-no-files-found: error
+          retention-days: 7
